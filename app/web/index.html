@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hello Subspace!</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="./bundle.js"></script>
+  </head>
+  <body>
+    <div id='app'>
+      <nav class="navbar is-spaced" role="navigation" aria-label="main navigation">
+          <div class="navbar-brand">
+            <a class="navbar-item" href="#">
+              <p>Subspace Client</p>
+            </a>
+            <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
+              <span aria-hidden="true"></span>
+              <span aria-hidden="true"></span>
+              <span aria-hidden="true"></span>
+            </a>
+          </div>
+          <div class="navbar-menu">
+            <div class="navbar-start">
+            </div>
+            <div class="navbar-end">
+              <a href="#" class="navbar-item" style='padding-right: 25px'>
+                {{ nodeId }}
+              </a>
+            </div>
+          </div>
+      </nav>
+
+      <div class="section" style='padding: 0rem'>
+        <div class="container">
+          <div class="tabs">
+            <ul>
+              <li v-bind:class="{ 'is-active': activeTab == 'network' }" @click="activeTab = 'network'"><a>Network</a></li>
+              <li v-bind:class="{ 'is-active': activeTab == 'ledger' }" @click="activeTab = 'ledger'"><a>Ledger</a></li>
+              <li v-bind:class="{ 'is-active': activeTab == 'wallet' }" @click="activeTab = 'wallet'"><a>Wallet</a></li>
+              <li v-bind:class="{ 'is-active': activeTab == 'settings' }" @click="activeTab = 'settings'"><a>Settings</a></li>
+            </ul>
+          </div>
+          <div class="content">
+            <div v-if='activeTab === "network"'>
+              <nav class="level">
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Nodes</p>
+                    <p class="title">16</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Space Pledged</p>
+                    <p class="title">16 TB</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Ledger Size</p>
+                    <p class="title">1 GB</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Load Factor</p>
+                    <p class="title">16k</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Pieces</p>
+                    <p class="title">250k</p>
+                  </div>
+                </div>
+              </nav>
+              <div class="content">
+                <ul>
+                  <li>Activity Log</li>
+                  <li>Network Map</li>
+                </ul>
+              </div>              
+            </div>
+
+            <div v-else-if='activeTab === "ledger"'>
+              <nav class="level">
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Chains</p>
+                    <p class="title">1024</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Blocks</p>
+                    <p class="title">42k</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Levels</p>
+                      <p class="title">550</p>
+                    </div>
+                  </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Transactions</p>
+                    <p class="title">75k</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Credits</p>
+                    <p class="title">42k</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Accounts</p>
+                    <p class="title">423</p>
+                  </div>
+                </div>
+              </nav>
+            </div>
+            <div v-else-if='activeTab === "wallet"'>
+              Wallet Content
+            </div>
+            <div v-else-if='activeTab === "settings"'>
+              Settings Content
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+<script type='text/javascript'>
+  var app = new Vue({
+    el: '#app',
+    data: {
+      nodeId: 'myNodeId',
+      activeTab: 'network'
+    },
+    methods: {
+      
+    },
+  })
+</script>
+
+<style type='css'>
+    .fade-enter-active, .fade-leave-active {
+      transition: opacity .5s;
+    }
+    .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+      opacity: 0;
+    }
+</style>

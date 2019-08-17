@@ -1,0 +1,418 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>@subspace/subspace-core</title>
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="assets/js/search.js" data-base=".">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="index.html" class="title">@subspace/subspace-core</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="globals.html">Globals</a>
+				</li>
+			</ul>
+			<h1> @subspace/subspace-core</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<div class="tsd-panel tsd-typography">
+				<a href="#subspace-core" id="subspace-core" style="color: inherit; text-decoration: none;">
+					<h1>Subspace Core</h1>
+				</a>
+				<p>A monorepo that incudes everything needed to run a full node for the Subspace Ledger.</p>
+				<a href="#todo" id="todo" style="color: inherit; text-decoration: none;">
+					<h2>ToDo</h2>
+				</a>
+				<ol>
+					<li>Finish crypto module</li>
+					<li>Smoke test pipeline</li>
+					<li>Integrate Code</li>
+					<li>Extend Code</li>
+				</ol>
+				<a href="#remote-procedure-call-rpc" id="remote-procedure-call-rpc" style="color: inherit; text-decoration: none;">
+					<h3>Remote Procedure Call (RPC)</h3>
+				</a>
+				<pre><code class="language-typescript">
+<span class="hljs-keyword">class</span> RPC {
+
+  <span class="hljs-comment">// consensus methods</span>
+
+  gossipTx() {}
+
+  gossipBlock() {}
+
+  <span class="hljs-comment">// ledger query methods</span>
+
+  getPiece(pieceId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
+
+  getTx(txId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
+
+  getState(stateId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
+
+  getBlock(blockId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
+}
+</code></pre>
+				<a href="#design" id="design" style="color: inherit; text-decoration: none;">
+					<h2>Design</h2>
+				</a>
+				<a href="#target-runtime" id="target-runtime" style="color: inherit; text-decoration: none;">
+					<h3>Target Runtime</h3>
+				</a>
+				<p>Primarily written in <a href="https://www.typescriptlang.org/">Typescript</a> for a <a href="https://nodejs.org">Node JS</a> runtime.
+				Mission critical code written in <a href="https://www.rust-lang.org/">Rust</a>, compiled to <a href="https://webassembly.org/">Web Assembly</a> using <a href="https://github.com/rustwasm/wasm-bindgen">wasm-bindgen</a> and called from JS Runtime. </p>
+				<p>Wasm Pack for browser (client side)
+				Native binding for Node JS runtime</p>
+				<a href="#cross-platform" id="cross-platform" style="color: inherit; text-decoration: none;">
+					<h3>Cross Platform</h3>
+				</a>
+				<p>Standard implementation may be run anywhere with <a href="https://www.docker.com/">Docker</a>.
+					May be used with <a href="https://electronjs.org/">Electron</a> for cross-platform desktop app development.
+					May be compiled with <a href="http://browserify.org/">Browserify</a> to run in any browser JS runtime.
+				May be compiled to <a href="https://facebook.github.io/react-native/">React-Native</a> for mobile app development. </p>
+				<a href="#development" id="development" style="color: inherit; text-decoration: none;">
+					<h3>Development</h3>
+				</a>
+				<p>Full test suite with <a href="https://jestjs.io/">Jest</a>
+					Auto-generated documentation with <a href="https://typedoc.org">TypeDoc</a>
+					Continuous Integration through <a href="https://circleci.com/">Circle CI</a>
+					Published as module to <a href="https://www.npmjs.com/">NPM</a>
+					Docker containers hosted on <a href="https://hub.docker.com/">DockerHub</a>
+				HTTP and GraphQL API provided through <a href="https://grpc.io/">gRPC</a></p>
+				<a href="#user-interfaces" id="user-interfaces" style="color: inherit; text-decoration: none;">
+					<h3>User Interfaces</h3>
+				</a>
+				<p>Subspace Network Daemon (SND), a CLI built using <a href="https://github.com/tj/commander.js/">Commander</a></p>
+				<p>A standard GUI is provided in <a href="https://quasar.dev/">Quasar</a> using <a href="https://vuejs.org/">Vue JS</a> which may run in a browser, desktop, or mobile environment, providing a network dashboard, block explorer, and wallet interface.</p>
+				<a href="#modules" id="modules" style="color: inherit; text-decoration: none;">
+					<h2>Modules</h2>
+				</a>
+				<p>For the purposes of this document, a module refers to top level directory within the src folder that organizes some code. External npm modules are referred to as dependencies. We are taking a monorepo approach. Instead of using separate NPM modules and git repositories for each module we will simply use different folders within the same core project. Later, we may use <a href="https://lerna.js.org/">Lerna</a> to separate each folder into a discrete module, which may all be managed from the core project.  </p>
+				<p>Currently there are ten modules. <code>Main</code> wraps <code>Node</code>, which is the base class for a network node. <code>Wallet</code>, <code>Farm</code>, <code>Ledger</code>, <code>Network</code>, and <code>Storage</code> are sub classes that provide specific functionality. <code>Utils</code>, <code>Crypto</code> and <code>Codes</code> are collections of logically grouped helper functions.</p>
+				<a href="#main" id="main" style="color: inherit; text-decoration: none;">
+					<h3>Main</h3>
+				</a>
+				<p>Entry point for the project through <code>index.ts</code>. Also defines the constants and shared Typescript interfaces for the project. Essentially a wrapper around the core functionality provide by the <code>Node</code> class that allows for one more layer of abstraction when defining initialization and environment parameters.</p>
+				<a href="#node" id="node" style="color: inherit; text-decoration: none;">
+					<h3>Node</h3>
+				</a>
+				<p>Master class for the running a &#39;node&#39; on the Subspace Network that implements all other modules and dependencies.</p>
+				<ol>
+					<li>Manages the connection to the subspace network </li>
+					<li>Manages a wallet for one or more node ids.</li>
+					<li>Tracks the current state of the ledger.</li>
+					<li>Executes the validate, solve, prove loop for farming and ledger validation.</li>
+					<li>Manages the plot for farming.</li>
+					<li>Interfaces with local storage media for persistence.</li>
+				</ol>
+				<a href="#wallet" id="wallet" style="color: inherit; text-decoration: none;">
+					<h3>Wallet</h3>
+				</a>
+				<p>Manages identities (profiles) for nodes on the network. An identity is not required to join and query the network.</p>
+				<ol>
+					<li>Securely create, store, manage, and delete BLS Public/Private key pairs and associated metadata (via crypto and storage modules)</li>
+					<li>View balances of any valid subspace network address (via ledger and network modules)</li>
+					<li>Send funds from one address to another with a valid key pair (via ledger and network modules)</li>
+				</ol>
+				<a href="#farm" id="farm" style="color: inherit; text-decoration: none;">
+					<h3>Farm</h3>
+				</a>
+				<p>Manages plots for this node. A node may have many plots. A plot is a set of encoded pieces under a given node id (address). If the ledger is small, nodes must have many plots to fully utilize their free disk. Once the ledger is large (&gt; 16 TB) we would expect most nodes to have a single plot. Multiple plots per node will make testing sybil attacks far easier as well. Farming is purely optional and not required to query the network or maintain a copy of the Ledger. Each plot is initialized with a different path, which may be on different drives.</p>
+				<ol>
+					<li>Encodes pieces under a node id and stores them to disk (storage and codes modules)</li>
+					<li>Retrieves encodings from a piece id and returns the encoding or original pieces (storage and codes modules)</li>
+					<li>Searches through the plot for the closest encoding to a given target (RB Tree dep)</li>
+				</ol>
+				<a href="#ledger" id="ledger" style="color: inherit; text-decoration: none;">
+					<h3>Ledger</h3>
+				</a>
+				<p>Manages the state of the ledger, which is the collection of all parallel chains for the network. </p>
+				<ol>
+					<li>Tracks the pending state of the ledger in memory.</li>
+					<li>May store the archival state of the ledger on disk (unencoded).</li>
+					<li>Assigns new block to chains and determines when to confirm a new level (collection of blocks across chains)</li>
+					<li>Compresses levels into state blocks and applies piece encodings.</li>
+					<li>Stores state blocks in memory, potentially with a fly-client approach.</li>
+					<li>Maintains a balance of all active accounts network (account based vs UTXO based)</li>
+					<li>Maintains a memory pool of pending blocks (proofs + contents) and transactions (txs).</li>
+					<li>Creates and validates new txs, proofs, and contents.</li>
+				</ol>
+				<a href="#storage" id="storage" style="color: inherit; text-decoration: none;">
+					<h3>Storage</h3>
+				</a>
+				<p>Manages persistent state in a cross-platform manner.</p>
+				<ol>
+					<li>Uses a custom Node JS storage interface for plotting pieces. Browser and Mobile may follow eventually, but only Node JS environments will be able to <code>plot()</code> and <code>solve()</code> for consensus initially.</li>
+					<li>Maintains a simple key-value database for other persistent storage such as Ledger and Wallet data. Uses Rocks DB for Node JS, local storage in the Browser, and React-Native async for Mobile.</li>
+					<li>Uses a Red Black tree that combines memory and disk storage for indexing a plot with fast lookups.</li>
+				</ol>
+				<a href="#network" id="network" style="color: inherit; text-decoration: none;">
+					<h3>Network</h3>
+				</a>
+				<p>Manages a connection to the subspace network across multiple transports with multiple modes of operation.</p>
+				<ol>
+					<li>Defines a simple RPC that is gRPC compatible (allowing simple REST and graphQL interfaces)</li>
+					<li>Provides a basic gossip protocol over UDP.</li>
+					<li>Provides a ledger / piece sync protocol over TCP.</li>
+					<li>Provides a lightweight Kademlia Distributed Sloppy Hash Table (K-DSHT) over UDP &amp; TCP.</li>
+					<li>Provides a browser sync protocol over WebSockets (WS) where a Node JS node with public IP may run a WS Server</li>
+					<li>Provides a browser P2P protocol over WebRTC (WRTC) where a Node JS with public IP may run a WRTC Relay server.</li>
+					<li>Eventually may support a torrent style ledger / piece sync protocol TCP and WS.</li>
+				</ol>
+				<a href="#crypto" id="crypto" style="color: inherit; text-decoration: none;">
+					<h3>Crypto</h3>
+				</a>
+				<p>A convenience wrapper around a set of standard cryptographic primitives. Goal is to convert all to Rust and expose via WASM for performance.</p>
+				<ol>
+					<li>Implements basic hash functions from the Node JS crypto standard library.</li>
+					<li>Implements a secure pseudo random number generator via a Poisson process</li>
+					<li>Implements binary merkle tree library. Currently Typescript based, eventually port to WASM via Rust.</li>
+					<li>Implements a Jump Consistent Hash function to assign blocks to chains. Currently Typescript based, eventually port to WASM via Rust.</li>
+					<li>Implements Chia Network BLS Signature library via WASM port. Provides deterministic key generation that supports HD Wallets and a unique signature scheme with aggregation.</li>
+				</ol>
+				<a href="#codes" id="codes" style="color: inherit; text-decoration: none;">
+					<h3>Codes</h3>
+				</a>
+				<p>A convenience wrapper around a set of algorithms for encoding and decoding pieces of the ledger. Goal is to convert all to Rust and expose via WASM for performance.</p>
+				<ol>
+					<li>Level Coding: Slices a level (set of proofs and unique contents across many new blocks) into a set of 4096 byte content-addressed pieces, padding the last piece. </li>
+					<li>Erasure Codes: Create a set of parity pieces that may be used to recover a level given a constant subset of pieces. Currently uses <a href="https://github.com/ronomon/reed-solomon">Backblaze Reed-Solomon</a> implementation ported to Node JS. Attempting to user a more efficient <a href="https://github.com/darrenldl/reed-solomon-erasure">port to Rust</a>. Need to benchmark and compare some other, possibly faster libraries <a href="https://github.com/catid/longhair">written in C++</a></li>
+					<li>Piece Coding: A simple Pseudo Random Permutation (PRP) CBC XOR cipher that uses the node id as the initialization vector. Encoding is inherently sequential with a variable number of rounds. Decoding is inherently parallelizable. </li>
+					<li>Hourglass Function: A second PRP that applies a slow, time-delay encoding to the encoded piece that is efficiently reversible. Candidate function include memory hard encoding, verifiable delay encoding, random permutations, and Poehling-Hellman ciphers.</li>
+				</ol>
+				<a href="#external-dependencies" id="external-dependencies" style="color: inherit; text-decoration: none;">
+					<h2>External Dependencies</h2>
+				</a>
+				<p><a href="https://github.com/nazar-pc/merkle-tree-binary">Merkle Tree Binary</a>
+					<a href="https://github.com/subspace/jump-consistent-hash">Jump Consistent Hash</a>
+					<a href="https://github.com/Chia-Network/bls-signatures">BLS Signatures</a>
+					<a href="https://github.com/ronomon/reed-solomon">Erasure Coding</a>
+					<a href="https://github.com/subspace/red-black-tree">Red-Black Tree</a>
+					<a href="https://github.com/Level/level-rocksdb">Rocks DB Node</a>
+					<a href="https://github.com/localForage/localForage">Local Forage</a>
+				<a href="https://github.com/webtorrent/bittorrent-dht">Bit Torrent DHT</a></p>
+			</div>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="globals.html"><em>Globals</em></a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_codes_benchmarks_.html">"codes/benchmarks"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_codes_codes_.html">"codes/codes"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_codes_test_.html">"codes/test"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_crypto_crypto_.html">"crypto/crypto"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_crypto_test_.html">"crypto/test"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_crypto_test_data_.html">"crypto/test-<wbr>data"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_farm_farm_.html">"farm/farm"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_farm_test_.html">"farm/test"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_accounts_.html">"ledger/accounts"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_block_.html">"ledger/block"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_chain_.html">"ledger/chain"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_content_.html">"ledger/content"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_ledger_.html">"ledger/ledger"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_proof_.html">"ledger/proof"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_state_.html">"ledger/state"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_tests_.html">"ledger/tests"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_tx_.html">"ledger/tx"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_main_cli_.html">"main/cli"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_main_constants_.html">"main/constants"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_main_index_.html">"main/index"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_main_interfaces_.html">"main/interfaces"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_network_network_.html">"network/network"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_node_node_.html">"node/node"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_storage_browseradapter_.html">"storage/<wbr>Browser<wbr>Adapter"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_storage_iadapter_.html">"storage/IAdapter"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_storage_rocksadapter_.html">"storage/<wbr>Rocks<wbr>Adapter"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_storage_storage_.html">"storage/storage"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_storage_test_.html">"storage/test"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_utils_utils_.html">"utils/utils"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_wallet_tests_.html">"wallet/tests"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_wallet_wallet_.html">"wallet/wallet"</a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-module"><span class="tsd-kind-icon">Module</span></li>
+				<li class="tsd-kind-object-literal"><span class="tsd-kind-icon">Object literal</span></li>
+				<li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li>
+				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
+				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
+				<li class="tsd-kind-index-signature"><span class="tsd-kind-icon">Index signature</span></li>
+				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
+				<li class="tsd-kind-enum-member"><span class="tsd-kind-icon">Enumeration member</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-enum"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-enum"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
+				<li class="tsd-kind-constructor tsd-parent-kind-interface"><span class="tsd-kind-icon">Constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-interface"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-interface"><span class="tsd-kind-icon">Method</span></li>
+				<li class="tsd-kind-index-signature tsd-parent-kind-interface"><span class="tsd-kind-icon">Index signature</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
+				<li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li>
+				<li class="tsd-kind-constructor tsd-parent-kind-class"><span class="tsd-kind-icon">Constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-class"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class"><span class="tsd-kind-icon">Accessor</span></li>
+				<li class="tsd-kind-index-signature tsd-parent-kind-class"><span class="tsd-kind-icon">Index signature</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-constructor tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-static"><span class="tsd-kind-icon">Static property</span></li>
+				<li class="tsd-kind-call-signature tsd-parent-kind-class tsd-is-static"><span class="tsd-kind-icon">Static method</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="assets/js/main.js"></script>
+<script>if (location.protocol == 'file:') document.write('<script src="assets/js/search.js"><' + '/script>');</script>
+</body>
+</html>
