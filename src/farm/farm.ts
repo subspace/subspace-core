@@ -1,6 +1,3 @@
-// tslint:disable: max-classes-per-file
-// tslint:disable: no-console
-
 import { NodeManagerJsUint8Array, Tree } from "@subspace/red-black-tree";
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
@@ -83,7 +80,6 @@ export class Farm {
    */
   public async getClosestPiece(target: Uint8Array): Promise<Uint8Array | void> {
     const node = this.memTree.getClosestNode(target);
-    console.log(node);
     if (node) {
       let encoding: Uint8Array | null | undefined;
       switch (this.mode) {
