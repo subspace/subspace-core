@@ -31,12 +31,9 @@
   "homepage": "https://github.com/subspace/subspace-core#readme",
   "devDependencies": {
     "@types/jest": "^24.0.16",
-    "@types/level-js": "^4.0.1",
-    "@types/levelup": "^3.1.1",
-    "@types/node": "^12.6.9",
     "browserify": "^16.5.0",
     "fake-indexeddb": "^2.1.1",
-    "jest": "^24.8.0",
+    "jest": "^24.9.0",
     "ts-jest": "^24.0.2",
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
@@ -46,12 +43,16 @@
   },
   "dependencies": {
     "@subspace/jump-consistent-hash": "^1.0.0",
+    "@types/level-js": "^4.0.1",
+    "@types/levelup": "^3.1.1",
+    "@types/node": "^12.6.9",
     "@subspace/red-black-tree": "^0.1.2",
     "@subspace/reed-solomon-erasure": "^0.1.3",
     "bls-signatures": "^0.1.9",
     "commander": "^3.0.0",
     "level-js": "^4.0.1",
     "level-rocksdb": "^4.0.0",
+    "levelup": "^4.1.0",
     "merkle-tree-binary": "^2.0.0"
   }
 }
