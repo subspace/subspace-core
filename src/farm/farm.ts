@@ -20,17 +20,18 @@ import { Storage } from '../storage/storage';
  * Manages all plots for this node. Plots store encoded pieces which are used to solve the block challenge.
  */
 export class Farm {
-
+  public static readonly MODE_MEM_DB = 'mem-db';
+  public static readonly MODE_DISK_DB = 'disk-db';
   /**
    * Returns a new farm instance.
    */
-  public static async init(adapter: string, mode: string): Promise<Farm> {
+  public static async init(adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
     const storage = new Storage(adapter, 'farm');
     const farm = new Farm(storage, mode, adapter);
     return farm;
   }
 
-  private mode: string;
+  private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
   private storage: Storage;
   private memTree: Tree<Uint8Array, number>;
   private memPlot: Map<number, Uint8Array> = new Map();
@@ -38,7 +39,7 @@ export class Farm {
   private pieceOffset = 0;
   private nodeId: Uint8Array;
 
-  constructor(storage: Storage, mode: string, adapter: string) {
+  constructor(storage: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB, adapter: string) {
     this.mode = mode;
     this.storage = storage;
     this.nodeId = new Uint8Array();
@@ -66,9 +67,9 @@ export class Farm {
     this.pieceOffset ++;
 
     switch (this.mode) {
-      case 'mem-db':
+      case Farm.MODE_MEM_DB:
         this.memPlot.set(this.pieceOffset, encodedPiece);
-      case 'disk-db':
+      case Farm.MODE_DISK_DB:
         await this.storage.put(Buffer.from(this.pieceOffset.toString(2)), encodedPiece);
     }
 
@@ -84,9 +85,9 @@ export class Farm {
     if (node) {
       let encoding: Uint8Array | null | undefined;
       switch (this.mode) {
-        case 'mem-db':
+        case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(node[1]);
-        case 'disk-db':
+        case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(node[1].toString(2)));
       }
       if (encoding) {
@@ -104,9 +105,9 @@ export class Farm {
     if (offset) {
       let encoding: Uint8Array | null | undefined;
       switch (this.mode) {
-        case 'mem-db':
+        case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(offset);
-        case 'disk-db':
+        case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(offset.toString(2)));
       }
       if (encoding) {
@@ -126,9 +127,9 @@ export class Farm {
     if (node) {
       let encoding: Uint8Array | null | undefined;
       switch (this.mode) {
-        case 'mem-db':
+        case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(node[1]);
-        case 'disk-db':
+        case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(node[1].toString(2)));
       }
       if (encoding) {
@@ -145,9 +146,9 @@ export class Farm {
     if (offset) {
       let encoding: Uint8Array | null | undefined;
       switch (this.mode) {
-        case 'mem-db':
+        case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(offset);
-        case 'disk-db':
+        case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(offset.toString(2)));
       }
       if (encoding) {
@@ -163,9 +164,9 @@ export class Farm {
     const offset = this.memTree.getNodeValue(pieceId);
     if (offset) {
       switch (this.mode) {
-        case 'mem-db':
+        case Farm.MODE_MEM_DB:
           this.memPlot.delete(offset);
-        case 'disk-db':
+        case Farm.MODE_DISK_DB:
           await this.storage.del(Buffer.from(offset.toString(2)));
       }
       this.memTree.removeNode(pieceId);
