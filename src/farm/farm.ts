@@ -69,8 +69,10 @@ export class Farm {
     switch (this.mode) {
       case Farm.MODE_MEM_DB:
         this.memPlot.set(this.pieceOffset, encodedPiece);
+        break;
       case Farm.MODE_DISK_DB:
         await this.storage.put(Buffer.from(this.pieceOffset.toString(2)), encodedPiece);
+        break;
     }
 
     this.memTree.addNode(pieceId, this.pieceOffset);
@@ -87,8 +89,10 @@ export class Farm {
       switch (this.mode) {
         case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(node[1]);
+          break;
         case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(node[1].toString(2)));
+          break;
       }
       if (encoding) {
         const piece = codes.decodePiece(encoding, this.nodeId);
@@ -107,8 +111,10 @@ export class Farm {
       switch (this.mode) {
         case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(offset);
+          break;
         case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(offset.toString(2)));
+          break;
       }
       if (encoding) {
         const piece = codes.decodePiece(encoding, this.nodeId);
@@ -129,8 +135,10 @@ export class Farm {
       switch (this.mode) {
         case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(node[1]);
+          break;
         case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(node[1].toString(2)));
+          break;
       }
       if (encoding) {
         return encoding;
@@ -148,8 +156,10 @@ export class Farm {
       switch (this.mode) {
         case Farm.MODE_MEM_DB:
           encoding = this.memPlot.get(offset);
+          break;
         case Farm.MODE_DISK_DB:
           encoding = await this.diskPlot.get(Buffer.from(offset.toString(2)));
+          break;
       }
       if (encoding) {
         return encoding;
@@ -166,8 +176,10 @@ export class Farm {
       switch (this.mode) {
         case Farm.MODE_MEM_DB:
           this.memPlot.delete(offset);
+          break;
         case Farm.MODE_DISK_DB:
           await this.storage.del(Buffer.from(offset.toString(2)));
+          break;
       }
       this.memTree.removeNode(pieceId);
     }
