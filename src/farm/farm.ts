@@ -63,7 +63,7 @@ export class Farm {
    */
   public async addPiece(piece: Uint8Array): Promise<void> {
     const pieceId = crypto.hash(piece);
-    const encodedPiece = codes.encodePiece(piece, this.nodeId, 16);
+    const encodedPiece = codes.encodePiece(piece, this.nodeId);
     this.pieceOffset ++;
 
     switch (this.mode) {
