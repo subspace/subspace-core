@@ -7,7 +7,7 @@
     "subspace": "bin/subspace.js"
   },
   "scripts": {
-    "subspace": "node bin/subspace.js",
+    "subspace": "bin/subspace.js",
     "build": "npm run clean && npm run lint && npm run gen-docs && npm run compile",
     "build-browser": "npm run browser-bundle && npm run browser-minify",
     "browser-bundle": "browserify --standalone Subspace dist/main/index.js > app/web/bundle.js",
