@@ -21,7 +21,7 @@ export class Storage {
     public readonly adapterName: string,
     public nameSpace?: string,
   ) {
-    let path: string = `${os.homedir()}/subspace`;
+    let path: string = `${__dirname}/../../data`;
     if (nameSpace) {
       path = path.concat(`/${nameSpace}`);
     }

@@ -15,11 +15,12 @@ export function xorUint8Array(a: Uint8Array, b: Uint8Array): Uint8Array {
 /**
  * Pauses execution synchronously for the specified time period.
  */
-export function wait(delay: number): void {
+export async function wait(delay: number): Promise<void> {
   const startTime = Date.now();
   let now = startTime;
   while ((now - startTime) < delay) {
     now = Date.now();
+    return;
   }
 }
 

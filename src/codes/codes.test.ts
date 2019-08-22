@@ -22,26 +22,24 @@ test('pad-large-level', () => {
   expect(paddedLevelData.length).toBe(32768);
 });
 
-test('erasure-code-level', () => {
+test('erasure-code-level', async () => {
   // single source shard + single parity shard
   const data = crypto.randomBytes(4096);
-  const encodedData = codes.erasureCodeLevel(data);
+  const encodedData = await codes.erasureCodeLevel(data);
   expect(encodedData.length).toBe(8192);
 });
 
-test('erasure-code-large-level', () => {
+test('erasure-code-large-level', async () => {
   // eight source shards + eight parity shards
   const data = crypto.randomBytes(32768);
-  const encodedData = codes.erasureCodeLevel(data);
+  const encodedData = await codes.erasureCodeLevel(data);
   expect(encodedData.length).toBe(65536);
 });
 
-test('erasure-code-overlarge-level', () => {
+test('erasure-code-overlarge-level', async () => {
   // 129 source shards + 129 parity shards
   const data = crypto.randomBytes(528384);
-  expect(() => {
-    codes.erasureCodeLevel(data);
-  }).toThrow();
+  await expect(codes.erasureCodeLevel(data)).rejects.toThrow();
 });
 
 test('slice-level', () => {
@@ -53,15 +51,16 @@ test('slice-level', () => {
   }
 });
 
-test('repair-level', () => {
+test('repair-level', async () => {
   // two source shards + two parity shards, delete one of each and reconstruct
   const seed = crypto.randomBytes(4097);
   const data = codes.padLevel(seed);
   const tag = crypto.hash(data);
-  const encodedData = codes.erasureCodeLevel(data);
+  const encodedData = await codes.erasureCodeLevel(data);
   const pieceSet = codes.sliceLevel(encodedData);
-  const partialData = Buffer.concat([pieceSet[0], pieceSet[2]]);
-  const repairedData = codes.reconstructLevel(partialData, 2, 2);
+  const nullPiece = new Uint8Array(4096);
+  const partialData = Buffer.concat([nullPiece, pieceSet[1], pieceSet[2], nullPiece]);
+  const repairedData = await codes.reconstructLevel(partialData, 2, 2, [false, true, true, false]);
   const repairedTag = crypto.hash(repairedData);
   expect(repairedTag.toString()).toBe(tag.toString());
 });
@@ -104,9 +103,9 @@ const data = crypto.randomBytes(520191);
 // 128 pieces
 // const data = crypto.randomBytes(524287);
 
-test('encode-full-level', () => {
+test('encode-full-level', async () => {
   const paddedData = codes.padLevel(data);
-  const encodedData = codes.erasureCodeLevel(paddedData);
+  const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const encodings: Uint8Array[] = [];
   const encodedHashes: Uint8Array[] = [];

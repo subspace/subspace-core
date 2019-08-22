@@ -68,69 +68,39 @@
 					<h1>Subspace Core</h1>
 				</a>
 				<p>A monorepo that incudes everything needed to run a full node for the Subspace Ledger.</p>
-				<a href="#todo" id="todo" style="color: inherit; text-decoration: none;">
-					<h2>ToDo</h2>
-				</a>
-				<ol>
-					<li>Finish crypto module</li>
-					<li>Smoke test pipeline</li>
-					<li>Integrate Code</li>
-					<li>Extend Code</li>
-				</ol>
-				<a href="#remote-procedure-call-rpc" id="remote-procedure-call-rpc" style="color: inherit; text-decoration: none;">
-					<h3>Remote Procedure Call (RPC)</h3>
-				</a>
-				<pre><code class="language-typescript">
-<span class="hljs-keyword">class</span> RPC {
-
-  <span class="hljs-comment">// consensus methods</span>
-
-  gossipTx() {}
-
-  gossipBlock() {}
-
-  <span class="hljs-comment">// ledger query methods</span>
-
-  getPiece(pieceId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
-
-  getTx(txId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
-
-  getState(stateId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
-
-  getBlock(blockId: <span class="hljs-built_in">Uint8Array</span>): <span class="hljs-built_in">Uint8Array</span> {}
-}
-</code></pre>
 				<a href="#design" id="design" style="color: inherit; text-decoration: none;">
 					<h2>Design</h2>
 				</a>
 				<a href="#target-runtime" id="target-runtime" style="color: inherit; text-decoration: none;">
 					<h3>Target Runtime</h3>
 				</a>
-				<p>Primarily written in <a href="https://www.typescriptlang.org/">Typescript</a> for a <a href="https://nodejs.org">Node JS</a> runtime.
-				Mission critical code written in <a href="https://www.rust-lang.org/">Rust</a>, compiled to <a href="https://webassembly.org/">Web Assembly</a> using <a href="https://github.com/rustwasm/wasm-bindgen">wasm-bindgen</a> and called from JS Runtime. </p>
-				<p>Wasm Pack for browser (client side)
-				Native binding for Node JS runtime</p>
+				<ul>
+					<li>Primarily written in <a href="https://www.typescriptlang.org/">Typescript</a> for a <a href="https://nodejs.org">Node JS</a> runtime.</li>
+					<li>Mission critical code written in <a href="https://www.rust-lang.org/">Rust</a>, compiled to <a href="https://webassembly.org/">Web Assembly</a> using <a href="https://rustwasm.github.io/wasm-pack/">wasm-pack</a> and called from JS Runtime. </li>
+				</ul>
 				<a href="#cross-platform" id="cross-platform" style="color: inherit; text-decoration: none;">
 					<h3>Cross Platform</h3>
 				</a>
-				<p>Standard implementation may be run anywhere with <a href="https://www.docker.com/">Docker</a>.
-					May be used with <a href="https://electronjs.org/">Electron</a> for cross-platform desktop app development.
-					May be compiled with <a href="http://browserify.org/">Browserify</a> to run in any browser JS runtime.
-				May be compiled to <a href="https://facebook.github.io/react-native/">React-Native</a> for mobile app development. </p>
+				<ul>
+					<li>Node JS implementation may be run anywhere with <a href="https://www.docker.com/">Docker</a>. </li>
+					<li>May be compiled with <a href="http://browserify.org/">Browserify</a> to run in any browser JS runtime. </li>
+					<li>May be used with <a href="https://electronjs.org/">Electron</a> for cross-platform desktop app development. </li>
+				</ul>
 				<a href="#development" id="development" style="color: inherit; text-decoration: none;">
 					<h3>Development</h3>
 				</a>
-				<p>Full test suite with <a href="https://jestjs.io/">Jest</a>
-					Auto-generated documentation with <a href="https://typedoc.org">TypeDoc</a>
-					Continuous Integration through <a href="https://circleci.com/">Circle CI</a>
-					Published as module to <a href="https://www.npmjs.com/">NPM</a>
-					Docker containers hosted on <a href="https://hub.docker.com/">DockerHub</a>
-				HTTP and GraphQL API provided through <a href="https://grpc.io/">gRPC</a></p>
+				<ul>
+					<li>Full test suite with <a href="https://jestjs.io/">Jest</a> run with <code>npm test</code></li>
+					<li>Auto-generated documentation with <a href="https://typedoc.org">TypeDoc</a> run with <code>npm gen-docs</code> to <a href="../docs/index.html">/docs</a></li>
+					<li>Published as module to <a href="https://www.npmjs.com/">NPM</a></li>
+					<li>Docker containers hosted on <a href="https://hub.docker.com/">DockerHub</a></li>
+				</ul>
 				<a href="#user-interfaces" id="user-interfaces" style="color: inherit; text-decoration: none;">
 					<h3>User Interfaces</h3>
 				</a>
-				<p>Subspace Network Daemon (SND), a CLI built using <a href="https://github.com/tj/commander.js/">Commander</a></p>
-				<p>A standard GUI is provided in <a href="https://quasar.dev/">Quasar</a> using <a href="https://vuejs.org/">Vue JS</a> which may run in a browser, desktop, or mobile environment, providing a network dashboard, block explorer, and wallet interface.</p>
+				<p>Subspace Network Daemon (SND), a CLI built using <a href="https://github.com/tj/commander.js/">Commander</a><br></p>
+				<p>Run with <code>bin/subspace.js</code> from the root of the repository or just using <code>subspace</code> when installed globally.</p>
+				<p>A simple GUI can be viewed from <a href="/app/web/index.html">/app/web/index.html</a> built with vanilla <a href="https://vuejs.org/">Vue</a> and <a href="https://bulma.io/">Bulma</a>. This will run the browserified version of the protocol as a standalone network node with its own copy of the ledger from genesis -- primarily for testing purposes right now.</p>
 				<a href="#modules" id="modules" style="color: inherit; text-decoration: none;">
 					<h2>Modules</h2>
 				</a>
@@ -149,7 +119,7 @@
 					<li>Manages a wallet for one or more node ids.</li>
 					<li>Tracks the current state of the ledger.</li>
 					<li>Executes the validate, solve, prove loop for farming and ledger validation.</li>
-					<li>Manages the plot for farming.</li>
+					<li>Manages the plots for farming.</li>
 					<li>Interfaces with local storage media for persistence.</li>
 				</ol>
 				<a href="#wallet" id="wallet" style="color: inherit; text-decoration: none;">
@@ -166,14 +136,15 @@
 				</a>
 				<p>Manages plots for this node. A node may have many plots. A plot is a set of encoded pieces under a given node id (address). If the ledger is small, nodes must have many plots to fully utilize their free disk. Once the ledger is large (&gt; 16 TB) we would expect most nodes to have a single plot. Multiple plots per node will make testing sybil attacks far easier as well. Farming is purely optional and not required to query the network or maintain a copy of the Ledger. Each plot is initialized with a different path, which may be on different drives.</p>
 				<ol>
-					<li>Encodes pieces under a node id and stores them to disk (storage and codes modules)</li>
+					<li>Encodes pieces under a node id and persists them through a plot mode.</li>
+					<li>Current modes include pure in-memory (mem-db) and rocks-db (disk-db). Future modes include raw-disk and on-the-fly computation from unencoded pieces stored in memory (for security analysis).</li>
+					<li>Uses a Red Black tree that combines memory and disk storage for indexing a plot with fast lookups.</li>
 					<li>Retrieves encodings from a piece id and returns the encoding or original pieces (storage and codes modules)</li>
-					<li>Searches through the plot for the closest encoding to a given target (RB Tree dep)</li>
 				</ol>
 				<a href="#ledger" id="ledger" style="color: inherit; text-decoration: none;">
 					<h3>Ledger</h3>
 				</a>
-				<p>Manages the state of the ledger, which is the collection of all parallel chains for the network. </p>
+				<p>Manages the state of the ledger, which is the collection of all parallel chains for the network. Currently a work in progress.</p>
 				<ol>
 					<li>Tracks the pending state of the ledger in memory.</li>
 					<li>May store the archival state of the ledger on disk (unencoded).</li>
@@ -189,13 +160,14 @@
 				</a>
 				<p>Manages persistent state in a cross-platform manner.</p>
 				<ol>
-					<li>Uses a custom Node JS storage interface for plotting pieces. Browser and Mobile may follow eventually, but only Node JS environments will be able to <code>plot()</code> and <code>solve()</code> for consensus initially.</li>
-					<li>Maintains a simple key-value database for other persistent storage such as Ledger and Wallet data. Uses Rocks DB for Node JS, local storage in the Browser, and React-Native async for Mobile.</li>
-					<li>Uses a Red Black tree that combines memory and disk storage for indexing a plot with fast lookups.</li>
+					<li>Maintains a simple key-value database for persistent storage with a <a href="https://github.com/google/leveldb">level-db</a> compliant API </li>
+					<li>Uses Rocks DB for Node JS through <a href="https://github.com/Level/level-rocksdb">Rocks DB Node</a></li>
+					<li>Uses indexed-db in the Browser through <a href="https://github.com/Level/level-js">Level-js</a></li>
 				</ol>
 				<a href="#network" id="network" style="color: inherit; text-decoration: none;">
 					<h3>Network</h3>
 				</a>
+				<p>Not yet implemented.</p>
 				<p>Manages a connection to the subspace network across multiple transports with multiple modes of operation.</p>
 				<ol>
 					<li>Defines a simple RPC that is gRPC compatible (allowing simple REST and graphQL interfaces)</li>
@@ -212,7 +184,7 @@
 				<p>A convenience wrapper around a set of standard cryptographic primitives. Goal is to convert all to Rust and expose via WASM for performance.</p>
 				<ol>
 					<li>Implements basic hash functions from the Node JS crypto standard library.</li>
-					<li>Implements a secure pseudo random number generator via a Poisson process</li>
+					<li>Implements a secure pseudo random number generator via a Poisson process (pending)</li>
 					<li>Implements binary merkle tree library. Currently Typescript based, eventually port to WASM via Rust.</li>
 					<li>Implements a Jump Consistent Hash function to assign blocks to chains. Currently Typescript based, eventually port to WASM via Rust.</li>
 					<li>Implements Chia Network BLS Signature library via WASM port. Provides deterministic key generation that supports HD Wallets and a unique signature scheme with aggregation.</li>
@@ -230,14 +202,16 @@
 				<a href="#external-dependencies" id="external-dependencies" style="color: inherit; text-decoration: none;">
 					<h2>External Dependencies</h2>
 				</a>
-				<p><a href="https://github.com/nazar-pc/merkle-tree-binary">Merkle Tree Binary</a>
-					<a href="https://github.com/subspace/jump-consistent-hash">Jump Consistent Hash</a>
-					<a href="https://github.com/Chia-Network/bls-signatures">BLS Signatures</a>
-					<a href="https://github.com/ronomon/reed-solomon">Erasure Coding</a>
-					<a href="https://github.com/subspace/red-black-tree">Red-Black Tree</a>
-					<a href="https://github.com/Level/level-rocksdb">Rocks DB Node</a>
-					<a href="https://github.com/localForage/localForage">Local Forage</a>
-				<a href="https://github.com/webtorrent/bittorrent-dht">Bit Torrent DHT</a></p>
+				<ul>
+					<li><a href="https://github.com/nazar-pc/merkle-tree-binary">Merkle Tree Binary</a> </li>
+					<li><a href="https://github.com/subspace/jump-consistent-hash">Jump Consistent Hash</a> </li>
+					<li><a href="https://github.com/Chia-Network/bls-signatures">BLS Signatures</a></li>
+					<li><a href="https://github.com/ronomon/reed-solomon">Erasure Coding</a></li>
+					<li><a href="https://github.com/subspace/red-black-tree">Red-Black Tree</a></li>
+					<li><a href="https://github.com/Level/level-rocksdb">Rocks DB Node</a></li>
+					<li><a href="https://github.com/Level/level-js">Level-js</a></li>
+					<li><a href="https://github.com/webtorrent/bittorrent-dht">Bit Torrent DHT</a></li>
+				</ul>
 			</div>
 		</div>
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
@@ -253,13 +227,13 @@
 						<a href="modules/_codes_codes_.html">"codes/codes"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_codes_test_.html">"codes/test"</a>
+						<a href="modules/_codes_codes_test_.html">"codes/codes.test"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_crypto_crypto_.html">"crypto/crypto"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_crypto_test_.html">"crypto/test"</a>
+						<a href="modules/_crypto_crypto_test_.html">"crypto/crypto.test"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_crypto_test_data_.html">"crypto/test-<wbr>data"</a>
@@ -268,7 +242,7 @@
 						<a href="modules/_farm_farm_.html">"farm/farm"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_farm_test_.html">"farm/test"</a>
+						<a href="modules/_farm_farm_test_.html">"farm/farm.test"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_ledger_accounts_.html">"ledger/accounts"</a>
@@ -286,13 +260,13 @@
 						<a href="modules/_ledger_ledger_.html">"ledger/ledger"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_ledger_tests_.html">"ledger/ledger.tests"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
 						<a href="modules/_ledger_proof_.html">"ledger/proof"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_ledger_state_.html">"ledger/state"</a>
-					</li>
-					<li class=" tsd-kind-external-module">
-						<a href="modules/_ledger_tests_.html">"ledger/tests"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_ledger_tx_.html">"ledger/tx"</a>
@@ -328,16 +302,16 @@
 						<a href="modules/_storage_storage_.html">"storage/storage"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_storage_test_.html">"storage/test"</a>
+						<a href="modules/_storage_storage_test_.html">"storage/storage.test"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_utils_utils_.html">"utils/utils"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_wallet_tests_.html">"wallet/tests"</a>
+						<a href="modules/_wallet_wallet_.html">"wallet/wallet"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_wallet_wallet_.html">"wallet/wallet"</a>
+						<a href="modules/_wallet_wallet_tests_.html">"wallet/wallet.tests"</a>
 					</li>
 				</ul>
 			</nav>

@@ -94,7 +94,7 @@
 								<li class="tsd-kind-constructor tsd-parent-kind-class"><a href="_farm_farm_.farm.html#constructor" class="tsd-kind-icon">constructor</a></li>
 							</ul>
 						</section>
-						<section class="tsd-index-section tsd-is-private tsd-is-private-protected">
+						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_farm_farm_.farm.html#diskplot" class="tsd-kind-icon">disk<wbr>Plot</a></li>
@@ -104,6 +104,8 @@
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_farm_farm_.farm.html#nodeid" class="tsd-kind-icon">node<wbr>Id</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_farm_farm_.farm.html#pieceoffset" class="tsd-kind-icon">piece<wbr>Offset</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_farm_farm_.farm.html#storage" class="tsd-kind-icon">storage</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-static"><a href="_farm_farm_.farm.html#mode_disk_db" class="tsd-kind-icon">MODE_<wbr>DISK_<wbr>DB</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-static"><a href="_farm_farm_.farm.html#mode_mem_db" class="tsd-kind-icon">MODE_<wbr>MEM_<wbr>DB</a></li>
 							</ul>
 						</section>
 						<section class="tsd-index-section ">
@@ -128,13 +130,13 @@
 					<a name="constructor" class="tsd-anchor"></a>
 					<h3>constructor</h3>
 					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">new <wbr>Farm<span class="tsd-signature-symbol">(</span>storage<span class="tsd-signature-symbol">: </span><a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a>, mode<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, adapter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a></li>
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Farm<span class="tsd-signature-symbol">(</span>storage<span class="tsd-signature-symbol">: </span><a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a>, mode<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span>, adapter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:39</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L38">farm/farm.ts:38</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -143,7 +145,7 @@
 									<h5>storage: <a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a></h5>
 								</li>
 								<li>
-									<h5>mode: <span class="tsd-signature-type">string</span></h5>
+									<h5>mode: <span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span></h5>
 								</li>
 								<li>
 									<h5>adapter: <span class="tsd-signature-type">string</span></h5>
@@ -154,7 +156,7 @@
 					</ul>
 				</section>
 			</section>
-			<section class="tsd-panel-group tsd-member-group tsd-is-private tsd-is-private-protected">
+			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="diskplot" class="tsd-anchor"></a>
@@ -162,7 +164,7 @@
 					<div class="tsd-signature tsd-kind-icon">disk<wbr>Plot<span class="tsd-signature-symbol">:</span> <a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:37</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L36">farm/farm.ts:36</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -172,7 +174,7 @@
 					<div class="tsd-signature tsd-kind-icon">mem<wbr>Plot<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Map()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:36</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L35">farm/farm.ts:35</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -182,17 +184,17 @@
 					<div class="tsd-signature tsd-kind-icon">mem<wbr>Tree<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Tree</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:35</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L34">farm/farm.ts:34</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="mode" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> mode</h3>
-					<div class="tsd-signature tsd-kind-icon">mode<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<div class="tsd-signature tsd-kind-icon">mode<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:33</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L32">farm/farm.ts:32</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -202,7 +204,7 @@
 					<div class="tsd-signature tsd-kind-icon">node<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:39</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L38">farm/farm.ts:38</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -212,7 +214,7 @@
 					<div class="tsd-signature tsd-kind-icon">piece<wbr>Offset<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> =&nbsp;0</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:38</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L37">farm/farm.ts:37</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -222,7 +224,27 @@
 					<div class="tsd-signature tsd-kind-icon">storage<span class="tsd-signature-symbol">:</span> <a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in farm/farm.ts:34</li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L33">farm/farm.ts:33</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-static">
+					<a name="mode_disk_db" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> MODE_<wbr>DISK_<wbr>DB</h3>
+					<div class="tsd-signature tsd-kind-icon">MODE_<wbr>DISK_<wbr>DB<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"disk-db"</span><span class="tsd-signature-symbol"> =&nbsp;&quot;disk-db&quot;</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L22">farm/farm.ts:22</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-static">
+					<a name="mode_mem_db" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> MODE_<wbr>MEM_<wbr>DB</h3>
+					<div class="tsd-signature tsd-kind-icon">MODE_<wbr>MEM_<wbr>DB<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> =&nbsp;&quot;mem-db&quot;</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L21">farm/farm.ts:21</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -239,7 +261,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:63</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L62">farm/farm.ts:62</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -267,7 +289,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:124</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L128">farm/farm.ts:128</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -295,7 +317,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:81</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L82">farm/farm.ts:82</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -323,12 +345,12 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:143</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L149">farm/farm.ts:149</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
-									<p>Searches the index for the exact match boased on piece id and returns the associated encoding.</p>
+									<p>Searches the index for the exact match based on piece id and returns the associated encoding.</p>
 								</div>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -351,7 +373,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:102</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L104">farm/farm.ts:104</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -373,13 +395,13 @@
 					<a name="initplot" class="tsd-anchor"></a>
 					<h3>init<wbr>Plot</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">init<wbr>Plot<span class="tsd-signature-symbol">(</span>nodeId<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, pieceSet<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">init<wbr>Plot<span class="tsd-signature-symbol">(</span>nodeId<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, pieceSet<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:53</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L52">farm/farm.ts:52</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -396,7 +418,7 @@
 									<h5>pieceSet: <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span></h5>
 								</li>
 							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -410,7 +432,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:162</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L170">farm/farm.ts:170</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -432,13 +454,13 @@
 					<a name="init" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagStatic">Static</span> init</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-static">
-						<li class="tsd-signature tsd-kind-icon">init<span class="tsd-signature-symbol">(</span>adapter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, mode<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">init<span class="tsd-signature-symbol">(</span>adapter<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, mode<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in farm/farm.ts:27</li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/farm/farm.ts#L26">farm/farm.ts:26</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -452,7 +474,7 @@
 									<h5>adapter: <span class="tsd-signature-type">string</span></h5>
 								</li>
 								<li>
-									<h5>mode: <span class="tsd-signature-type">string</span></h5>
+									<h5>mode: <span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a><span class="tsd-signature-symbol">&gt;</span></h4>
@@ -502,6 +524,12 @@
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
 								<a href="_farm_farm_.farm.html#storage" class="tsd-kind-icon">storage</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-static">
+								<a href="_farm_farm_.farm.html#mode_disk_db" class="tsd-kind-icon">MODE_<wbr>DISK_<wbr>DB</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-static">
+								<a href="_farm_farm_.farm.html#mode_mem_db" class="tsd-kind-icon">MODE_<wbr>MEM_<wbr>DB</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_farm_farm_.farm.html#addpiece" class="tsd-kind-icon">add<wbr>Piece</a>

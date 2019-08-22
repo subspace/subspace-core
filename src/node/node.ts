@@ -44,7 +44,7 @@ export class Node {
   public async plot(): Promise<void> {
     const data = crypto.randomBytes(520191);
     const paddedData = codes.padLevel(data);
-    const encodedData = codes.erasureCodeLevel(paddedData);
+    const encodedData = await codes.erasureCodeLevel(paddedData);
     const pieceSet = codes.sliceLevel(encodedData);
     await this.farm.initPlot(this.id, pieceSet);
     console.log(`Completed plotting ${pieceSet.length} pieces.`);

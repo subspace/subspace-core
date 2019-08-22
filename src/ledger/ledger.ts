@@ -20,6 +20,15 @@ import { Tx } from './tx';
     // block
     // level?
 
+// modes of operation
+  // light client -- only stores the state chain, discards all level data after it is compressed
+  // full node -- stores the full tx and block history (in memory or on disk)
+  // farmer -- only stores the state chain but  encodes each new level into their plot
+  // gateway node -- answers rpc requests for records over the DHT
+  // farmer -- answers rpc requests for pieces
+// need to define the RPC layer
+// how do we load balance the RPC requests across the network
+
 const DIFFICULTY = 64;
 const VERSION = 1;
 
@@ -56,7 +65,7 @@ export class Ledger extends EventEmitter {
     }
   }
 
-  public createGenesisLevel(): IPieceData[] {
+  public async createGenesisLevel(): Promise<IPieceData[]> {
     let previousProofHash = new Uint8Array();
     const parentContentHash = new Uint8Array();
     const level = new Uint8Array();
@@ -97,11 +106,11 @@ export class Ledger extends EventEmitter {
     return;
   }
 
-  public encodeLevel(level: Uint8Array): IPieceData[] {
+  public async encodeLevel(level: Uint8Array): Promise<IPieceData[]> {
     // encode level and generate the piece set
     const pieceDataSet: IPieceData[] = [];
     const paddedLevel = codes.padLevel(level);
-    const erasureCodedLevel = codes.erasureCodeLevel(paddedLevel);
+    const erasureCodedLevel = await codes.erasureCodeLevel(paddedLevel);
     const pieces = codes.sliceLevel(erasureCodedLevel);
 
     // create the piece index

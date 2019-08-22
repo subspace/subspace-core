@@ -3,6 +3,7 @@ import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { IPlotData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
+import { num2Bin } from "../utils/utils";
 
 // ToDo
   // Plots
@@ -23,7 +24,7 @@ export class Farm {
    * Returns a new farm instance.
    */
   public static async init(adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
-    const storage = new Storage(adapter, 'farm');
+    const storage = new Storage(adapter, `farm/${mode}`);
     const farm = new Farm(storage, mode, adapter);
     return farm;
   }
@@ -48,10 +49,10 @@ export class Farm {
   /**
    * Initializes a new plot from seed data (typically at genesis).
    */
-  public initPlot(nodeId: Uint8Array, pieceSet: Uint8Array[]): void {
+  public async initPlot(nodeId: Uint8Array, pieceSet: Uint8Array[]): Promise<void> {
     this.nodeId = nodeId;
     for (const piece of pieceSet) {
-      this.addPiece(piece);
+      await this.addPiece(piece);
     }
   }
 
@@ -68,7 +69,7 @@ export class Farm {
         this.memPlot.set(this.pieceOffset, encodedPiece);
         break;
       case Farm.MODE_DISK_DB:
-        await this.storage.put(Buffer.from(this.pieceOffset.toString(2)), encodedPiece);
+        await this.storage.put(num2Bin(this.pieceOffset), encodedPiece);
         break;
     }
 
@@ -87,7 +88,7 @@ export class Farm {
           encoding = this.memPlot.get(node[1]);
           break;
         case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(Buffer.from(node[1].toString(2)));
+          encoding = await this.diskPlot.get(num2Bin(node[1]));
           break;
       }
       if (encoding) {
@@ -109,7 +110,7 @@ export class Farm {
           encoding = this.memPlot.get(offset);
           break;
         case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(Buffer.from(offset.toString(2)));
+          encoding = await this.diskPlot.get(num2Bin(offset));
           break;
       }
       if (encoding) {
@@ -133,7 +134,7 @@ export class Farm {
           encoding = this.memPlot.get(node[1]);
           break;
         case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(Buffer.from(node[1].toString(2)));
+          encoding = await this.diskPlot.get(num2Bin(node[1]));
           break;
       }
       if (encoding) {
@@ -143,7 +144,7 @@ export class Farm {
   }
 
   /**
-   * Searches the index for the exact match boased on piece id and returns the associated encoding.
+   * Searches the index for the exact match based on piece id and returns the associated encoding.
    */
   public async getExactEncoding(pieceId: Uint8Array): Promise<Uint8Array | void> {
     const offset = this.memTree.getNodeValue(pieceId);
@@ -154,7 +155,7 @@ export class Farm {
           encoding = this.memPlot.get(offset);
           break;
         case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(Buffer.from(offset.toString(2)));
+          encoding = await this.diskPlot.get(num2Bin(offset));
           break;
       }
       if (encoding) {
@@ -174,7 +175,7 @@ export class Farm {
           this.memPlot.delete(offset);
           break;
         case Farm.MODE_DISK_DB:
-          await this.storage.del(Buffer.from(offset.toString(2)));
+          await this.storage.del(num2Bin(offset));
           break;
       }
       this.memTree.removeNode(pieceId);
