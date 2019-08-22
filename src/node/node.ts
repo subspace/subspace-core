@@ -17,7 +17,7 @@ import { Wallet } from '../wallet/wallet';
 
 export class Node {
 
-  public static async init(storageAdapter = 'rocks', mode: string): Promise<Node> {
+  public static async init(storageAdapter = 'rocks', mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Node> {
     const wallet = await Wallet.init(storageAdapter);
     const farm = await Farm.init(storageAdapter, mode);
     return new Node(wallet, farm);

@@ -1,9 +1,8 @@
-import { encode, memory, reconstruct} from "@subspace/reed-solomon-erasure";
+import { ReedSolomonErasure } from "@subspace/reed-solomon-erasure.wasm";
 import { BLOCKS_PER_PIECE, HASH_LENGTH, PIECE_SIZE, ROUNDS} from '../main/constants';
 import { xorUint8Array } from '../utils/utils';
 
 // ToDo
-  // fix reed-solomon wasm package (Nazar)
   // optimize/import encode/decode in Rust
   // actual hourglass function (from filecoin rust proofs?)
 
@@ -28,20 +27,14 @@ export function padLevel(levelData: Uint8Array): Uint8Array {
   return levelData;
 }
 
-/**
- * A helper function that explicitly manages memory for erasure codes.
- */
-function setMemory(value: ArrayLike<number>, offset?: number): void {
-  (new Uint8Array(memory.buffer)).set(value, offset);
-}
+const readSolomonErasure = ReedSolomonErasure.fromCurrentDirectory();
 
 const SHARD_SIZE = PIECE_SIZE;
-const SHARDS_ADDRESS = 0;
 
 /**
  * Returns the Reed-Solomon erasure coding of source data.
  */
-export function erasureCodeLevel(data: Uint8Array): Uint8Array {
+export async function erasureCodeLevel(data: Uint8Array): Promise<Uint8Array> {
   const DATA_SHARDS = data.length / SHARD_SIZE;
   const PARITY_SHARDS = DATA_SHARDS;
 
@@ -50,9 +43,11 @@ export function erasureCodeLevel(data: Uint8Array): Uint8Array {
   }
 
   const shards = new Uint8Array(SHARD_SIZE * (DATA_SHARDS + PARITY_SHARDS));
-  shards.set(data.slice());
-  setMemory(shards, SHARDS_ADDRESS);
-  encode(SHARDS_ADDRESS, SHARD_SIZE, DATA_SHARDS, PARITY_SHARDS);
+  shards.set(data);
+  const result = (await readSolomonErasure).encode(shards, DATA_SHARDS, PARITY_SHARDS);
+  if (result !== ReedSolomonErasure.RESULT_OK) {
+    throw new Error(`Erasure coding failed with code ${result}`);
+  }
   return shards;
 }
 
@@ -72,12 +67,13 @@ export function sliceLevel(erasureCodedLevelData: Uint8Array): Uint8Array[] {
 /**
  * Reconstructs the source data of an erasure coding given a sufficient number of pieces.
  */
-export function reconstructLevel(data: Uint8Array, DATA_SHARDS: number, PARITY_SHARDS: number): Uint8Array {
-  const SHARDS_AVAILABLE_ADDRESS = SHARDS_ADDRESS + SHARD_SIZE * (DATA_SHARDS * PARITY_SHARDS);
-  setMemory(data, SHARDS_AVAILABLE_ADDRESS);
-  reconstruct(SHARDS_ADDRESS, SHARD_SIZE, DATA_SHARDS, PARITY_SHARDS, SHARDS_AVAILABLE_ADDRESS);
-  const originalShards = (new Uint8Array(memory.buffer)).slice(SHARDS_ADDRESS, SHARDS_ADDRESS + SHARD_SIZE * DATA_SHARDS);
-  return originalShards;
+export async function reconstructLevel(data: Uint8Array, DATA_SHARDS: number, PARITY_SHARDS: number, shardsAvailable: boolean[]): Promise<Uint8Array> {
+  const shards = data.slice();
+  const result = (await readSolomonErasure).reconstruct(shards, DATA_SHARDS, PARITY_SHARDS, shardsAvailable);
+  if (result !== ReedSolomonErasure.RESULT_OK) {
+    throw new Error(`Erasure coding reconstruction failed with code ${result}`);
+  }
+  return shards.subarray(0, SHARD_SIZE * DATA_SHARDS);
 }
 
 /**

@@ -1,10 +1,12 @@
 // tslint:disable: no-console
-import * as program from "commander";
+import * as commander from "commander";
 import * as fs from "fs";
 import { Node } from '../node/node';
 
-const version = JSON.parse(fs.readFileSync(__dirname + '/../package.json', 'utf8')).version;
+const version = JSON.parse(fs.readFileSync(__dirname + '/../../package.json', 'utf8')).version;
 const title = `Subspace Network Daemon version ${version}`;
+
+const program = new commander.Command();
 
 program
   .command('run')

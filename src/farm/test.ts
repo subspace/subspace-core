@@ -23,7 +23,7 @@ test('mem-plot', async () => {
   const closestEncoding = await farm.getClosestEncoding(target);
   console.log(closestEncoding);
   if (closestPiece && closestEncoding) {
-    expect(pieceSet.includes(closestPiece)).toBe(true);
+    expect(pieceSet).toContainEqual(closestPiece);
     expect(codes.decodePiece(closestEncoding, key).toString()).toBe(closestPiece.toString());
   } else {
     fail(true);
@@ -35,7 +35,7 @@ test('mem-plot', async () => {
   const exactPiece = await farm.getExactPiece(pieceId);
   const exactEncoding = await farm.getExactEncoding(pieceId);
   if (exactPiece && exactEncoding) {
-    expect(pieceSet.includes(exactPiece)).toBe(true);
+    expect(pieceSet).toContainEqual(exactPiece);
     expect(codes.decodePiece(exactEncoding, key).toString()).toBe(exactPiece.toString());
   } else {
     fail(true);
