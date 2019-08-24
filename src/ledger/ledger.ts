@@ -4,7 +4,7 @@
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import { DIFFICULTY, VERSION } from '../main/constants'
+import { DIFFICULTY, VERSION } from '../main/constants';
 import {IBlockData, IBlockValue, ICompactBlockData, ICompactBlockValue, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { num2Bin } from '../utils/utils';
@@ -17,12 +17,9 @@ import { State } from './state';
 import { Tx } from './tx';
 
 // ToDo
-  // check if level is confirmed
-    // update state and solve
-    // encode the new level
-    // update the piece set and plot
   // handle chain forks
   // handle level forks
+  // decode level data
   // Refactor Level into a separate class
   // handle tx fees
   // handle validation where one farmer computes the next level and adds pieces before another
@@ -47,8 +44,6 @@ import { Tx } from './tx';
   // farmer -- answers rpc requests for pieces
 // need to define the RPC layer
 // how do we load balance the RPC requests across the network
-
-
 
 export class Ledger extends EventEmitter {
 
@@ -78,7 +73,7 @@ export class Ledger extends EventEmitter {
   private contentMap: Map<Uint8Array, IContentData> = new Map();
   private txMap: Map<Uint8Array, ITxData> = new Map();
   private unconfirmedTxs: Set<Uint8Array> = new Set(); // has not been included in a block
-  private unconfirmedBlocksByChain: Set<Uint8Array>[] = []; // has not been included in a level
+  private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
 
   constructor(storageAdapter: string, path: string) {
@@ -248,7 +243,7 @@ export class Ledger extends EventEmitter {
   /**
    * Takes any minimal subset of the erasure coded level and returns the original records (blocks, proofs, contents, and txs).
    */
-  public async decodeLevel(leveData: Uint8Array): Promise<void> {
+  public async decodeLevel(levelData: Uint8Array): Promise<void> {
     // parse record length value
     // parse record
     // load and validate all proofs

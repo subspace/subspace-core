@@ -8,7 +8,7 @@ import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { COINBASE_REWARD, HASH_LENGTH, PIECE_SIZE } from '../main/constants';
-import { IBlockData, ITxData, IPiece } from '../main/interfaces';
+import { IBlockData, IPiece, ITxData } from '../main/interfaces';
 import { measureProximity } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
@@ -223,13 +223,6 @@ export class Node {
    * Listens for and validates new blocks, discarding them as they are compressed into new state blocks.
    */
   public async syncStateAndListen(): Promise<void> {
-    return;
-  }
-
-  /**
-   * Called (or triggered) when a new level is confirmed. Updating the piece set within the plot if farming.
-   */
-  public async onLevel(): Promise<void> {
     return;
   }
 }

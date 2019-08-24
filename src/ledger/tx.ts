@@ -4,7 +4,6 @@ import * as crypto from '../crypto/crypto';
 import { ITxData, ITxValue } from '../main/interfaces';
 import { bin2Hex, num2Bin, num2Date } from '../utils/utils';
 
-
 /**
  * Record class for credit transactions used to transfer funds between accounts on the ledger.
  */
