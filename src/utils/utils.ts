@@ -13,6 +13,34 @@ export function xorUint8Array(a: Uint8Array, b: Uint8Array): Uint8Array {
 }
 
 /**
+ * Returns the hamming distance (number of continuous similar bits) between two byte arrays of equal length.
+ */
+export function measureProximity(a: Uint8Array, b: Uint8Array, reverse = false): number {
+
+  if (a.length !== b.length) {
+    throw new Error('Cannot measure proximity between byte arrays of unequal length');
+  }
+
+  let proximity = 0;
+  let bitString = '';
+  xorUint8Array(a, b).forEach((byte) => bitString += byte.toString(2).padStart(8, '0'));
+
+  if (reverse) {
+    bitString.split('').reverse().join('');
+  }
+
+  for (const bit of bitString) {
+    if (bit === '0') {
+      ++proximity;
+    } else {
+      break;
+    }
+  }
+
+  return proximity;
+}
+
+/**
  * Pauses execution synchronously for the specified time period.
  */
 export async function wait(delay: number): Promise<void> {
@@ -71,4 +99,11 @@ export function JSON2Bin(data: object): Uint8Array {
  */
 export function bin2JSON(data: Uint8Array): object {
   return JSON.parse(Buffer.from(data).toString());
+}
+
+/**
+ * Converts a string to binary data.
+ */
+export function str2Bin(data: string): Uint8Array {
+  return new Uint8Array(Buffer.from(data));
 }

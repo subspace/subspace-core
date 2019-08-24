@@ -11,7 +11,8 @@ import { bin2Hex, num2Bin, num2Date } from '../utils/utils';
 export class Proof {
 
   /**
-   * Returns a new proof given correct inputs.
+   * Returns a new unsigned proof given correct inputs.
+   * Proof must be passed to wallet for signing before being valid.
    */
   public static create(
     previousLevelHash: Uint8Array,
@@ -21,7 +22,6 @@ export class Proof {
     pieceLevel: number,
     pieceProof: Uint8Array,
     publicKey: Uint8Array,
-    privateKey: Uint8Array,
   ): Proof {
     const proofValue: IProofValue = {
       previousLevelHash,
@@ -34,19 +34,18 @@ export class Proof {
       signature: new Uint8Array(),
     };
     const proof = new Proof(proofValue);
-    if (proof._value.publicKey.length > 0) {
-      proof.sign(privateKey);
-    }
-    proof.setKey();
     return proof;
   }
 
   /**
    * Creates an empty proof for a new chain as part of the genesis level.
+   * Does not need to be signed.
    */
   public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array()): Proof {
     const nullArray = new Uint8Array();
-    return Proof.create(nullArray, previousProofHash, nullArray, nullArray, 0, nullArray, nullArray, nullArray);
+    const proof = Proof.create(nullArray, previousProofHash, nullArray, nullArray, 0, nullArray, nullArray);
+    proof.setKey();
+    return proof;
   }
 
   /**

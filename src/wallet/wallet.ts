@@ -1,14 +1,22 @@
+// tslint:disable: variable-name
+
 import * as crypto from "../crypto/crypto";
+import { Proof } from "../ledger/proof";
+import { Tx } from "../ledger/tx";
 import { HASH_LENGTH } from '../main/constants';
 import { IKeyPair } from "../main/interfaces";
 import { Storage } from "../storage/storage";
+import { num2Bin, str2Bin } from "../utils/utils";
 
 // ToDo
+  // only use keys from within wallet module
+  // each address should have its own nonce
   // create from user generated seeds
   // encrypt private keys at rest
   // HD Wallet Functions (child keys)
 
-const STORAGE_ADDRESS = crypto.hash(Buffer.from('address'));
+const STORAGE_ADDRESS = crypto.hash(str2Bin('address'));
+const NONCE_ADDRESS = crypto.hash(str2Bin('nonce'));
 
 /**
  * Class for securely creating, managing, and persisting keys.
@@ -16,7 +24,7 @@ const STORAGE_ADDRESS = crypto.hash(Buffer.from('address'));
 export class Wallet {
 
   /**
-   * Returns a nee wallet instance, loading any stored keys from disk.
+   * Returns a new wallet instance, loading any stored keys and nonce from disk.
    */
   public static async init(storageAdapter: string): Promise<Wallet> {
     const storage = new Storage(storageAdapter, 'wallet');
@@ -26,10 +34,19 @@ export class Wallet {
   }
 
   public readonly addresses: Set<Uint8Array> = new Set();
+  public address = new Uint8Array();
+  public publicKey = new Uint8Array();
+  public privateKey = new Uint8Array();
   private storage: Storage;
+  private _nonce: number;
 
-  constructor(storage: Storage) {
+  constructor(storage: Storage, nonce = 0) {
     this.storage = storage;
+    this._nonce = nonce;
+  }
+
+  get nonce(): number {
+    return this._nonce;
   }
 
   /**
@@ -68,6 +85,24 @@ export class Wallet {
   }
 
   /**
+   * Sets the default (master) address, private key, and public key from persistent storage.
+   */
+  public async setMasterKeyPair(): Promise<boolean> {
+    if (this.addresses.size > 0) {
+      this.address = [...this.addresses.values()][0];
+      const keyPair = await this.getKeyPair(this.address);
+      if (keyPair) {
+        this.privateKey = keyPair.binaryPrivateKey;
+        this.publicKey = keyPair.binaryPublicKey;
+        return true;
+      } else {
+        throw new Error('Could not retrieve keys from storage');
+      }
+    }
+    return false;
+  }
+
+  /**
    * Deletes an existing key pair from disk by address.
    */
   public async deleteKeyPair(address: Uint8Array): Promise<void> {
@@ -90,6 +125,35 @@ export class Wallet {
   }
 
   /**
+   * Signs a proof deliberately so as not to expose BLS Private Keys outside wallet module.
+   */
+  public signProof(proof: Proof): Proof {
+    if (proof.value.publicKey.length > 0) {
+      proof.sign(this.privateKey);
+    }
+    proof.setKey();
+    return proof;
+  }
+
+  /**
+   * Creates a coinbase (block reward) tx using a farmers keys and nonce.
+   */
+  public async createCoinBaseTx(reward: number): Promise<Tx> {
+    const coinbaseTx = Tx.createCoinbase(this.publicKey, reward, this.nonce, this.privateKey);
+    await this.incrementNonce();
+    return coinbaseTx;
+  }
+
+  /**
+   * Creates a simple credit tx using a farmers keys and nonce.
+   */
+  public async createCreditTx(amount: number, receiver: Uint8Array): Promise<Tx> {
+    const tx = Tx.create(this.publicKey, receiver, amount, this.nonce, this.privateKey);
+    await this.incrementNonce();
+    return tx;
+  }
+
+  /**
    * Loads all addresses from disk on initialization.
    */
   private async loadAddresses(): Promise<void> {
@@ -100,5 +164,13 @@ export class Wallet {
         this.addresses.add(address);
       }
     }
+  }
+
+  /**
+   * Increments the nonce for the master address to prevent replay attacks.
+   */
+  private async incrementNonce(): Promise<void> {
+    this._nonce ++;
+    await this.storage.put(NONCE_ADDRESS, num2Bin(this._nonce));
   }
 }

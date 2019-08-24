@@ -1,3 +1,10 @@
+import { Content } from "../ledger/content";
+import { Proof } from "../ledger/proof";
+import { Tx } from '../ledger/tx';
+
+/**
+ * Summary of all Blocks in a Level, compressed into a State Block that is tracked within a single State Chain by light clients.
+ */
 export interface IStateValue {
   previousStateHash: Uint8Array; // hash of the previous state (32 bytes)
   levelHash: Uint8Array; // hash of the concatenation of all proofs for the last full level (32 bytes)
@@ -8,23 +15,48 @@ export interface IStateValue {
   indexPiece: Uint8Array;
 }
 
+/**
+ * Compact representation of a State value.
+ */
 export type IStateData = [Uint8Array, Uint8Array, Uint8Array, number, number, number, Uint8Array];
+
+/**
+ * A logical Block contains a Proof, Content, and an array of Txs.
+ */
+
+export interface IFullBlockValue {
+   proof: Proof;
+   content: Content;
+   coinbase?: Tx;
+ }
 
 export interface IBlockValue {
   proof: IProofValue;
   content: IContentValue;
-  txs: ITxValue[];
+  coinbase?: ITxValue;
 }
 
-export type IBlockData = [IProofData, IContentData];
+/**
+ * Compact representation of a Block value.
+ */
+export type IBlockData = [IProofData, IContentData, ITxData?];
 
+/**
+ * An even smaller representation of a Block as pointers to store within Chain objects held in memory.
+ */
 export interface ICompactBlockValue {
   proofHash: Uint8Array;
   contentHash: Uint8Array;
 }
 
+/**
+ * Compact representation of a compact Block.
+ */
 export type ICompactBlockData = [Uint8Array, Uint8Array];
 
+/**
+ * A canonical (non-malleable / unique) Proof of storage in response to a ledger challenge.
+ */
 export interface IProofValue {
   previousLevelHash: Uint8Array; // hash of all proofs in the previous level (32 bytes)
   previousProofHash: Uint8Array;  // hash of the last unconfirmed proof seen
@@ -36,27 +68,45 @@ export interface IProofValue {
   signature: Uint8Array; // detached signature of this proof with node's private key (32 bytes)
 }
 
+/**
+ * Compact representation of a Proof value.
+ */
 export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, number, Uint8Array, Uint8Array, Uint8Array ];
 
+/**
+ * The malleable content associated with a block that includes a summary of Tx ids, not the Tx values themselves.
+ */
 export interface IContentValue {
   parentContentHash: Uint8Array; // hash of parent content block (32 bytes)
   proofHash: Uint8Array; // hash of proof for this block (32 bytes)
-  payload: Uint8Array[]; // all txs in this block (for now)
+  payload: Uint8Array[]; // all tx ids in this block
 }
 
+/**
+ * Compact representation of a Content value.
+ */
 export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 
+/**
+ * The value of a simple credit Tx.
+ */
 export interface ITxValue {
   sender: Uint8Array; // public key of sender
   receiver: Uint8Array; // address of receiver
   amount: number; // number of credits being sent
   nonce: number; // auto incrementing tx nonce for the sender
-  timestamp: number; // create at unix timestamp
+  timestamp: number; // create a unix timestamp
   signature: Uint8Array; // detached signature with sender's private key
 }
 
+/**
+ * Compact representation of a Tx value.
+ */
 export type ITxData = [ Uint8Array, Uint8Array, number, number, number, Uint8Array ];
 
+/**
+ * The solution to a block challenge returned from Farm, used to create a Proof.
+ */
 export interface ISolution {
   pieceHash: Uint8Array;
   encodedChunk: Uint8Array;
@@ -64,28 +114,51 @@ export interface ISolution {
   pieceProof: Uint8Array;
 }
 
-export interface IPieceData {
+/**
+ * Wrapper for Piece and all metadata.
+ */
+export interface IPiece {
   piece: Uint8Array;
-  proof: Uint8Array;
-  index: number;
+  data: IPieceData;
 }
 
-export interface IEncodingData {
+/**
+ * Wrapper for Encoding and all metadata.
+ */
+export interface IEncoding {
   encoding: Uint8Array;
-  proof: Uint8Array;
-  index: number;
+  data: IPieceData;
 }
 
+/**
+ * Metadata associated with Piece required for Proofs and reconstructing Levels.
+ */
+export interface IPieceData {
+  pieceHash: Uint8Array;
+  levelIndex: number;
+  pieceIndex: number;
+  proof: Uint8Array;
+}
+
+/**
+ * A BLS public and private key pair.
+ */
 export interface IKeyPair {
   binaryPrivateKey: Uint8Array;
   binaryPublicKey: Uint8Array;
 }
 
+/**
+ * The metadata associated with a merkle tree of some Piece set.
+ */
 export interface IMerkleData {
   root: Uint8Array;
   proofs: Uint8Array[];
 }
 
+/**
+ * The metadata associated with a Plot within the Farm.
+ */
 export interface IPlotData {
   address: Uint8Array;
   offset: number;

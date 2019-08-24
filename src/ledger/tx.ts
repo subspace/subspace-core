@@ -4,6 +4,7 @@ import * as crypto from '../crypto/crypto';
 import { ITxData, ITxValue } from '../main/interfaces';
 import { bin2Hex, num2Bin, num2Date } from '../utils/utils';
 
+
 /**
  * Record class for credit transactions used to transfer funds between accounts on the ledger.
  */
@@ -12,17 +13,17 @@ export class Tx {
   /**
    * Returns a new signed tx instance given correct inputs.
    */
-  public static create(sender: Uint8Array, receiver: Uint8Array, amount: number, nonce: number, key: Uint8Array): Tx {
+  public static create(senderPublicKey: Uint8Array, receiverPublicKey: Uint8Array, amount: number, nonce: number, senderPrivateKey: Uint8Array): Tx {
     const txValue: ITxValue = {
-      sender,
-      receiver,
+      sender: senderPublicKey,
+      receiver: receiverPublicKey,
       amount,
       nonce,
       timestamp: Date.now(),
       signature: new Uint8Array(),
     };
     const tx = new Tx(txValue);
-    tx.sign(key);
+    tx.sign(senderPrivateKey);
     tx.setKey();
     return tx;
   }
@@ -30,8 +31,8 @@ export class Tx {
   /**
    * Creates a coinbase tx to reward the farmer who creates a new block.
    */
-  public static createCoinbase(creator: Uint8Array, amount: number, nonce: number, key: Uint8Array): Tx {
-    return Tx.create(new Uint8Array(), creator, amount, nonce, key);
+  public static createCoinbase(creatorPublicKey: Uint8Array, amount: number, nonce: number, creatorPrivateKey: Uint8Array): Tx {
+    return Tx.create(new Uint8Array(), creatorPublicKey, amount, nonce, creatorPrivateKey);
   }
 
   /**

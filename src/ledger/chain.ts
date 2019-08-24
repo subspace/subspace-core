@@ -8,11 +8,13 @@ export class Chain {
   private _index: number;
   private _height: number;
   private _blocks: Set<Uint8Array>;
+  private _head: Uint8Array;
 
   constructor(index: number) {
     this._index = index;
     this._height = 0;
     this._blocks = new Set();
+    this._head = new Uint8Array();
   }
 
   /**
@@ -36,6 +38,10 @@ export class Chain {
     return this._blocks.size;
   }
 
+  get head(): Uint8Array {
+    return this._head;
+  }
+
   /**
    * Returns an array of pending block ids for this chain, in insertion order (oldest first).
    */
@@ -56,20 +62,20 @@ export class Chain {
   public addBlock(id: Uint8Array): void {
     this._blocks.add(id);
     this._height += 1;
+    this._head = id;
   }
 
   /**
    * Removes a block and all of its children blocks from the chain. Called on a chain fork.
    */
-  public removeBlocks(startId: Uint8Array): void {
-    if (this.hasBlock(startId)) {
-      let startPoint = false;
-      for (const id of this.blocks) {
-        if (!startPoint) {
-          if (id === startId) {
-            startPoint = true;
-            this._blocks.delete(id);
-            this._height -= 1;
+  public removeBlocks(stopId: Uint8Array): void {
+    if (this.hasBlock(stopId)) {
+      let stopPoint = false;
+      for (const id of this.blocks.reverse()) {
+        if (!stopPoint) {
+          if (id === stopId) {
+            stopPoint = true;
+            this._head = stopId;
           }
         } else {
           this._blocks.delete(id);

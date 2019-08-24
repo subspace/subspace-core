@@ -1,6 +1,6 @@
-import * as os from "os";
 // import BrowserAdapter from './BrowserAdapter';
 import IAdapter from './IAdapter';
+import MemoryAdapter from './MemoryAdapter';
 import RocksAdapter from './RocksAdapter';
 
 // ToDo
@@ -32,8 +32,11 @@ export class Storage {
       case 'rocks':
         this.adapter = new RocksAdapter(path);
         break;
+      case 'memory':
+        this.adapter = new MemoryAdapter();
+        break;
       default:
-        throw new Error('Wrong adapter name, supported adapters: browser, rocks');
+        throw new Error('Wrong adapter name, supported adapters: browser, memory, rocks');
     }
   }
 

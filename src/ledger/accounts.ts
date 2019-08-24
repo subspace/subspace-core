@@ -65,7 +65,7 @@ export class Account {
   public printBalanceOfAccounts(): void {
     [...this.accounts.entries()]
       .map((entry) => {
-        console.log(`Account ${bin2Hex(entry[0])} has balance ${entry[1]} credits`);
+        console.log(`Account ${bin2Hex(entry[0])} has a balance of ${entry[1]} credits`);
       });
   }
 }

@@ -1,64 +1,51 @@
-import { Content } from './content';
-import { Proof } from './proof';
-import { Tx } from './tx';
-
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { IBlockData, IContentData, IContentValue, IProofData, IProofValue } from '../main/interfaces';
+import { IBlockData, IBlockValue, ICompactBlockData, IFullBlockValue } from '../main/interfaces';
 import { bin2Hex } from '../utils/utils';
-
-interface IBlockValue {
-  proof: Proof;
-  content: Content;
-  txs: Tx[];
-}
-
-// generate a full genesis block instead of proof and content separately
-// generate a single full block with proof, content, and tx on solve
-// send full blocks back and forth via RPC
-// eventually handle compact blocks
-// generate a skeleton block for tracking pending blocks
-
-// meta block -> for internal pointers (chain and pending blocks)
-  // proof id
-  // content id
-  // chain assigned to
-  // level for that chain
-// compact block -> for efficient transmission over the network
-// full block -> for convenience and inefficient transmission over the network
+import { Content } from './content';
+import { Proof } from './proof';
+import { Tx } from './tx';
 
 export class Block {
 
   public static createGenesisBlock(previousProofHash: Uint8Array, parentContentHash: Uint8Array): Block {
     const genesisProof = Proof.createGenesisProof(previousProofHash);
     const genesisContent = Content.createGenesisContent(parentContentHash);
-    const genesisBlockValue: IBlockValue = {
+    const genesisBlockValue: IFullBlockValue = {
       proof: genesisProof,
       content: genesisContent,
-      txs: [],
     };
     return new Block(genesisBlockValue);
   }
 
-  // public static create(proof: Proof, parentContentHash: Uint8Array, tx: Tx[]): void {
-  //   return;
-  // }
+  public static create(
+    proof: Proof,
+    parentContentHash: Uint8Array,
+    txIds: Uint8Array[],
+    coinbase: Tx,
+  ): Block {
+    const content = Content.create(parentContentHash, proof.key, txIds);
+    const fullBlockValue: IFullBlockValue = {
+      proof,
+      content,
+      coinbase,
+    };
+    return new Block(fullBlockValue);
+  }
 
-  // public static load(blockData: IBlockData): Block {
-  //   const blockValue: IBlockValue = {
-  //     proof: Proof
-  //   };
-  //   const content = new Content(contentValue);
-  //   content.setKey();
-  //   return content;
-  // }
+  public static load(blockData: IBlockData): Block {
+    const proof = Proof.load(blockData[0]);
+    const content = Content.load(blockData[1]);
+    const fullBlockValue: IFullBlockValue = { proof, content };
+    return new Block(fullBlockValue);
+  }
 
   private _key: Uint8Array;
-  private _value: IBlockValue;
+  private _value: IFullBlockValue;
 
-  constructor(value: IBlockValue) {
+  constructor(value: IFullBlockValue) {
     this._value = value;
     this._key = this.setKey();
   }
@@ -67,16 +54,35 @@ export class Block {
     return this._key;
   }
 
-  get value(): IBlockValue {
+  get value(): IFullBlockValue {
     return this._value;
   }
 
+  // convert to bytes for encoding as part of a level
   public toBytes(): Uint8Array {
     return Buffer.concat([
       this._value.proof.toBytes(),
       this._value.content.toBytes(),
-      ...this._value.txs.map((tx) => tx.toBytes()),
     ]);
+  }
+
+  public toData(): IBlockData {
+    return [
+      this._value.proof.toData(),
+      this._value.content.toData(),
+      this._value.coinbase ? this._value.coinbase.toData() : undefined,
+    ];
+  }
+
+  public toCompactData(): ICompactBlockData {
+    return [
+      this._value.proof.key,
+      this._value.content.key,
+    ];
+  }
+
+  public isValid(): boolean {
+    return true;
   }
 
   private setKey(): Uint8Array {

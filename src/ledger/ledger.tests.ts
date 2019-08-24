@@ -41,6 +41,8 @@ const fromContent = Content.load(contentData);
 console.log(content.print());
 fromContent.toData();
 
+// block tests ...
+
 // state tests
 const previousStateHash = crypto.randomBytes(32);
 const indexPiece = crypto.randomBytes(32);
@@ -51,3 +53,7 @@ const stateData = state.toData();
 const fromState = State.load(stateData);
 console.log(state.print());
 fromState.toData();
+
+// create genesis level
+
+// encode level

@@ -79,8 +79,8 @@ const storageTest = (storage: Storage) => {
   });
 };
 
-const rocksStorage =  new Storage('rocks', 'storage');
-storageTest(rocksStorage);
+storageTest(new Storage('rocks', 'storage'));
+storageTest(new Storage('memory', 'storage'));
 
 // const browserStorage = new Storage('browser');
 // storageTest(browserStorage);
