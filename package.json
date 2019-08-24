@@ -14,9 +14,10 @@
     "browser-minify": "terser --compress --mangle -- app/web/bundle.js > app/web/bundle.min.js",
     "gen-docs": "typedoc --out docs/ src/ --ignoreCompilerErrors",
     "clean": "rm -rf dist",
+    "clear-data": "rm -rf data && mkdir data",
     "compile": "tsc -b",
     "lint": "tslint --project .",
-    "test": "jest --verbose",
+    "test": "npm run clear-data && jest --verbose",
     "build-and-publish": "npm run build && npm publish"
   },
   "repository": {

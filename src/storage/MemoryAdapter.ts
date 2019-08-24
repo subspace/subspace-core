@@ -1,4 +1,3 @@
-// TODO: Fix typings here
 // @ts-ignore
 import IAdapter from './IAdapter';
 

@@ -23,6 +23,7 @@ import { Tx } from './tx';
   // Refactor Level into a separate class
   // handle tx fees
   // handle validation where one farmer computes the next level and adds pieces before another
+  // enforce a maximum block size?
 
 // Basic Modes
   // do I store the chain data (full node)
@@ -178,7 +179,7 @@ export class Ledger extends EventEmitter {
     // prepend each record with its length
     let levelData = new Uint8Array();
     for (const record of levelRecords) {
-      levelData = Buffer.concat([num2Bin(record.length), record]);
+      levelData = Buffer.concat([levelData, num2Bin(record.length), record]);
     }
 
     // encode level and generate the piece set

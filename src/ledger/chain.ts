@@ -1,5 +1,9 @@
 // tslint:disable: variable-name
 
+// ToDo
+  // has() will not work, need to implement array-map-set
+  // treat the chain as a tree not a set
+
 /**
  * An in-memory object that tracks the pending state of a chain on the ledger.
  */

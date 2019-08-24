@@ -1,4 +1,3 @@
-// tslint:disable: no-console
 // tslint:disable: object-literal-sort-keys
 
 import * as codes from '../codes/codes';
@@ -62,60 +61,58 @@ test('mem-plot', async () => {
   }
 });
 
-// test('disk-plot', async () => {
-//   const farm = await Farm.init('rocks', 'disk-db');
-//   const key = crypto.randomBytes(32);
-//   const data = crypto.randomBytes(520191);
-//   const paddedData = codes.padLevel(data);
-//   const encodedData = await codes.erasureCodeLevel(paddedData);
-//   const pieceSet = codes.sliceLevel(encodedData);
-//   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
-//   const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
-//   const pieces: IPiece[] = [];
-//   for (let i = 0; i < pieceSet.length; ++i) {
-//     pieces[i] = {
-//       piece: pieceSet[i],
-//       data: {
-//         pieceHash: pieceHashes[i],
-//         levelIndex: 0,
-//         pieceIndex: i,
-//         proof: proofs[i],
-//       },
-//     };
-//   }
+test('disk-plot', async () => {
+  const farm = await Farm.init('rocks', 'disk-db');
+  const key = crypto.randomBytes(32);
+  const data = crypto.randomBytes(520191);
+  const paddedData = codes.padLevel(data);
+  const encodedData = await codes.erasureCodeLevel(paddedData);
+  const pieceSet = codes.sliceLevel(encodedData);
+  const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
+  const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
+  const pieces: IPiece[] = [];
+  for (let i = 0; i < pieceSet.length; ++i) {
+    pieces[i] = {
+      piece: pieceSet[i],
+      data: {
+        pieceHash: pieceHashes[i],
+        levelIndex: 0,
+        pieceIndex: i,
+        proof: proofs[i],
+      },
+    };
+  }
 
-//   // bulk add
-//   await farm.initPlot(key, pieces);
+  // bulk add
+  await farm.initPlot(key, pieces);
 
-//   // get closest
-//   const target = crypto.randomBytes(32);
-//   console.log(target);
-//   const closestPiece = await farm.getClosestPiece(target);
-//   const closestEncoding = await farm.getClosestEncoding(target);
-//   console.log(closestPiece, closestEncoding);
-//   if (closestPiece && closestEncoding) {
-//     expect(pieceSet).toContainEqual(closestPiece.piece);
-//     expect(codes.decodePiece(closestEncoding.encoding, key).toString()).toBe(closestPiece.piece.toString());
-//   } else {
-//     fail(true);
-//   }
+  // get closest
+  const target = crypto.randomBytes(32);
+  const closestPiece = await farm.getClosestPiece(target);
+  const closestEncoding = await farm.getClosestEncoding(target);
+  if (closestPiece && closestEncoding) {
+    expect(pieceSet).toContainEqual(closestPiece.piece);
+    expect(codes.decodePiece(closestEncoding.encoding, key).toString()).toBe(closestPiece.piece.toString());
+  } else {
+    fail(true);
+  }
 
-//   // get exact
-//   const pieceId = pieceHashes[0];
-//   const exactPiece = await farm.getExactPiece(pieceId);
-//   const exactEncoding = await farm.getExactEncoding(pieceId);
-//   if (exactPiece && exactEncoding) {
-//     expect(pieceSet).toContainEqual(exactPiece.piece);
-//     expect(codes.decodePiece(exactEncoding.encoding, key).toString()).toBe(exactPiece.piece.toString());
-//   } else {
-//     fail(true);
-//   }
+  // get exact
+  const pieceId = pieceHashes[0];
+  const exactPiece = await farm.getExactPiece(pieceId);
+  const exactEncoding = await farm.getExactEncoding(pieceId);
+  if (exactPiece && exactEncoding) {
+    expect(pieceSet).toContainEqual(exactPiece.piece);
+    expect(codes.decodePiece(exactEncoding.encoding, key).toString()).toBe(exactPiece.piece.toString());
+  } else {
+    fail(true);
+  }
 
-//   // test delete
-//   await farm.removePiece(pieceId);
-//   const exactPiece1 = await farm.getExactPiece(pieceId);
-//   const exactEncoding1 = await farm.getExactEncoding(pieceId);
-//   if (exactPiece1 || exactEncoding1) {
-//     fail(true);
-//   }
-// });
+  // test delete
+  await farm.removePiece(pieceId);
+  const exactPiece1 = await farm.getExactPiece(pieceId);
+  const exactEncoding1 = await farm.getExactEncoding(pieceId);
+  if (exactPiece1 || exactEncoding1) {
+    fail(true);
+  }
+});

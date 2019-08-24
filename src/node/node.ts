@@ -151,7 +151,7 @@ export class Node {
     this.getOrCreateAddress();
     const pieceSet = await this.ledger.createGenesisLevel(chainCount);
     for (const piece of pieceSet) {
-      this.farm.addPiece(piece.piece, piece.data);
+      await this.farm.addPiece(piece.piece, piece.data);
     }
 
     // start a farming evaluation loop

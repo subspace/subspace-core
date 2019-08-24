@@ -1,6 +1,10 @@
 // tslint:disable: no-console
 import { bin2Hex } from '../utils/utils';
 
+// ToDo
+  // persist to disk
+  // how big can this get in memory: 400 MB per 10M accounts
+
 /**
  * Manages the credit balance of all accounts on the ledger.
  */

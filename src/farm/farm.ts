@@ -30,7 +30,7 @@ export class Farm {
     if (mode === 'mem-db') {
       adapter = 'memory';
     }
-    const storage = new Storage(adapter, `farm/${mode}`);
+    const storage = new Storage(adapter, `farm-${mode}`);
     const diskPlot = new Storage(adapter, 'plot');
     const farm = new Farm(storage, diskPlot, mode);
     return farm;
@@ -68,7 +68,7 @@ export class Farm {
         this.memPlot.set(this.pieceOffset, encodedPiece);
         break;
       case Farm.MODE_DISK_DB:
-        await this.storage.put(num2Bin(this.pieceOffset), encodedPiece);
+        await this.diskPlot.put(num2Bin(this.pieceOffset), encodedPiece);
         break;
     }
 
@@ -182,7 +182,7 @@ export class Farm {
           this.memPlot.delete(offset);
           break;
         case Farm.MODE_DISK_DB:
-          await this.storage.del(num2Bin(offset));
+          await this.diskPlot.del(num2Bin(offset));
           break;
       }
       this.memTree.removeNode(pieceId);
