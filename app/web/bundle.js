@@ -332,7 +332,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
             if (mode === 'mem-db') {
                 adapter = 'memory';
             }
-            const storage = new storage_1.Storage(adapter, `farm/${mode}`);
+            const storage = new storage_1.Storage(adapter, `farm-${mode}`);
             const diskPlot = new storage_1.Storage(adapter, 'plot');
             const farm = new Farm(storage, diskPlot, mode);
             return farm;
@@ -348,7 +348,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
                     this.memPlot.set(this.pieceOffset, encodedPiece);
                     break;
                 case Farm.MODE_DISK_DB:
-                    await this.storage.put(utils_1.num2Bin(this.pieceOffset), encodedPiece);
+                    await this.diskPlot.put(utils_1.num2Bin(this.pieceOffset), encodedPiece);
                     break;
             }
             this.memTree.addNode(pieceData.pieceHash, this.pieceOffset);
@@ -456,7 +456,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
                         this.memPlot.delete(offset);
                         break;
                     case Farm.MODE_DISK_DB:
-                        await this.storage.del(utils_1.num2Bin(offset));
+                        await this.diskPlot.del(utils_1.num2Bin(offset));
                         break;
                 }
                 this.memTree.removeNode(pieceId);
@@ -525,6 +525,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     Object.defineProperty(exports, "__esModule", { value: true });
     // tslint:disable: no-console
     const utils_1 = require("../utils/utils");
+    // ToDo
+    // persist to disk
+    // how big can this get in memory: 400 MB per 10M accounts
     /**
      * Manages the credit balance of all accounts on the ledger.
      */
@@ -692,6 +695,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    // ToDo
+    // has() will not work, need to implement array-map-set
+    // treat the chain as a tree not a set
     /**
      * An in-memory object that tracks the pending state of a chain on the ledger.
      */
@@ -909,6 +915,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     // Refactor Level into a separate class
     // handle tx fees
     // handle validation where one farmer computes the next level and adds pieces before another
+    // enforce a maximum block size?
     // Basic Modes
     // do I store the chain data (full node)
     // do I store the piece set (plotting)
@@ -1035,7 +1042,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
             // prepend each record with its length
             let levelData = new Uint8Array();
             for (const record of levelRecords) {
-                levelData = Buffer.concat([utils_1.num2Bin(record.length), record]);
+                levelData = Buffer.concat([levelData, utils_1.num2Bin(record.length), record]);
             }
             // encode level and generate the piece set
             const paddedLevel = codes.padLevel(levelData);
@@ -1876,7 +1883,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
             this.getOrCreateAddress();
             const pieceSet = await this.ledger.createGenesisLevel(chainCount);
             for (const piece of pieceSet) {
-                this.farm.addPiece(piece.piece, piece.data);
+                await this.farm.addPiece(piece.piece, piece.data);
             }
             // start a farming evaluation loop
             while (this.isFarming) {
