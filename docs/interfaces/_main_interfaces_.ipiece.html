@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>IStateValue | @subspace/subspace-core</title>
+	<title>IPiece | @subspace/subspace-core</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -59,10 +59,10 @@
 					<a href="../modules/_main_interfaces_.html">&quot;main/interfaces&quot;</a>
 				</li>
 				<li>
-					<a href="_main_interfaces_.istatevalue.html">IStateValue</a>
+					<a href="_main_interfaces_.ipiece.html">IPiece</a>
 				</li>
 			</ul>
-			<h1>Interface IStateValue</h1>
+			<h1>Interface IPiece</h1>
 		</div>
 	</div>
 </header>
@@ -72,7 +72,7 @@
 			<section class="tsd-panel tsd-comment">
 				<div class="tsd-comment tsd-typography">
 					<div class="lead">
-						<p>Summary of all Blocks in a Level, compressed into a State Block that is tracked within a single State Chain by light clients.</p>
+						<p>Wrapper for Piece and all metadata.</p>
 					</div>
 				</div>
 			</section>
@@ -80,7 +80,7 @@
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">IStateValue</span>
+						<span class="target">IPiece</span>
 					</li>
 				</ul>
 			</section>
@@ -91,13 +91,8 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#difficulty" class="tsd-kind-icon">difficulty</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#indexpiece" class="tsd-kind-icon">index<wbr>Piece</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#levelhash" class="tsd-kind-icon">level<wbr>Hash</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#pieceroot" class="tsd-kind-icon">piece<wbr>Root</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#previousstatehash" class="tsd-kind-icon">previous<wbr>State<wbr>Hash</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#timestamp" class="tsd-kind-icon">timestamp</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.istatevalue.html#version" class="tsd-kind-icon">version</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.ipiece.html#data" class="tsd-kind-icon">data</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.ipiece.html#piece" class="tsd-kind-icon">piece</a></li>
 							</ul>
 						</section>
 					</div>
@@ -106,72 +101,22 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="difficulty" class="tsd-anchor"></a>
-					<h3>difficulty</h3>
-					<div class="tsd-signature tsd-kind-icon">difficulty<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+					<a name="data" class="tsd-anchor"></a>
+					<h3>data</h3>
+					<div class="tsd-signature tsd-kind-icon">data<span class="tsd-signature-symbol">:</span> <a href="_main_interfaces_.ipiecedata.html" class="tsd-signature-type">IPieceData</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L13">main/interfaces.ts:13</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L122">main/interfaces.ts:122</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="indexpiece" class="tsd-anchor"></a>
-					<h3>index<wbr>Piece</h3>
-					<div class="tsd-signature tsd-kind-icon">index<wbr>Piece<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
+					<a name="piece" class="tsd-anchor"></a>
+					<h3>piece</h3>
+					<div class="tsd-signature tsd-kind-icon">piece<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L15">main/interfaces.ts:15</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="levelhash" class="tsd-anchor"></a>
-					<h3>level<wbr>Hash</h3>
-					<div class="tsd-signature tsd-kind-icon">level<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L10">main/interfaces.ts:10</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="pieceroot" class="tsd-anchor"></a>
-					<h3>piece<wbr>Root</h3>
-					<div class="tsd-signature tsd-kind-icon">piece<wbr>Root<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L11">main/interfaces.ts:11</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="previousstatehash" class="tsd-anchor"></a>
-					<h3>previous<wbr>State<wbr>Hash</h3>
-					<div class="tsd-signature tsd-kind-icon">previous<wbr>State<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L9">main/interfaces.ts:9</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="timestamp" class="tsd-anchor"></a>
-					<h3>timestamp</h3>
-					<div class="tsd-signature tsd-kind-icon">timestamp<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L12">main/interfaces.ts:12</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="version" class="tsd-anchor"></a>
-					<h3>version</h3>
-					<div class="tsd-signature tsd-kind-icon">version<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L14">main/interfaces.ts:14</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L121">main/interfaces.ts:121</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -211,9 +156,21 @@
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.imerkledata.html" class="tsd-kind-icon">IMerkle<wbr>Data</a>
 					</li>
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
+				</ul>
+				<ul class="current">
+					<li class="current tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.ipiece.html" class="tsd-kind-icon">IPiece</a>
+						<ul>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_main_interfaces_.ipiece.html#data" class="tsd-kind-icon">data</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-interface">
+								<a href="_main_interfaces_.ipiece.html#piece" class="tsd-kind-icon">piece</a>
+							</li>
+						</ul>
 					</li>
+				</ul>
+				<ul class="after-current">
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.ipiecedata.html" class="tsd-kind-icon">IPiece<wbr>Data</a>
 					</li>
@@ -226,36 +183,9 @@
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.isolution.html" class="tsd-kind-icon">ISolution</a>
 					</li>
-				</ul>
-				<ul class="current">
-					<li class="current tsd-kind-interface tsd-parent-kind-external-module">
+					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.istatevalue.html" class="tsd-kind-icon">IState<wbr>Value</a>
-						<ul>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#difficulty" class="tsd-kind-icon">difficulty</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#indexpiece" class="tsd-kind-icon">index<wbr>Piece</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#levelhash" class="tsd-kind-icon">level<wbr>Hash</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#pieceroot" class="tsd-kind-icon">piece<wbr>Root</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#previousstatehash" class="tsd-kind-icon">previous<wbr>State<wbr>Hash</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#timestamp" class="tsd-kind-icon">timestamp</a>
-							</li>
-							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.istatevalue.html#version" class="tsd-kind-icon">version</a>
-							</li>
-						</ul>
 					</li>
-				</ul>
-				<ul class="after-current">
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.itxvalue.html" class="tsd-kind-icon">ITx<wbr>Value</a>
 					</li>

@@ -97,18 +97,33 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_wallet_wallet_.wallet.html#_nonce" class="tsd-kind-icon">_nonce</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#address" class="tsd-kind-icon">address</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#addresses" class="tsd-kind-icon">addresses</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#privatekey" class="tsd-kind-icon">private<wbr>Key</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#publickey" class="tsd-kind-icon">public<wbr>Key</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_wallet_wallet_.wallet.html#storage" class="tsd-kind-icon">storage</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Accessors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-get-signature tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#nonce" class="tsd-kind-icon">nonce</a></li>
 							</ul>
 						</section>
 						<section class="tsd-index-section ">
 							<h3>Methods</h3>
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#clearaddresses" class="tsd-kind-icon">clear<wbr>Addresses</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#createcoinbasetx" class="tsd-kind-icon">create<wbr>Coin<wbr>Base<wbr>Tx</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#createcredittx" class="tsd-kind-icon">create<wbr>Credit<wbr>Tx</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#createkeypair" class="tsd-kind-icon">create<wbr>Key<wbr>Pair</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#deletekeypair" class="tsd-kind-icon">delete<wbr>Key<wbr>Pair</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#getkeypair" class="tsd-kind-icon">get<wbr>Key<wbr>Pair</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_wallet_wallet_.wallet.html#incrementnonce" class="tsd-kind-icon">increment<wbr>Nonce</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_wallet_wallet_.wallet.html#loadaddresses" class="tsd-kind-icon">load<wbr>Addresses</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#setmasterkeypair" class="tsd-kind-icon">set<wbr>Master<wbr>Key<wbr>Pair</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_wallet_wallet_.wallet.html#signproof" class="tsd-kind-icon">sign<wbr>Proof</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-static"><a href="_wallet_wallet_.wallet.html#init" class="tsd-kind-icon">init</a></li>
 							</ul>
 						</section>
@@ -121,19 +136,22 @@
 					<a name="constructor" class="tsd-anchor"></a>
 					<h3>constructor</h3>
 					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">new <wbr>Wallet<span class="tsd-signature-symbol">(</span>storage<span class="tsd-signature-symbol">: </span><a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_wallet_wallet_.wallet.html" class="tsd-signature-type">Wallet</a></li>
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Wallet<span class="tsd-signature-symbol">(</span>storage<span class="tsd-signature-symbol">: </span><a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a>, nonce<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_wallet_wallet_.wallet.html" class="tsd-signature-type">Wallet</a></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L29">wallet/wallet.ts:29</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L41">wallet/wallet.ts:41</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
 									<h5>storage: <a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagDefault value">Default value</span> nonce: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> =&nbsp;0</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <a href="_wallet_wallet_.wallet.html" class="tsd-signature-type">Wallet</a></h4>
@@ -143,13 +161,53 @@
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
+					<a name="_nonce" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> _nonce</h3>
+					<div class="tsd-signature tsd-kind-icon">_nonce<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L41">wallet/wallet.ts:41</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="address" class="tsd-anchor"></a>
+					<h3>address</h3>
+					<div class="tsd-signature tsd-kind-icon">address<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L37">wallet/wallet.ts:37</a></li>
+						</ul>
+					</aside>
+				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
 					<a name="addresses" class="tsd-anchor"></a>
 					<h3>addresses</h3>
 					<div class="tsd-signature tsd-kind-icon">addresses<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Set()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L28">wallet/wallet.ts:28</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L36">wallet/wallet.ts:36</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="privatekey" class="tsd-anchor"></a>
+					<h3>private<wbr>Key</h3>
+					<div class="tsd-signature tsd-kind-icon">private<wbr>Key<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L39">wallet/wallet.ts:39</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="publickey" class="tsd-anchor"></a>
+					<h3>public<wbr>Key</h3>
+					<div class="tsd-signature tsd-kind-icon">public<wbr>Key<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L38">wallet/wallet.ts:38</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -159,9 +217,29 @@
 					<div class="tsd-signature tsd-kind-icon">storage<span class="tsd-signature-symbol">:</span> <a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L29">wallet/wallet.ts:29</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L40">wallet/wallet.ts:40</a></li>
 						</ul>
 					</aside>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Accessors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-get-signature tsd-parent-kind-class">
+					<a name="nonce" class="tsd-anchor"></a>
+					<h3>nonce</h3>
+					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> nonce<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L48">wallet/wallet.ts:48</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+					</ul>
 				</section>
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
@@ -176,7 +254,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L85">wallet/wallet.ts:85</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L120">wallet/wallet.ts:120</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -185,6 +263,65 @@
 								</div>
 							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="createcoinbasetx" class="tsd-anchor"></a>
+					<h3>create<wbr>Coin<wbr>Base<wbr>Tx</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">create<wbr>Coin<wbr>Base<wbr>Tx<span class="tsd-signature-symbol">(</span>reward<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L141">wallet/wallet.ts:141</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Creates a coinbase (block reward) tx using a farmers keys and nonce.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>reward: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="createcredittx" class="tsd-anchor"></a>
+					<h3>create<wbr>Credit<wbr>Tx</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">create<wbr>Credit<wbr>Tx<span class="tsd-signature-symbol">(</span>amount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, receiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L150">wallet/wallet.ts:150</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Creates a simple credit tx using a farmers keys and nonce.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>amount: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5>receiver: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -198,7 +335,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L38">wallet/wallet.ts:38</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L55">wallet/wallet.ts:55</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -226,7 +363,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L73">wallet/wallet.ts:73</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L108">wallet/wallet.ts:108</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -254,7 +391,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L52">wallet/wallet.ts:52</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L69">wallet/wallet.ts:69</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -273,6 +410,28 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private">
+					<a name="incrementnonce" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> increment<wbr>Nonce</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
+						<li class="tsd-signature tsd-kind-icon">increment<wbr>Nonce<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L172">wallet/wallet.ts:172</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Increments the nonce for the master address to prevent replay attacks.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private">
 					<a name="loadaddresses" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> load<wbr>Addresses</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
@@ -282,7 +441,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L95">wallet/wallet.ts:95</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L159">wallet/wallet.ts:159</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -291,6 +450,56 @@
 								</div>
 							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="setmasterkeypair" class="tsd-anchor"></a>
+					<h3>set<wbr>Master<wbr>Key<wbr>Pair</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Master<wbr>Key<wbr>Pair<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L90">wallet/wallet.ts:90</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Sets the default (master) address, private key, and public key from persistent storage.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="signproof" class="tsd-anchor"></a>
+					<h3>sign<wbr>Proof</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">sign<wbr>Proof<span class="tsd-signature-symbol">(</span>proof<span class="tsd-signature-symbol">: </span><a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L130">wallet/wallet.ts:130</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Signs a proof deliberately so as not to expose BLS Private Keys outside wallet module.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>proof: <a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a></h4>
 						</li>
 					</ul>
 				</section>
@@ -304,12 +513,12 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/wallet/wallet.ts#L21">wallet/wallet.ts:21</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/wallet/wallet.ts#L29">wallet/wallet.ts:29</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
-									<p>Returns a nee wallet instance, loading any stored keys from disk.</p>
+									<p>Returns a new wallet instance, loading any stored keys and nonce from disk.</p>
 								</div>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -345,14 +554,35 @@
 							<li class=" tsd-kind-constructor tsd-parent-kind-class">
 								<a href="_wallet_wallet_.wallet.html#constructor" class="tsd-kind-icon">constructor</a>
 							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
+								<a href="_wallet_wallet_.wallet.html#_nonce" class="tsd-kind-icon">_nonce</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#address" class="tsd-kind-icon">address</a>
+							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
 								<a href="_wallet_wallet_.wallet.html#addresses" class="tsd-kind-icon">addresses</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#privatekey" class="tsd-kind-icon">private<wbr>Key</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#publickey" class="tsd-kind-icon">public<wbr>Key</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
 								<a href="_wallet_wallet_.wallet.html#storage" class="tsd-kind-icon">storage</a>
 							</li>
+							<li class=" tsd-kind-get-signature tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#nonce" class="tsd-kind-icon">nonce</a>
+							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_wallet_wallet_.wallet.html#clearaddresses" class="tsd-kind-icon">clear<wbr>Addresses</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#createcoinbasetx" class="tsd-kind-icon">create<wbr>Coin<wbr>Base<wbr>Tx</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#createcredittx" class="tsd-kind-icon">create<wbr>Credit<wbr>Tx</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_wallet_wallet_.wallet.html#createkeypair" class="tsd-kind-icon">create<wbr>Key<wbr>Pair</a>
@@ -364,7 +594,16 @@
 								<a href="_wallet_wallet_.wallet.html#getkeypair" class="tsd-kind-icon">get<wbr>Key<wbr>Pair</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
+								<a href="_wallet_wallet_.wallet.html#incrementnonce" class="tsd-kind-icon">increment<wbr>Nonce</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
 								<a href="_wallet_wallet_.wallet.html#loadaddresses" class="tsd-kind-icon">load<wbr>Addresses</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#setmasterkeypair" class="tsd-kind-icon">set<wbr>Master<wbr>Key<wbr>Pair</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_wallet_wallet_.wallet.html#signproof" class="tsd-kind-icon">sign<wbr>Proof</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-static">
 								<a href="_wallet_wallet_.wallet.html#init" class="tsd-kind-icon">init</a>
@@ -373,6 +612,9 @@
 					</li>
 				</ul>
 				<ul class="after-current">
+					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
+						<a href="../modules/_wallet_wallet_.html#nonce_address" class="tsd-kind-icon">NONCE_<wbr>ADDRESS</a>
+					</li>
 					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
 						<a href="../modules/_wallet_wallet_.html#storage_address" class="tsd-kind-icon">STORAGE_<wbr>ADDRESS</a>
 					</li>

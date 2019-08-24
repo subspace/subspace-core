@@ -104,9 +104,14 @@
 						<section class="tsd-index-section ">
 							<h3>Methods</h3>
 							<ul class="tsd-index-list">
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#isvalid" class="tsd-kind-icon">is<wbr>Valid</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_ledger_block_.block.html#setkey" class="tsd-kind-icon">set<wbr>Key</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#tobytes" class="tsd-kind-icon">to<wbr>Bytes</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#tocompactdata" class="tsd-kind-icon">to<wbr>Compact<wbr>Data</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#todata" class="tsd-kind-icon">to<wbr>Data</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-static"><a href="_ledger_block_.block.html#create" class="tsd-kind-icon">create</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-static"><a href="_ledger_block_.block.html#creategenesisblock" class="tsd-kind-icon">create<wbr>Genesis<wbr>Block</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-static"><a href="_ledger_block_.block.html#load" class="tsd-kind-icon">load</a></li>
 							</ul>
 						</section>
 					</div>
@@ -118,19 +123,19 @@
 					<a name="constructor" class="tsd-anchor"></a>
 					<h3>constructor</h3>
 					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">new <wbr>Block<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><a href="../interfaces/_ledger_block_.iblockvalue.html" class="tsd-signature-type">IBlockValue</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></li>
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Block<span class="tsd-signature-symbol">(</span>value<span class="tsd-signature-symbol">: </span><a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L59">ledger/block.ts:59</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L46">ledger/block.ts:46</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
-									<h5>value: <a href="../interfaces/_ledger_block_.iblockvalue.html" class="tsd-signature-type">IBlockValue</a></h5>
+									<h5>value: <a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></h4>
@@ -146,17 +151,17 @@
 					<div class="tsd-signature tsd-kind-icon">_key<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L58">ledger/block.ts:58</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L45">ledger/block.ts:45</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="_value" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> _value</h3>
-					<div class="tsd-signature tsd-kind-icon">_value<span class="tsd-signature-symbol">:</span> <a href="../interfaces/_ledger_block_.iblockvalue.html" class="tsd-signature-type">IBlockValue</a></div>
+					<div class="tsd-signature tsd-kind-icon">_value<span class="tsd-signature-symbol">:</span> <a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L59">ledger/block.ts:59</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L46">ledger/block.ts:46</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -173,7 +178,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L66">ledger/block.ts:66</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L53">ledger/block.ts:53</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
@@ -184,22 +189,39 @@
 					<a name="value" class="tsd-anchor"></a>
 					<h3>value</h3>
 					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> value<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/_ledger_block_.iblockvalue.html" class="tsd-signature-type">IBlockValue</a></li>
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> value<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L70">ledger/block.ts:70</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L57">ledger/block.ts:57</a></li>
 								</ul>
 							</aside>
-							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_ledger_block_.iblockvalue.html" class="tsd-signature-type">IBlockValue</a></h4>
+							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a></h4>
 						</li>
 					</ul>
 				</section>
 			</section>
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Methods</h2>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="isvalid" class="tsd-anchor"></a>
+					<h3>is<wbr>Valid</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">is<wbr>Valid<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L84">ledger/block.ts:84</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
+						</li>
+					</ul>
+				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private">
 					<a name="setkey" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> set<wbr>Key</h3>
@@ -210,7 +232,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L82">ledger/block.ts:82</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L88">ledger/block.ts:88</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
@@ -227,10 +249,76 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L74">ledger/block.ts:74</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L62">ledger/block.ts:62</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="tocompactdata" class="tsd-anchor"></a>
+					<h3>to<wbr>Compact<wbr>Data</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">to<wbr>Compact<wbr>Data<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../modules/_main_interfaces_.html#icompactblockdata" class="tsd-signature-type">ICompactBlockData</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L77">ledger/block.ts:77</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <a href="../modules/_main_interfaces_.html#icompactblockdata" class="tsd-signature-type">ICompactBlockData</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="todata" class="tsd-anchor"></a>
+					<h3>to<wbr>Data</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">to<wbr>Data<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../modules/_main_interfaces_.html#iblockdata" class="tsd-signature-type">IBlockData</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L69">ledger/block.ts:69</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-returns-title">Returns <a href="../modules/_main_interfaces_.html#iblockdata" class="tsd-signature-type">IBlockData</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-static">
+					<a name="create" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> create</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-static">
+						<li class="tsd-signature tsd-kind-icon">create<span class="tsd-signature-symbol">(</span>proof<span class="tsd-signature-symbol">: </span><a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a>, parentContentHash<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, txIds<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span>, coinbase<span class="tsd-signature-symbol">: </span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L23">ledger/block.ts:23</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>proof: <a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a></h5>
+								</li>
+								<li>
+									<h5>parentContentHash: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+								<li>
+									<h5>txIds: <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span></h5>
+								</li>
+								<li>
+									<h5>coinbase: <a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></h4>
 						</li>
 					</ul>
 				</section>
@@ -244,7 +332,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/ledger/block.ts#L34">ledger/block.ts:34</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L13">ledger/block.ts:13</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -254,6 +342,29 @@
 								</li>
 								<li>
 									<h5>parentContentHash: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-static">
+					<a name="load" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagStatic">Static</span> load</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-static">
+						<li class="tsd-signature tsd-kind-icon">load<span class="tsd-signature-symbol">(</span>blockData<span class="tsd-signature-symbol">: </span><a href="../modules/_main_interfaces_.html#iblockdata" class="tsd-signature-type">IBlockData</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/ledger/block.ts#L38">ledger/block.ts:38</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>blockData: <a href="../modules/_main_interfaces_.html#iblockdata" class="tsd-signature-type">IBlockData</a></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></h4>
@@ -295,22 +406,34 @@
 							<li class=" tsd-kind-get-signature tsd-parent-kind-class">
 								<a href="_ledger_block_.block.html#value" class="tsd-kind-icon">value</a>
 							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ledger_block_.block.html#isvalid" class="tsd-kind-icon">is<wbr>Valid</a>
+							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
 								<a href="_ledger_block_.block.html#setkey" class="tsd-kind-icon">set<wbr>Key</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_ledger_block_.block.html#tobytes" class="tsd-kind-icon">to<wbr>Bytes</a>
 							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ledger_block_.block.html#tocompactdata" class="tsd-kind-icon">to<wbr>Compact<wbr>Data</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ledger_block_.block.html#todata" class="tsd-kind-icon">to<wbr>Data</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-static">
+								<a href="_ledger_block_.block.html#create" class="tsd-kind-icon">create</a>
+							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-static">
 								<a href="_ledger_block_.block.html#creategenesisblock" class="tsd-kind-icon">create<wbr>Genesis<wbr>Block</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-static">
+								<a href="_ledger_block_.block.html#load" class="tsd-kind-icon">load</a>
 							</li>
 						</ul>
 					</li>
 				</ul>
 				<ul class="after-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module tsd-is-not-exported">
-						<a href="../interfaces/_ledger_block_.iblockvalue.html" class="tsd-kind-icon">IBlock<wbr>Value</a>
-					</li>
 				</ul>
 			</nav>
 		</div>

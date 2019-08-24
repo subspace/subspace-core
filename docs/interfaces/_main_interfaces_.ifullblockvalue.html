@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<title>IEncodingData | @subspace/subspace-core</title>
+	<title>IFullBlockValue | @subspace/subspace-core</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="../assets/css/main.css">
@@ -59,21 +59,28 @@
 					<a href="../modules/_main_interfaces_.html">&quot;main/interfaces&quot;</a>
 				</li>
 				<li>
-					<a href="_main_interfaces_.iencodingdata.html">IEncodingData</a>
+					<a href="_main_interfaces_.ifullblockvalue.html">IFullBlockValue</a>
 				</li>
 			</ul>
-			<h1>Interface IEncodingData</h1>
+			<h1>Interface IFullBlockValue</h1>
 		</div>
 	</div>
 </header>
 <div class="container container-main">
 	<div class="row">
 		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-comment">
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>A logical Block contains a Proof, Content, and an array of Txs.</p>
+					</div>
+				</div>
+			</section>
 			<section class="tsd-panel tsd-hierarchy">
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
 					<li>
-						<span class="target">IEncodingData</span>
+						<span class="target">IFullBlockValue</span>
 					</li>
 				</ul>
 			</section>
@@ -84,9 +91,9 @@
 						<section class="tsd-index-section ">
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iencodingdata.html#encoding" class="tsd-kind-icon">encoding</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iencodingdata.html#index" class="tsd-kind-icon">index</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iencodingdata.html#proof" class="tsd-kind-icon">proof</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.ifullblockvalue.html#coinbase" class="tsd-kind-icon">coinbase</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.ifullblockvalue.html#content" class="tsd-kind-icon">content</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.ifullblockvalue.html#proof" class="tsd-kind-icon">proof</a></li>
 							</ul>
 						</section>
 					</div>
@@ -95,32 +102,32 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Properties</h2>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="encoding" class="tsd-anchor"></a>
-					<h3>encoding</h3>
-					<div class="tsd-signature tsd-kind-icon">encoding<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
+					<a name="coinbase" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagOptional">Optional</span> coinbase</h3>
+					<div class="tsd-signature tsd-kind-icon">coinbase<span class="tsd-signature-symbol">:</span> <a href="../classes/_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L74">main/interfaces.ts:74</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L30">main/interfaces.ts:30</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="index" class="tsd-anchor"></a>
-					<h3>index</h3>
-					<div class="tsd-signature tsd-kind-icon">index<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
+					<a name="content" class="tsd-anchor"></a>
+					<h3>content</h3>
+					<div class="tsd-signature tsd-kind-icon">content<span class="tsd-signature-symbol">:</span> <a href="../classes/_ledger_content_.content.html" class="tsd-signature-type">Content</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L76">main/interfaces.ts:76</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L29">main/interfaces.ts:29</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
 					<a name="proof" class="tsd-anchor"></a>
 					<h3>proof</h3>
-					<div class="tsd-signature tsd-kind-icon">proof<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
+					<div class="tsd-signature tsd-kind-icon">proof<span class="tsd-signature-symbol">:</span> <a href="../classes/_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L75">main/interfaces.ts:75</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L28">main/interfaces.ts:28</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -148,19 +155,22 @@
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.icontentvalue.html" class="tsd-kind-icon">IContent<wbr>Value</a>
 					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
+						<a href="_main_interfaces_.iencoding.html" class="tsd-kind-icon">IEncoding</a>
+					</li>
 				</ul>
 				<ul class="current">
 					<li class="current tsd-kind-interface tsd-parent-kind-external-module">
-						<a href="_main_interfaces_.iencodingdata.html" class="tsd-kind-icon">IEncoding<wbr>Data</a>
+						<a href="_main_interfaces_.ifullblockvalue.html" class="tsd-kind-icon">IFull<wbr>Block<wbr>Value</a>
 						<ul>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.iencodingdata.html#encoding" class="tsd-kind-icon">encoding</a>
+								<a href="_main_interfaces_.ifullblockvalue.html#coinbase" class="tsd-kind-icon">coinbase</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.iencodingdata.html#index" class="tsd-kind-icon">index</a>
+								<a href="_main_interfaces_.ifullblockvalue.html#content" class="tsd-kind-icon">content</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.iencodingdata.html#proof" class="tsd-kind-icon">proof</a>
+								<a href="_main_interfaces_.ifullblockvalue.html#proof" class="tsd-kind-icon">proof</a>
 							</li>
 						</ul>
 					</li>
@@ -171,6 +181,9 @@
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.imerkledata.html" class="tsd-kind-icon">IMerkle<wbr>Data</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
+						<a href="_main_interfaces_.ipiece.html" class="tsd-kind-icon">IPiece</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.ipiecedata.html" class="tsd-kind-icon">IPiece<wbr>Data</a>

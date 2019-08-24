@@ -12,10 +12,10 @@ program
   .command('run')
   .action(async () => {
     const node = await Node.init('rocks', 'mem-db');
-    await node.createId();
-    if (node.id) {
-      const id = Buffer.from(node.id).toString('hex');
-      console.log(`Created new node with id: ${id.substring(0, 8)}`);
+    await node.getOrCreateAddress();
+    if (node.wallet.address) {
+      const address = Buffer.from(node.wallet.address).toString('hex');
+      console.log(`Created new node with address: ${address.substring(0, 8)}`);
     }
   });
 

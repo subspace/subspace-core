@@ -78,8 +78,10 @@
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#bin2json" class="tsd-kind-icon">bin2JSON</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#bin2num" class="tsd-kind-icon">bin2<wbr>Num</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#clone" class="tsd-kind-icon">clone</a></li>
+								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#measureproximity" class="tsd-kind-icon">measure<wbr>Proximity</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#num2bin" class="tsd-kind-icon">num2<wbr>Bin</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#num2date" class="tsd-kind-icon">num2<wbr>Date</a></li>
+								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#str2bin" class="tsd-kind-icon">str2<wbr>Bin</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#wait" class="tsd-kind-icon">wait</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-external-module"><a href="_utils_utils_.html#xoruint8array" class="tsd-kind-icon">xor<wbr>Uint8<wbr>Array</a></li>
 							</ul>
@@ -99,7 +101,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L65">utils/utils.ts:65</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L93">utils/utils.ts:93</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -127,7 +129,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L58">utils/utils.ts:58</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L86">utils/utils.ts:86</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -155,7 +157,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L72">utils/utils.ts:72</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L100">utils/utils.ts:100</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -183,7 +185,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L51">utils/utils.ts:51</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L79">utils/utils.ts:79</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -211,7 +213,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L30">utils/utils.ts:30</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L58">utils/utils.ts:58</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -230,6 +232,40 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-external-module">
+					<a name="measureproximity" class="tsd-anchor"></a>
+					<h3>measure<wbr>Proximity</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-external-module">
+						<li class="tsd-signature tsd-kind-icon">measure<wbr>Proximity<span class="tsd-signature-symbol">(</span>a<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, b<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, reverse<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L18">utils/utils.ts:18</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns the hamming distance (number of continuous similar bits) between two byte arrays of equal length.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>a: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+								<li>
+									<h5>b: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagDefault value">Default value</span> reverse: <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;false</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-external-module">
 					<a name="num2bin" class="tsd-anchor"></a>
 					<h3>num2<wbr>Bin</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-external-module">
@@ -239,7 +275,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L44">utils/utils.ts:44</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L72">utils/utils.ts:72</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -267,7 +303,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L37">utils/utils.ts:37</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L65">utils/utils.ts:65</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -286,6 +322,34 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-external-module">
+					<a name="str2bin" class="tsd-anchor"></a>
+					<h3>str2<wbr>Bin</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-external-module">
+						<li class="tsd-signature tsd-kind-icon">str2<wbr>Bin<span class="tsd-signature-symbol">(</span>data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L107">utils/utils.ts:107</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Converts a string to binary data.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>data: <span class="tsd-signature-type">string</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-external-module">
 					<a name="wait" class="tsd-anchor"></a>
 					<h3>wait</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-external-module">
@@ -295,7 +359,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L18">utils/utils.ts:18</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L46">utils/utils.ts:46</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -323,7 +387,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/utils/utils.ts#L8">utils/utils.ts:8</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/utils/utils.ts#L8">utils/utils.ts:8</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -375,10 +439,16 @@
 						<a href="_utils_utils_.html#clone" class="tsd-kind-icon">clone</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-external-module">
+						<a href="_utils_utils_.html#measureproximity" class="tsd-kind-icon">measure<wbr>Proximity</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-external-module">
 						<a href="_utils_utils_.html#num2bin" class="tsd-kind-icon">num2<wbr>Bin</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-external-module">
 						<a href="_utils_utils_.html#num2date" class="tsd-kind-icon">num2<wbr>Date</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-external-module">
+						<a href="_utils_utils_.html#str2bin" class="tsd-kind-icon">str2<wbr>Bin</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-external-module">
 						<a href="_utils_utils_.html#wait" class="tsd-kind-icon">wait</a>

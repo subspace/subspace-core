@@ -91,16 +91,22 @@
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#farm" class="tsd-kind-icon">farm</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#id" class="tsd-kind-icon">id</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#network" class="tsd-kind-icon">network</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#isfarming" class="tsd-kind-icon">is<wbr>Farming</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#isrelay" class="tsd-kind-icon">is<wbr>Relay</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#isserving" class="tsd-kind-icon">is<wbr>Serving</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#ledger" class="tsd-kind-icon">ledger</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#rpc" class="tsd-kind-icon">rpc</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_node_node_.node.html#wallet" class="tsd-kind-icon">wallet</a></li>
 							</ul>
 						</section>
 						<section class="tsd-index-section ">
 							<h3>Methods</h3>
 							<ul class="tsd-index-list">
-								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#createid" class="tsd-kind-icon">create<wbr>Id</a></li>
-								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#plot" class="tsd-kind-icon">plot</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#createledgerandfarm" class="tsd-kind-icon">create<wbr>Ledger<wbr>And<wbr>Farm</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#getorcreateaddress" class="tsd-kind-icon">get<wbr>OrCreate<wbr>Address</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#syncledgerandfarm" class="tsd-kind-icon">sync<wbr>Ledger<wbr>And<wbr>Farm</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#syncledgerandserve" class="tsd-kind-icon">sync<wbr>Ledger<wbr>And<wbr>Serve</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_node_node_.node.html#syncstateandlisten" class="tsd-kind-icon">sync<wbr>State<wbr>And<wbr>Listen</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-static"><a href="_node_node_.node.html#init" class="tsd-kind-icon">init</a></li>
 							</ul>
 						</section>
@@ -113,13 +119,13 @@
 					<a name="constructor" class="tsd-anchor"></a>
 					<h3>constructor</h3>
 					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">new <wbr>Node<span class="tsd-signature-symbol">(</span>wallet<span class="tsd-signature-symbol">: </span><a href="_wallet_wallet_.wallet.html" class="tsd-signature-type">Wallet</a>, farm<span class="tsd-signature-symbol">: </span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_node_node_.node.html" class="tsd-signature-type">Node</a></li>
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Node<span class="tsd-signature-symbol">(</span>wallet<span class="tsd-signature-symbol">: </span><a href="_wallet_wallet_.wallet.html" class="tsd-signature-type">Wallet</a>, farm<span class="tsd-signature-symbol">: </span><a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a>, ledger<span class="tsd-signature-symbol">: </span><a href="_ledger_ledger_.ledger.html" class="tsd-signature-type">Ledger</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_node_node_.node.html" class="tsd-signature-type">Node</a></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L29">node/node.ts:29</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L41">node/node.ts:41</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -129,6 +135,9 @@
 								</li>
 								<li>
 									<h5>farm: <a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a></h5>
+								</li>
+								<li>
+									<h5>ledger: <a href="_ledger_ledger_.ledger.html" class="tsd-signature-type">Ledger</a></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <a href="_node_node_.node.html" class="tsd-signature-type">Node</a></h4>
@@ -144,27 +153,57 @@
 					<div class="tsd-signature tsd-kind-icon">farm<span class="tsd-signature-symbol">:</span> <a href="_farm_farm_.farm.html" class="tsd-signature-type">Farm</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L28">node/node.ts:28</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L39">node/node.ts:39</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
-					<a name="id" class="tsd-anchor"></a>
-					<h3>id</h3>
-					<div class="tsd-signature tsd-kind-icon">id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
+					<a name="isfarming" class="tsd-anchor"></a>
+					<h3>is<wbr>Farming</h3>
+					<div class="tsd-signature tsd-kind-icon">is<wbr>Farming<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L26">node/node.ts:26</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L34">node/node.ts:34</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
-					<a name="network" class="tsd-anchor"></a>
-					<h3>network</h3>
-					<div class="tsd-signature tsd-kind-icon">network<span class="tsd-signature-symbol">:</span> <a href="_network_network_.network.html" class="tsd-signature-type">Network</a><span class="tsd-signature-symbol"> =&nbsp;new Network()</span></div>
+					<a name="isrelay" class="tsd-anchor"></a>
+					<h3>is<wbr>Relay</h3>
+					<div class="tsd-signature tsd-kind-icon">is<wbr>Relay<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L29">node/node.ts:29</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L35">node/node.ts:35</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="isserving" class="tsd-anchor"></a>
+					<h3>is<wbr>Serving</h3>
+					<div class="tsd-signature tsd-kind-icon">is<wbr>Serving<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L36">node/node.ts:36</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="ledger" class="tsd-anchor"></a>
+					<h3>ledger</h3>
+					<div class="tsd-signature tsd-kind-icon">ledger<span class="tsd-signature-symbol">:</span> <a href="_ledger_ledger_.ledger.html" class="tsd-signature-type">Ledger</a></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L40">node/node.ts:40</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
+					<a name="rpc" class="tsd-anchor"></a>
+					<h3>rpc</h3>
+					<div class="tsd-signature tsd-kind-icon">rpc<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">any</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L41">node/node.ts:41</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -174,7 +213,7 @@
 					<div class="tsd-signature tsd-kind-icon">wallet<span class="tsd-signature-symbol">:</span> <a href="_wallet_wallet_.wallet.html" class="tsd-signature-type">Wallet</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L27">node/node.ts:27</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L38">node/node.ts:38</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -182,35 +221,121 @@
 			<section class="tsd-panel-group tsd-member-group ">
 				<h2>Methods</h2>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-					<a name="createid" class="tsd-anchor"></a>
-					<h3>create<wbr>Id</h3>
+					<a name="createledgerandfarm" class="tsd-anchor"></a>
+					<h3>create<wbr>Ledger<wbr>And<wbr>Farm</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">create<wbr>Id<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">create<wbr>Ledger<wbr>And<wbr>Farm<span class="tsd-signature-symbol">(</span>chainCount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L38">node/node.ts:38</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L149">node/node.ts:149</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Starts a new ledger from genesis and begins farming its own plot in isolation. Mostly for testing.
+									Retains both the original ledger data within storage and the encoded piece set in the plot.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>chainCount: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-					<a name="plot" class="tsd-anchor"></a>
-					<h3>plot</h3>
+					<a name="getorcreateaddress" class="tsd-anchor"></a>
+					<h3>get<wbr>OrCreate<wbr>Address</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">plot<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">get<wbr>OrCreate<wbr>Address<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L44">node/node.ts:44</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L124">node/node.ts:124</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Looks for an existing address within the wallet, creating a new one if one does not exist.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="syncledgerandfarm" class="tsd-anchor"></a>
+					<h3>sync<wbr>Ledger<wbr>And<wbr>Farm</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">sync<wbr>Ledger<wbr>And<wbr>Farm<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L209">node/node.ts:209</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Syncs the ledger from the network and begins farming. Default startup procedure for farmers.
+									Discards the original ledger data after several confirmed levels while retaining only the encoded pieces within its plot.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="syncledgerandserve" class="tsd-anchor"></a>
+					<h3>sync<wbr>Ledger<wbr>And<wbr>Serve</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">sync<wbr>Ledger<wbr>And<wbr>Serve<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L217">node/node.ts:217</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Syncs the ledger from existing nodes and serves RPC requests for structured data. Equivalent to a full validator node.
+									Retains the full unencoded ledger within persistent storage.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="syncstateandlisten" class="tsd-anchor"></a>
+					<h3>sync<wbr>State<wbr>And<wbr>Listen</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">sync<wbr>State<wbr>And<wbr>Listen<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L225">node/node.ts:225</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Syncs the state chain from the network. Equivalent to a light client.
+									Listens for and validates new blocks, discarding them as they are compressed into new state blocks.</p>
+								</div>
+							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
@@ -219,22 +344,27 @@
 					<a name="init" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagStatic">Static</span> init</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-static">
-						<li class="tsd-signature tsd-kind-icon">init<span class="tsd-signature-symbol">(</span>storageAdapter<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span>, mode<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_node_node_.node.html" class="tsd-signature-type">Node</a><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">init<span class="tsd-signature-symbol">(</span>storageAdapter<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span>, mode<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_node_node_.node.html" class="tsd-signature-type">Node</a><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/node/node.ts#L20">node/node.ts:20</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/node/node.ts#L27">node/node.ts:27</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Instantiate a new empty node with only environment variables.</p>
+								</div>
+							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
 									<h5><span class="tsd-flag ts-flagDefault value">Default value</span> storageAdapter: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> =&nbsp;&quot;rocks&quot;</span></h5>
 								</li>
 								<li>
-									<h5>mode: <span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span></h5>
+									<h5><span class="tsd-flag ts-flagDefault value">Default value</span> mode: <span class="tsd-signature-type">"mem-db"</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">"disk-db"</span><span class="tsd-signature-symbol"> =&nbsp;&quot;mem-db&quot;</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_node_node_.node.html" class="tsd-signature-type">Node</a><span class="tsd-signature-symbol">&gt;</span></h4>
@@ -268,19 +398,37 @@
 								<a href="_node_node_.node.html#farm" class="tsd-kind-icon">farm</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
-								<a href="_node_node_.node.html#id" class="tsd-kind-icon">id</a>
+								<a href="_node_node_.node.html#isfarming" class="tsd-kind-icon">is<wbr>Farming</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
-								<a href="_node_node_.node.html#network" class="tsd-kind-icon">network</a>
+								<a href="_node_node_.node.html#isrelay" class="tsd-kind-icon">is<wbr>Relay</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_node_node_.node.html#isserving" class="tsd-kind-icon">is<wbr>Serving</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_node_node_.node.html#ledger" class="tsd-kind-icon">ledger</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class">
+								<a href="_node_node_.node.html#rpc" class="tsd-kind-icon">rpc</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
 								<a href="_node_node_.node.html#wallet" class="tsd-kind-icon">wallet</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
-								<a href="_node_node_.node.html#createid" class="tsd-kind-icon">create<wbr>Id</a>
+								<a href="_node_node_.node.html#createledgerandfarm" class="tsd-kind-icon">create<wbr>Ledger<wbr>And<wbr>Farm</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
-								<a href="_node_node_.node.html#plot" class="tsd-kind-icon">plot</a>
+								<a href="_node_node_.node.html#getorcreateaddress" class="tsd-kind-icon">get<wbr>OrCreate<wbr>Address</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_node_node_.node.html#syncledgerandfarm" class="tsd-kind-icon">sync<wbr>Ledger<wbr>And<wbr>Farm</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_node_node_.node.html#syncledgerandserve" class="tsd-kind-icon">sync<wbr>Ledger<wbr>And<wbr>Serve</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_node_node_.node.html#syncstateandlisten" class="tsd-kind-icon">sync<wbr>State<wbr>And<wbr>Listen</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-static">
 								<a href="_node_node_.node.html#init" class="tsd-kind-icon">init</a>

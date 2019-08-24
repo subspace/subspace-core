@@ -243,16 +243,16 @@ export class Ledger extends EventEmitter {
   /**
    * Takes any minimal subset of the erasure coded level and returns the original records (blocks, proofs, contents, and txs).
    */
-  public async decodeLevel(levelData: Uint8Array): Promise<void> {
-    // parse record length value
-    // parse record
-    // load and validate all proofs
-    // load and validate all content
-    // load and validate all txs
-    // ensure all txs described in content are included
-    // reconstruct each block
-    return;
-  }
+  // public async decodeLevel(levelData: Uint8Array): Promise<void> {
+  //   // parse record length value
+  //   // parse record
+  //   // load and validate all proofs
+  //   // load and validate all content
+  //   // load and validate all txs
+  //   // ensure all txs described in content are included
+  //   // reconstruct each block
+  //   return;
+  // }
 
   /**
    * Called when a new Block solution is generated locally.

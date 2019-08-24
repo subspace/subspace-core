@@ -76,9 +76,11 @@
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.iblockvalue.html" class="tsd-kind-icon">IBlock<wbr>Value</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.icompactblockvalue.html" class="tsd-kind-icon">ICompact<wbr>Block<wbr>Value</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.icontentvalue.html" class="tsd-kind-icon">IContent<wbr>Value</a></li>
-								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.iencodingdata.html" class="tsd-kind-icon">IEncoding<wbr>Data</a></li>
+								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.iencoding.html" class="tsd-kind-icon">IEncoding</a></li>
+								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-kind-icon">IFull<wbr>Block<wbr>Value</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.ikeypair.html" class="tsd-kind-icon">IKey<wbr>Pair</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.imerkledata.html" class="tsd-kind-icon">IMerkle<wbr>Data</a></li>
+								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-kind-icon">IPiece</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.ipiecedata.html" class="tsd-kind-icon">IPiece<wbr>Data</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.iplotdata.html" class="tsd-kind-icon">IPlot<wbr>Data</a></li>
 								<li class="tsd-kind-interface tsd-parent-kind-external-module"><a href="../interfaces/_main_interfaces_.iproofvalue.html" class="tsd-kind-icon">IProof<wbr>Value</a></li>
@@ -106,12 +108,17 @@
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-external-module">
 					<a name="iblockdata" class="tsd-anchor"></a>
 					<h3>IBlock<wbr>Data</h3>
-					<div class="tsd-signature tsd-kind-icon">IBlock<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><a href="_main_interfaces_.html#iproofdata" class="tsd-signature-type">IProofData</a><span class="tsd-signature-symbol">, </span><a href="_main_interfaces_.html#icontentdata" class="tsd-signature-type">IContentData</a><span class="tsd-signature-symbol">]</span></div>
+					<div class="tsd-signature tsd-kind-icon">IBlock<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><a href="_main_interfaces_.html#iproofdata" class="tsd-signature-type">IProofData</a><span class="tsd-signature-symbol">, </span><a href="_main_interfaces_.html#icontentdata" class="tsd-signature-type">IContentData</a><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L19">main/interfaces.ts:19</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L42">main/interfaces.ts:42</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Compact representation of a Block value.</p>
+						</div>
+					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-external-module">
 					<a name="icompactblockdata" class="tsd-anchor"></a>
@@ -119,9 +126,14 @@
 					<div class="tsd-signature tsd-kind-icon">ICompact<wbr>Block<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L26">main/interfaces.ts:26</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L55">main/interfaces.ts:55</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Compact representation of a compact Block.</p>
+						</div>
+					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-external-module">
 					<a name="icontentdata" class="tsd-anchor"></a>
@@ -129,9 +141,14 @@
 					<div class="tsd-signature tsd-kind-icon">IContent<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L47">main/interfaces.ts:47</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L88">main/interfaces.ts:88</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Compact representation of a Content value.</p>
+						</div>
+					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-external-module">
 					<a name="iproofdata" class="tsd-anchor"></a>
@@ -139,9 +156,14 @@
 					<div class="tsd-signature tsd-kind-icon">IProof<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L39">main/interfaces.ts:39</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L74">main/interfaces.ts:74</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Compact representation of a Proof value.</p>
+						</div>
+					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-external-module">
 					<a name="istatedata" class="tsd-anchor"></a>
@@ -149,9 +171,14 @@
 					<div class="tsd-signature tsd-kind-icon">IState<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L11">main/interfaces.ts:11</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L21">main/interfaces.ts:21</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Compact representation of a State value.</p>
+						</div>
+					</div>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-type-alias tsd-parent-kind-external-module">
 					<a name="itxdata" class="tsd-anchor"></a>
@@ -159,9 +186,14 @@
 					<div class="tsd-signature tsd-kind-icon">ITx<wbr>Data<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/5c85ef3/src/main/interfaces.ts#L58">main/interfaces.ts:58</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/003fe19/src/main/interfaces.ts#L105">main/interfaces.ts:105</a></li>
 						</ul>
 					</aside>
+					<div class="tsd-comment tsd-typography">
+						<div class="lead">
+							<p>Compact representation of a Tx value.</p>
+						</div>
+					</div>
 				</section>
 			</section>
 		</div>
@@ -188,13 +220,19 @@
 						<a href="../interfaces/_main_interfaces_.icontentvalue.html" class="tsd-kind-icon">IContent<wbr>Value</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
-						<a href="../interfaces/_main_interfaces_.iencodingdata.html" class="tsd-kind-icon">IEncoding<wbr>Data</a>
+						<a href="../interfaces/_main_interfaces_.iencoding.html" class="tsd-kind-icon">IEncoding</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
+						<a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-kind-icon">IFull<wbr>Block<wbr>Value</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="../interfaces/_main_interfaces_.ikeypair.html" class="tsd-kind-icon">IKey<wbr>Pair</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="../interfaces/_main_interfaces_.imerkledata.html" class="tsd-kind-icon">IMerkle<wbr>Data</a>
+					</li>
+					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
+						<a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-kind-icon">IPiece</a>
 					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="../interfaces/_main_interfaces_.ipiecedata.html" class="tsd-kind-icon">IPiece<wbr>Data</a>
