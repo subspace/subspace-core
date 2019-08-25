@@ -9,9 +9,10 @@
   "scripts": {
     "subspace": "bin/subspace.js",
     "build": "npm run clean && npm run lint && npm run gen-docs && npm run compile",
-    "build-browser": "npm run browser-bundle && npm run browser-minify",
+    "build-browser": "npm run browser-bundle && npm run browser-minify && npm run browser-copy-wasm",
     "browser-bundle": "browserify --standalone Subspace dist/main/index.js > app/web/bundle.js",
     "browser-minify": "terser --compress --mangle -- app/web/bundle.js > app/web/bundle.min.js",
+    "browser-copy-wasm": "cp node_modules/*/*/dist/*.wasm app/web/",
     "gen-docs": "typedoc --out docs/ src/ --ignoreCompilerErrors",
     "clean": "rm -rf dist",
     "clear-data": "rm -rf data && mkdir data",
