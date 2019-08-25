@@ -4,7 +4,7 @@ import level from 'level-rocksdb';
 import IAdapter from './IAdapter';
 
 export default class RocksAdapter implements IAdapter {
-  public db: any;
+  public db: ReturnType<typeof level>;
 
   public constructor(path: string) {
     this.db = level(path, { valueEncoding: 'binary' });
@@ -41,8 +41,8 @@ export default class RocksAdapter implements IAdapter {
     return new Promise<Uint8Array[]> (async (resolve) => {
       const keys: Uint8Array[] = [];
       this.db.createKeyStream()
-        .on('data', (key: Uint8Array) => {
-          keys.push(key);
+        .on('data', (key: string) => {
+          keys.push(Uint8Array.from(key.split(',').map(Number)));
         })
         .on('end', () => {
           resolve(keys);

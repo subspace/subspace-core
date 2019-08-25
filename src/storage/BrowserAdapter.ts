@@ -4,7 +4,7 @@ import levelup from 'levelup';
 import IAdapter from "./IAdapter";
 
 export default class BrowserAdapter implements IAdapter {
-  public db: any;
+  public db: ReturnType<typeof levelup>;
 
   public constructor(path: string) {
     this.db = levelup(leveljs(path));
