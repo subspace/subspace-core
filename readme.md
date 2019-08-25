@@ -1,6 +1,6 @@
 # Subspace Core
 
-A monorepo that incudes everything needed to run a full node for the Subspace Ledger.
+A monorepo that includes everything needed to run a full node for the Subspace Ledger.
 
 ## Design
 
@@ -22,7 +22,7 @@ A monorepo that incudes everything needed to run a full node for the Subspace Le
 ### User Interfaces
 Subspace Network Daemon (SND), a CLI built using [Commander](https://github.com/tj/commander.js/)<br>
 
-Run with `bin/subspace.js` from the root of the repository or just using `subspace` when installed globally.
+Run with `bin/subspace.js` from the root of the repository or just using `subspace` when installed globally using `npm install -g @subspace/subspace-core`.
 
 A simple GUI can be viewed from [/app/web/index.html](/app/web/index.html) built with vanilla [Vue](https://vuejs.org/) and [Bulma](https://bulma.io/). This will run the browserified version of the protocol as a standalone network node with its own copy of the ledger from genesis -- primarily for testing purposes right now.
 
