@@ -23,7 +23,7 @@ export interface IStorageInstance {
      * @param offset At which offset to start reading
      * @param length How many bytes to read
      */
-    readData(offset: number, length: number): Promise<Buffer>;
+    readData(offset: number, length: number): Promise<Uint8Array>;
 
     /**
      * @param offset At which offset to start writing
@@ -35,7 +35,7 @@ export interface IStorageInstance {
      * @param offset At which offset to start reading
      * @param length How many bytes to read
      */
-    readMetadata(offset: number, length: number): Promise<Buffer>;
+    readMetadata(offset: number, length: number): Promise<Uint8Array>;
 
     /**
      * @param offset At which offset to start writing

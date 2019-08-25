@@ -18,7 +18,7 @@ export class Plot {
      * @param encoding
      */
     public static async create(
-        nodeId: Buffer,
+        nodeId: Uint8Array,
         plotLocation: string,
         plotSize: number,
         Storage: IStorage | null = null,
@@ -35,7 +35,7 @@ export class Plot {
      * @param encoding
      */
     public static async open(
-        nodeId: Buffer,
+        nodeId: Uint8Array,
         plotLocation: string,
         storage: IStorageInstance | null = null,
         encoding: IEncoding | null,
@@ -54,19 +54,17 @@ export class Plot {
         });
     }
 
-    private readonly nodeId: Buffer;
+    private readonly nodeId: Uint8Array;
     private readonly storage: IStorageInstance;
     private readonly encoding: IEncoding;
     private lastUsedPieceIndex: number = -1;
 
     private initialized = false;
-    private readonly pieceIdToIndex: Map<Buffer, number>;
-    private readonly pieceIndexToId: Map<number, Buffer | undefined>;
-    private readonly encodedIdToIndex: Map<Buffer, number>;
-    private readonly pieceIndexToEncodedId: Map<number, Buffer | undefined>;
+    private readonly pieceIdToIndex: Map<Uint8Array, number>;
+    private readonly encodedIdToIndex: Map<Uint8Array, number>;
 
     private constructor(
-        nodeId: Buffer,
+        nodeId: Uint8Array,
         storage: IStorageInstance,
         encoding: IEncoding,
         resolve: () => void,
@@ -75,10 +73,8 @@ export class Plot {
         this.nodeId = nodeId;
         this.storage = storage;
         this.encoding = encoding;
-        this.pieceIdToIndex = ArrayMap<Buffer, number>();
-        this.pieceIndexToId = new Map<number, Buffer | undefined>();
-        this.encodedIdToIndex = ArrayMap<Buffer, number>();
-        this.pieceIndexToEncodedId = new Map<number, Buffer | undefined>();
+        this.pieceIdToIndex = ArrayMap<Uint8Array, number>();
+        this.encodedIdToIndex = ArrayMap<Uint8Array, number>();
         this.init().then(resolve, reject);
     }
 
@@ -89,7 +85,7 @@ export class Plot {
      *
      * @return Resolves with piece key
      */
-    public async addPiece(piece: Buffer): Promise<Buffer> {
+    public async addPiece(piece: Uint8Array): Promise<Uint8Array> {
         if (piece.length !== PIECE_SIZE) {
             throw new Error(`Incorrect piece size: expected ${PIECE_SIZE} bytes, but ${piece.length} bytes was given`);
         }
@@ -100,18 +96,16 @@ export class Plot {
         }
 
         // TODO: Maybe some kind of log for these operations in case of unexpected power loss?
-        const pieceId = Buffer.from(hash(piece));
+        const pieceId = Uint8Array.from(hash(piece));
         const encodedPiece = this.encoding.encode(piece, this.nodeId);
-        const encodedId = Buffer.from(hash(encodedPiece));
+        const encodedId = Uint8Array.from(hash(encodedPiece));
 
         const storage = this.storage;
         await storage.writeData(indexForNewPiece * PIECE_SIZE, encodedPiece);
         await storage.writeMetadata(indexForNewPiece * HASH_LENGTH, pieceId);
         await storage.writeMetadata(indexForNewPiece * HASH_LENGTH + HASH_LENGTH, encodedId);
 
-        this.pieceIndexToId.set(indexForNewPiece, pieceId);
         this.pieceIdToIndex.set(pieceId, indexForNewPiece);
-        this.pieceIndexToEncodedId.set(indexForNewPiece, encodedId);
         this.encodedIdToIndex.set(encodedId, indexForNewPiece);
 
         return pieceId;
@@ -124,7 +118,7 @@ export class Plot {
      *
      * @return Resolves with piece on success of `null` if piece is not found in plot
      */
-    public async getPiece(pieceId: Buffer): Promise<Buffer | null> {
+    public async getPiece(pieceId: Uint8Array): Promise<Uint8Array | null> {
         const pieceIndex = this.pieceIdToIndex.get(pieceId);
         if (pieceIndex === undefined) {
             return null;
@@ -132,7 +126,7 @@ export class Plot {
 
         const encodedPiece = await this.storage.readData(pieceIndex * PIECE_SIZE, PIECE_SIZE);
 
-        return Buffer.from(this.encoding.decode(encodedPiece, this.nodeId));
+        return Uint8Array.from(this.encoding.decode(encodedPiece, this.nodeId));
     }
 
     public destroy(): Promise<void> {
@@ -157,16 +151,11 @@ export class Plot {
             const encodedId = pieceMetadata.slice(HASH_LENGTH);
             const empty = pieceId.find((byte) => byte !== 0) === undefined;
             if (empty) {
-                // Store `undefined` if corresponding piece index is not used for storing a piece yet
-                this.pieceIndexToId.set(pieceIndex, undefined);
-                this.pieceIndexToEncodedId.set(pieceIndex, undefined);
                 // TODO: Stop reading further, the rest of indexes will be undefined anyway, we can fill them right away
             } else {
                 // We assume sequential plotting, namely after single unoccupied pieceIndex the rest is also unoccupied
                 lastUsedPieceIndex = pieceIndex;
-                this.pieceIndexToId.set(pieceIndex, pieceId);
                 this.pieceIdToIndex.set(pieceId, pieceIndex);
-                this.pieceIndexToEncodedId.set(pieceIndex, encodedId);
                 this.encodedIdToIndex.set(encodedId, pieceIndex);
             }
         }
