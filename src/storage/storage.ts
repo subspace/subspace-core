@@ -1,4 +1,4 @@
-// import BrowserAdapter from './BrowserAdapter';
+import BrowserAdapter from './BrowserAdapter';
 import IAdapter from './IAdapter';
 import MemoryAdapter from './MemoryAdapter';
 import RocksAdapter from './RocksAdapter';
@@ -26,9 +26,9 @@ export class Storage {
       path = path.concat(`/${nameSpace}`);
     }
     switch (adapterName) {
-      // case 'browser':
-      //   this.adapter = new BrowserAdapter(path);
-      //   break;
+      case 'browser':
+        this.adapter = new BrowserAdapter(path);
+        break;
       case 'rocks':
         this.adapter = new RocksAdapter(path);
         break;

@@ -1,13 +1,10 @@
-// import indexedDB = require("fake-indexeddb");
-// tslint:disable-next-line: no-submodule-imports
-// import * as fidb from 'fake-indexeddb/auto';
 import leveljs = require('level-js');
 // tslint:disable-next-line: no-implicit-dependencies
 import levelup from 'levelup';
 import IAdapter from "./IAdapter";
 
 export default class BrowserAdapter implements IAdapter {
-  public db: any;
+  public db: ReturnType<typeof levelup>;
 
   public constructor(path: string) {
     this.db = levelup(leveljs(path));
@@ -67,7 +64,7 @@ export default class BrowserAdapter implements IAdapter {
 
   public async close(): Promise<void> {
     try {
-      await this.close();
+      await this.db.close();
     } catch (error) {
       throw error;
     }
