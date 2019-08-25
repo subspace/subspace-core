@@ -64,7 +64,7 @@ export default class BrowserAdapter implements IAdapter {
 
   public async close(): Promise<void> {
     try {
-      await this.close();
+      await this.db.close();
     } catch (error) {
       throw error;
     }

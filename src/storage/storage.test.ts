@@ -80,7 +80,7 @@ const storageTest = (storage: Storage) => {
     if (sv1 || sv2 || sv3) {
       fail(true);
     }
-    // await storage.close();
+    await storage.close();
   });
 };
 
