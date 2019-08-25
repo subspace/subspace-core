@@ -1,5 +1,4 @@
 import * as crypto from '../crypto/crypto';
-import { Storage } from '../storage/storage';
 import { Wallet } from './wallet';
 
 const runTests = async () => {

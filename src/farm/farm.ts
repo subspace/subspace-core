@@ -4,7 +4,7 @@
 import { NodeManagerJsUint8Array, Tree } from "@subspace/red-black-tree";
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import { IEncoding, IPiece, IPieceData, IPlotData } from '../main/interfaces';
+import { IEncoding, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { bin2Num, num2Bin } from "../utils/utils";
 

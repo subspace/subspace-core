@@ -13,6 +13,6 @@ const encodeTime = Date.now() - encodeStart;
 console.log(`Encode time is ${encodeTime} ms`);
 
 const decodeStart = Date.now();
-const decoding = codes.decodePiece(encoding, key, ROUNDS);
+codes.decodePiece(encoding, key, ROUNDS);
 const decodeTime = Date.now() - decodeStart;
 console.log(`Decode time is ${decodeTime} ms`);
