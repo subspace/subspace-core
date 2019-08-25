@@ -17,7 +17,7 @@
     "clear-data": "rm -rf data && mkdir data",
     "compile": "tsc -b",
     "lint": "tslint --project .",
-    "test": "npm run clear-data && jest --verbose",
+    "test": "npm run lint && npm run compile && npm run clear-data && jest --verbose",
     "build-and-publish": "npm run build && npm publish"
   },
   "repository": {
