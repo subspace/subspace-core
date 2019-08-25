@@ -4,7 +4,7 @@ import * as fs from "fs";
 import { Node } from '../node/node';
 
 const version = JSON.parse(fs.readFileSync(__dirname + '/../../package.json', 'utf8')).version;
-const title = `Subspace Network Daemon version ${version}`;
+// const title = `Subspace Network Daemon version ${version}`;
 
 const program = new commander.Command();
 

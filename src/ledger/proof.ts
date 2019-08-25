@@ -3,7 +3,7 @@
 
 import * as crypto from '../crypto/crypto';
 import { IProofData, IProofValue } from '../main/interfaces';
-import { bin2Hex, num2Bin, num2Date } from '../utils/utils';
+import { bin2Hex, num2Bin } from '../utils/utils';
 
 /**
  * Record class for canonical proofs of storage used to create new blocks for the ledger.

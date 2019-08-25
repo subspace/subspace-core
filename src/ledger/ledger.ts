@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { DIFFICULTY, VERSION } from '../main/constants';
-import {IBlockData, IBlockValue, ICompactBlockData, ICompactBlockValue, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
+import {ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { num2Bin } from '../utils/utils';
 import { Account } from './accounts';
@@ -66,6 +66,7 @@ export class Ledger extends EventEmitter {
   public state: Map<Uint8Array, IStateData> = new Map();
   private lastStateBlockId: Uint8Array = new Uint8Array();
   private chains: Chain[] = [];
+  // @ts-ignore TODO: Use it for something
   private storage: Storage;
 
   // memory pool, may be cleared after each level is confirmed (if not serving)

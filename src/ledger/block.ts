@@ -2,8 +2,7 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { IBlockData, IBlockValue, ICompactBlockData, IFullBlockValue } from '../main/interfaces';
-import { bin2Hex } from '../utils/utils';
+import { IBlockData, ICompactBlockData, IFullBlockValue } from '../main/interfaces';
 import { Content } from './content';
 import { Proof } from './proof';
 import { Tx } from './tx';
