@@ -80,6 +80,8 @@ export class Node {
       this.rpc.gossip(tx.toData());
     });
 
+    // `this.rpc` is undefined
+    return;
     /**
      * A new block is received over the network from another farmer.
      * Filter the block for duplicates or spam. Validate the block.
