@@ -40,3 +40,4 @@ COPY --from=2 /code/dist /code/dist
 COPY bin /code/bin
 
 ENTRYPOINT ["bin/subspace.js"]
+CMD ["--help"]

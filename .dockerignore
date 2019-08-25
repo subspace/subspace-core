@@ -1,0 +1,8 @@
+*
+!.npmrc
+!package.json
+!package-lock.json
+!tsconfig.json
+!tslint.json
+!bin
+!src

@@ -26,6 +26,17 @@ Run with `bin/subspace.js` from the root of the repository or just using `subspa
 
 A simple GUI can be viewed from [/app/web/index.html](/app/web/index.html) built with vanilla [Vue](https://vuejs.org/) and [Bulma](https://bulma.io/). This will run the browserified version of the protocol as a standalone network node with its own copy of the ledger from genesis -- primarily for testing purposes right now.
 
+#### Docker
+CLI interface using Docker is also available. You can run it like this:
+```bash
+docker run --rm -it subspacelabs/subspace-core
+```
+
+If you prefer to build it yourself, here is how:
+```bash
+docker build -t subspacelabs/subspace-core .
+```
+
 ## Modules
 
 For the purposes of this document, a module refers to top level directory within the src folder that organizes some code. External npm modules are referred to as dependencies. We are taking a monorepo approach. Instead of using separate NPM modules and git repositories for each module we will simply use different folders within the same core project. Later, we may use [Lerna](https://lerna.js.org/) to separate each folder into a discrete module, which may all be managed from the core project.  
