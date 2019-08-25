@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Subspace Network Core Blockchain",
   "main": "dist/index.js",
+  "browser": {
+    "level-rocksdb": false
+  },
   "bin": {
     "subspace": "bin/subspace.js"
   },
