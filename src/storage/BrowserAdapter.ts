@@ -1,6 +1,3 @@
-// import indexedDB = require("fake-indexeddb");
-// tslint:disable-next-line: no-submodule-imports
-import * as fidb from 'fake-indexeddb/auto';
 import leveljs = require('level-js');
 // tslint:disable-next-line: no-implicit-dependencies
 import levelup from 'levelup';

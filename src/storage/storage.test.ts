@@ -1,3 +1,5 @@
+// tslint:disable-next-line:no-var-requires no-submodule-imports
+require('fake-indexeddb/auto');
 import * as crypto from '../crypto/crypto';
 import { Storage } from './storage';
 
