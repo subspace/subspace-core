@@ -1,3 +1,8 @@
+if (!globalThis.indexedDB) {
+  // Only import when not preset (in Node.js)
+  // tslint:disable-next-line:no-var-requires no-submodule-imports
+  require('fake-indexeddb/auto');
+}
 import * as crypto from '../crypto/crypto';
 import { Storage } from './storage';
 
@@ -19,7 +24,7 @@ const storageTest = (storage: Storage) => {
   test(`${storage.adapterName}-get`, async () => {
     const storedValue = await storage.get(k0);
     if (storedValue) {
-      expect(storedValue.toString()).toBe(v0.toString());
+      expect(storedValue.join(', ')).toBe(v0.join(', '));
     } else {
       fail(true);
     }
@@ -41,9 +46,9 @@ const storageTest = (storage: Storage) => {
     const sv2 = await storage.get(k2);
     const sv3 = await storage.get(k3);
     if (sv1 && sv2 && sv3) {
-      expect(sv1.toString()).toBe(v1.toString());
-      expect(sv2.toString()).toBe(v2.toString());
-      expect(sv3.toString()).toBe(v3.toString());
+      expect(sv1.join(', ')).toBe(v1.join(', '));
+      expect(sv2.join(', ')).toBe(v2.join(', '));
+      expect(sv3.join(', ')).toBe(v3.join(', '));
     } else {
       fail(true);
     }
@@ -52,10 +57,10 @@ const storageTest = (storage: Storage) => {
   test(`${storage.adapterName}-get-keys`, async () => {
     const keys = await storage.getKeys();
     expect(keys.length).toBe(3);
-    const stringKeys = keys.map((key) => key.toString());
-    expect(stringKeys.includes(k1.toString())).toBe(true);
-    expect(stringKeys.includes(k2.toString())).toBe(true);
-    expect(stringKeys.includes(k3.toString())).toBe(true);
+    const stringKeys = keys.map((key) => key.join(', '));
+    expect(stringKeys.includes(k1.join(', '))).toBe(true);
+    expect(stringKeys.includes(k2.join(', '))).toBe(true);
+    expect(stringKeys.includes(k3.join(', '))).toBe(true);
   });
 
   test(`${storage.adapterName}-get-length`, async () => {
@@ -75,12 +80,12 @@ const storageTest = (storage: Storage) => {
     if (sv1 || sv2 || sv3) {
       fail(true);
     }
-    // await storage.close();
+    await storage.close();
   });
 };
 
 storageTest(new Storage('rocks', 'storage'));
 storageTest(new Storage('memory', 'storage'));
 
-// const browserStorage = new Storage('browser');
-// storageTest(browserStorage);
+const browserStorage = new Storage('browser');
+storageTest(browserStorage);

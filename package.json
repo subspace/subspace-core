@@ -21,7 +21,7 @@
     "clear-data": "rm -rf data && mkdir data",
     "compile": "tsc -b",
     "lint": "tslint --project .",
-    "test": "npm run clear-data && jest --verbose",
+    "test": "npm run lint && npm run compile && npm run clear-data && jest --verbose",
     "build-and-publish": "npm run build && npm publish"
   },
   "repository": {
@@ -40,7 +40,6 @@
     "fake-indexeddb": "^2.1.1",
     "jest": "^24.9.0",
     "terser": "^4.2.1",
-    "ts-jest": "^24.0.2",
     "ts-node": "^8.3.0",
     "tslint": "^5.19.0",
     "typedoc": "^0.15.0",
@@ -53,6 +52,7 @@
     "@types/level-js": "^4.0.1",
     "@types/levelup": "^3.1.1",
     "@types/node": "^12.7.2",
+    "array-map-set": "^1.0.3",
     "bls-signatures": "^0.1.9",
     "commander": "^3.0.0",
     "level-js": "^4.0.1",

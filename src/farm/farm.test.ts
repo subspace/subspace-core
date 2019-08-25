@@ -1,3 +1,8 @@
+if (!globalThis.indexedDB) {
+  // Only import when not preset (in Node.js)
+  // tslint:disable-next-line:no-var-requires no-submodule-imports
+  require('fake-indexeddb/auto');
+}
 // tslint:disable: object-literal-sort-keys
 
 import * as codes from '../codes/codes';
@@ -13,7 +18,7 @@ test('mem-plot', async () => {
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
-  const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
+  const { proofs } = crypto.buildMerkleTree(pieceHashes);
   const pieces: IPiece[] = [];
   for (let i = 0; i < pieceSet.length; ++i) {
     pieces[i] = {
@@ -69,7 +74,7 @@ test('disk-plot', async () => {
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
-  const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
+  const { proofs } = crypto.buildMerkleTree(pieceHashes);
   const pieces: IPiece[] = [];
   for (let i = 0; i < pieceSet.length; ++i) {
     pieces[i] = {

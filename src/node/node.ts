@@ -1,6 +1,5 @@
 // tslint:disable: no-console
 
-import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
