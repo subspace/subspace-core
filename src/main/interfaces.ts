@@ -30,11 +30,11 @@ export interface IFullBlockValue {
    coinbase?: Tx;
  }
 
-export interface IBlockValue {
-  proof: IProofValue;
-  content: IContentValue;
-  coinbase?: ITxValue;
-}
+// export interface IBlockValue {
+//   proof: IProofValue;
+//   content: IContentValue;
+//   coinbase?: ITxValue;
+// }
 
 /**
  * Compact representation of a Block value.
@@ -56,16 +56,17 @@ export type ICompactBlockData = [Uint8Array, Uint8Array];
 
 /**
  * A canonical (non-malleable / unique) Proof of storage in response to a ledger challenge.
+ * 252 bytes + merkle proof
  */
 export interface IProofValue {
-  previousLevelHash: Uint8Array; // hash of all proofs in the previous level (32 bytes)
-  previousProofHash: Uint8Array;  // hash of the last unconfirmed proof seen
-  solution: Uint8Array; // closest encoded chunk to encoding target (8 bytes)
-  pieceHash: Uint8Array; // original piece id of encoding that includes the solution (32 bytes)
-  pieceLevel: number; // state level to obtain the merkle root for this piece
-  pieceProof: Uint8Array; // merkle proof that piece is in that past level (??? bytes)
-  publicKey: Uint8Array; // public key of node creating proof (32 bytes)
-  signature: Uint8Array; // detached signature of this proof with node's private key (32 bytes)
+  previousLevelHash: Uint8Array; // 32 byte hash of all proofs in the previous level
+  previousProofHash: Uint8Array;  // 32 byte hash of the last unconfirmed proof seen
+  solution: Uint8Array; // 8 byte encoded chunk closest to encoding target
+  pieceHash: Uint8Array; // 32 byte original piece id of encoding that includes the solution
+  pieceLevel: number; // 4 byte state level to obtain the merkle root for this piece
+  pieceProof: Uint8Array; // unknown length merkle proof that piece is in that past level
+  publicKey: Uint8Array; // 48 byte public key of node creating proof
+  signature: Uint8Array; // 96 byte detached signature of this proof with node's private key
 }
 
 /**
@@ -75,11 +76,13 @@ export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, numbe
 
 /**
  * The malleable content associated with a block that includes a summary of Tx ids, not the Tx values themselves.
+ * 64 bytes + (32 * # txs in block)
+ * Max size needs to be set...
  */
 export interface IContentValue {
-  parentContentHash: Uint8Array; // hash of parent content block (32 bytes)
-  proofHash: Uint8Array; // hash of proof for this block (32 bytes)
-  payload: Uint8Array[]; // all tx ids in this block
+  parentContentHash: Uint8Array; // 32 byte hash of parent content block
+  proofHash: Uint8Array; // 32 byte hash of proof for this block
+  payload: Uint8Array[]; // Array of all 32 byte tx ids in this block
 }
 
 /**

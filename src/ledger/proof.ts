@@ -141,6 +141,74 @@ export class Proof {
    */
   public isValid(): boolean {
 
+    // ledger validation
+      // previous level hash is last seen level
+      // previous proof hash is in proof map
+      // solution is part of encoded piece
+      // piece level is seen in state
+      // piece proof is valid for a given state level
+      // piece hash is valid once encoding is decoded
+
+    // validate genesis proof
+    if (this._value.previousLevelHash.length === 0) {
+
+      // ensure fields are null
+      if (this._value.solution.length > 0 ||
+        this._value.pieceHash.length > 0 ||
+        this._value.pieceLevel !== 0 ||
+        this._value.pieceProof.length > 0 ||
+        this._value.publicKey.length > 0 ||
+        this._value.signature.length > 0) {
+          throw new Error('Invalid genesis proof, includes values for empty properties');
+        }
+
+      // previous proof must be null or 32 byte hash
+      if (this._value.previousProofHash.length !== 0 && this._value.previousProofHash.length !== 32) {
+        throw new Error('Invalid genesis proof, must reference null or past proof');
+      }
+      return true;
+    }
+
+    // previous level hash is 32 bytes
+    if (this._value.previousLevelHash.length !== 32) {
+      throw new Error('Invalid proof, invalid length for previous level hash');
+    }
+
+    // previous proof hash is 32 bytes
+    if (this._value.previousProofHash.length !== 32) {
+      throw new Error('Invalid proof, invalid length for previous proof hash');
+    }
+
+    // solution is 8 bytes
+    if (this._value.solution.length !== 8) {
+      throw new Error('Invalid proof, invalid length for solution');
+    }
+
+    // piece hash is 32 bytes
+    if (this._value.pieceHash.length !== 32) {
+      throw new Error('Invalid proof, invalid length for piece hash');
+    }
+
+    // piece level is 4 bytes
+    if (num2Bin(this._value.pieceLevel).length !== 4) {
+      throw new Error('Invalid proof, invalid length for piece level');
+    }
+
+    // piece proof is greater than 0 bytes
+    if (this._value.pieceProof.length < 32) {
+      throw new Error('Invalid proof, invalid length for piece proof');
+    }
+
+    // public key is 48 bytes
+    if (this._value.publicKey.length !== 48) {
+      throw new Error('Invalid proof, invalid length for public key');
+    }
+
+    // signature is 96 bytes
+    if (this._value.signature.length !== 96) {
+      throw new Error('Invalid proof, invalid length for signature');
+    }
+
     // is signature valid for message and public key
     if (this._value.signature.length > 0) {
       if (!crypto.verifySignature(this.toBytes(false), this._value.signature, this._value.publicKey)) {
