@@ -141,14 +141,6 @@ export class Proof {
    */
   public isValid(): boolean {
 
-    // ledger validation
-      // previous level hash is last seen level
-      // previous proof hash is in proof map
-      // solution is part of encoded piece
-      // piece level is seen in state
-      // piece proof is valid for a given state level
-      // piece hash is valid once encoding is decoded
-
     // validate genesis proof
     if (this._value.previousLevelHash.length === 0) {
 

@@ -27,14 +27,15 @@ export function hash(data: Uint8Array, outputLength = 32, type = 'sha256'): Uint
   return hash;
 }
 
+function merkleHash(data: Uint8Array): Uint8Array {
+  return hash(data, 32, 'whirlpool');
+}
+
 /**
  * Builds a merkle tree from input hashes, returning the root hash and an array of inclusion proofs.
  */
 export function buildMerkleTree(items: Uint8Array[]): IMerkleData {
-  const altHash = function altHash(data: Uint8Array, outputLength = 32, type = 'whirlpool'): Uint8Array {
-    return hash(data, outputLength, type);
-  };
-  const tree = new Tree(items, altHash);
+  const tree = new Tree(items, merkleHash);
   const root = tree.getRoot();
   const proofs: Uint8Array[] = [];
 
@@ -43,6 +44,13 @@ export function buildMerkleTree(items: Uint8Array[]): IMerkleData {
   }
 
   return { root, proofs };
+}
+
+/**
+ * Validates that a merkle proof is valid for a given root.
+ */
+export function isValidMerkleProof(root: Uint8Array, proof: Uint8Array, item: Uint8Array): boolean {
+  return Tree.checkProof(root, proof, item, merkleHash);
 }
 
 /**

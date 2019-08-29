@@ -107,13 +107,10 @@ export class Content {
    */
   public isValid(): boolean {
 
-    // ledger validation
-      // proof
-
     // genesis content
     if (this._value.parentContentHash.length === 0) {
       if (this._value.proofHash.length !== 32 || this._value.payload.length > 0) {
-        throw new Error('Invalid genesis content, proof hash and payload must be empty');
+        throw new Error('Invalid genesis content, should have proof hash and content should be empty');
       }
       return true;
     }

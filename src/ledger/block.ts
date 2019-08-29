@@ -121,8 +121,6 @@ export class Block {
    */
   public isValid(): boolean {
 
-    // ledger validation
-
     if (this._value.proof.key !== this._value.content.value.proofHash) {
       throw new Error('Invalid block, content does not point to proof');
     }

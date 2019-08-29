@@ -4,7 +4,7 @@
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import { DIFFICULTY, VERSION } from '../main/constants';
+import { DIFFICULTY, HASH_LENGTH, PIECE_SIZE, VERSION } from '../main/constants';
 import {ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { num2Bin } from '../utils/utils';
@@ -23,7 +23,7 @@ import { Tx } from './tx';
   // Refactor Level into a separate class
   // handle tx fees
   // handle validation where one farmer computes the next level and adds pieces before another
-  // enforce a maximum block size?
+  // enforce a maximum block size of 4096 bytes
 
 // Basic Modes
   // do I store the chain data (full node)
@@ -43,8 +43,6 @@ import { Tx } from './tx';
   // farmer -- only stores the state chain but  encodes each new level into their plot
   // gateway node -- answers rpc requests for records over the DHT
   // farmer -- answers rpc requests for pieces
-// need to define the RPC layer
-// how do we load balance the RPC requests across the network
 
 export class Ledger extends EventEmitter {
 
@@ -63,7 +61,7 @@ export class Ledger extends EventEmitter {
   public chainCount = 0;
   public readonly lastConfirmedLevel = 0;
   public accounts: Account;
-  public state: Map<Uint8Array, IStateData> = new Map();
+  public state: IStateData[] = [];
   private lastStateBlockId: Uint8Array = new Uint8Array();
   private chains: Chain[] = [];
   // @ts-ignore TODO: Use it for something
@@ -218,7 +216,7 @@ export class Ledger extends EventEmitter {
         piece: paddedLevel,
         data: {
           pieceHash,
-          levelIndex: this.state.size + 1,
+          levelIndex: this.state.length + 1,
           pieceIndex: 0,
           proof: new Uint8Array(),
         },
@@ -260,7 +258,7 @@ export class Ledger extends EventEmitter {
           piece: pieces[i],
           data: {
             pieceHash: pieceHashes[i],
-            levelIndex: this.state.size + 1,
+            levelIndex: this.state.length + 1,
             pieceIndex: i,
             proof: proofs[i],
           },
@@ -268,7 +266,7 @@ export class Ledger extends EventEmitter {
       }
     }
 
-    this.state.set(state.key, state.toData());
+    this.state.push(state.toData());
     this.lastStateBlockId = state.key;
 
     if (!this.isServing) {
@@ -327,17 +325,112 @@ export class Ledger extends EventEmitter {
    * Ensures the Proof and Content are well-formed.
    * Ensures all included Txs are valid against the Ledger and well-formed.
    */
-  public async isValidBlock(block: Block): Promise<boolean> {
-    let isValid = true;
-    // validate the proof
-    // validate the content
-    // validate the coinbase tx
-    // validate each credit tx
-      // if not in the mempool fail
-    if (block.isValid()) {
-      isValid = false;
+  public async isValidBlock(block: Block, encoding: Uint8Array): Promise<boolean> {
+
+    // validate the block, proof, content, and coinbase tx are all well formed, will throw if not
+    block.isValid();
+
+    // handle genesis blocks ...
+    if (block.value.proof.value.previousLevelHash.length === 0) {
+
+      // previous proof hash should be null or in proof map
+      if (block.value.proof.value.previousProofHash.length === 0) {
+        const genesisProof = this.proofMap.get(block.value.proof.key);
+        if (!genesisProof || this.proofMap.size) {
+          throw new Error('Invalid genesis block, already have a first genesis proof');
+        }
+      } else {
+        // check in proof map
+        const previousProofData = this.proofMap.get(block.value.proof.value.previousProofHash);
+        if (!previousProofData) {
+          throw new Error('Invalid genesis block, does not reference a known proof');
+        }
+      }
+
+      // encoding should be null
+      if (encoding.length > 0) {
+        throw new Error('Invalid genesis block, should not have an attached encoding');
+      }
+
+      return true;
     }
-    return isValid;
+
+    // verify the proof ...
+
+    // previous level hash is last seen level
+    if (block.value.proof.value.previousLevelHash.toString() !== this.previousLevelHash.toString()) {
+      throw new Error('Invalid block proof, points to incorrect previous level');
+    }
+
+    // previous proof hash is in proof map
+    if (!this.proofMap.has(block.value.proof.key)) {
+      throw new Error('Invalid block proof, points to an unknown previous proof');
+    }
+
+    // solution is part of encoded piece
+    let hasSolution = false;
+    for (let i = 0; i < PIECE_SIZE / HASH_LENGTH; ++i) {
+      const chunk = encoding.subarray((i * HASH_LENGTH), (i + 1) * HASH_LENGTH);
+      if (chunk.toString() === block.value.proof.value.solution.toString()) {
+        hasSolution = true;
+        break;
+      }
+    }
+
+    if (!hasSolution) {
+      throw new Error('Invalid block proof, solution is not present in encoding');
+    }
+
+    // piece level is seen in state
+    if (this.state.length < block.value.proof.value.pieceLevel) {
+      throw new Error('Invalid block proof, referenced piece level is unknown');
+    }
+
+    // piece proof is valid for a given state level
+    const pieceStateData = this.state[block.value.proof.value.pieceLevel];
+    const state = State.load(pieceStateData);
+    const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
+    if (!validPieceProof) {
+      throw new Error('Invalid block proof, piece proof is not a valid merkle path');
+    }
+
+    const proverAddress = crypto.hash(block.value.proof.value.publicKey);
+    const piece = codes.decodePiece(encoding, proverAddress);
+    const pieceHash = crypto.hash(piece);
+    if (pieceHash.toString() !== block.value.proof.value.pieceHash.toString()) {
+      throw new Error('Invalid block proof, encoding does not decode back to parent piece');
+    }
+
+    // verify the content points to the correct chain
+    const correctChainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
+    const parentContentData = this.contentMap.get(block.value.content.value.parentContentHash);
+    if (!parentContentData) {
+      throw new Error('Invalid block content, cannot retrieve parent content block');
+    }
+    const parentContent = Content.load(parentContentData);
+    const parentChainIndex = crypto.jumpHash(parentContent.value.proofHash, this.chainCount);
+    if (parentChainIndex !== correctChainIndex) {
+      throw new Error('Invalid block content, does not hash to the same chain as parent');
+    }
+
+    // validate the coinbase tx (since not in mempool)
+    if (!block.value.coinbase) {
+      throw new Error('Invalid block, does not have a coinbase tx');
+    }
+    this.isValidTx(block.value.coinbase);
+
+    // verify each tx in the content (including coinbase)
+    const txIds = block.value.content.value.payload;
+    for (let i = 1; i < txIds.length; ++i) {
+      const txData = this.txMap.get(txIds[i]);
+      if (!txData) {
+        throw new Error('Invalid block content, cannot retrieve referenced tx id');
+      }
+      const tx = Tx.load(txData);
+      this.isValidTx(tx);
+    }
+
+    return true;
   }
 
   /**
@@ -412,13 +505,31 @@ export class Ledger extends EventEmitter {
 
   /**
    * Validates a Tx against the Ledger and ensures it is well-formed.
+   * Validates schema.
+   * Ensures the sender has funds to cover.
+   * Ensures the nonce has been incremented.
    */
   public async isValidTx(tx: Tx): Promise<boolean> {
-    let isValid = true;
-    if (tx.isValid()) {
-      isValid = false;
+    // validate schema, will throw if invalid
+    tx.isValid();
+
+    // does sender have funds to cover tx (if not coinbase)
+    if (tx.value.sender.length > 0) {
+      const senderBalance = this.accounts.get(tx.senderAddress);
+      if (!senderBalance) {
+        throw new Error('Invalid tx, sender has no account on the ledger!');
+      }
+      if (senderBalance - tx.value.amount < 0) {
+        throw new Error('Invalid tx, sender does not have funds to cover the amount!');
+      }
     }
-    return isValid;
+
+    // has nonce been incremented? (prevent replay attack)
+      // how to get the last tx for this account?
+        // create secondary index in rocks for address and compile...
+        // track the nonce in each address field in accounts
+
+    return true;
   }
 
   /**

@@ -67,6 +67,7 @@ export class Node {
     this.ledger.on('block', (block: Block) => {
       console.log('New block received in node.');
       return;
+      // include the referenced encoding
       // encode to binary
       // wrap in message
       this.rpc.gossip(block.toData());
@@ -90,14 +91,15 @@ export class Node {
      * Filter the block for duplicates or spam. Validate the block.
      * Apply the block to the ledger and gossip to all other peers.
      */
-    this.rpc.on('block', (blockData: IBlockData) => {
+    this.rpc.on('block', (blockData: IBlockData, encoding: Uint8Array) => {
       return;
+      // should include the encoding
       // filter
       // validate
       // apply
       // re-gossip
       const block = Block.load(blockData);
-      if (this.ledger.isValidBlock(block)) {
+      if (this.ledger.isValidBlock(block, encoding)) {
         this.ledger.applyBlock(block);
         this.rpc.gossip(blockData);
       }

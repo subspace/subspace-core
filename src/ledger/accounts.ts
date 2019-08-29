@@ -2,6 +2,7 @@
 import { bin2Hex } from '../utils/utils';
 
 // ToDo
+  // track nonce for each address
   // persist to disk
   // how big can this get in memory: 400 MB per 10M accounts
 

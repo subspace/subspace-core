@@ -132,10 +132,6 @@ export class Tx {
    */
   public isValid(): boolean {
 
-    // ledger validation
-      // sender has funds to cover tx
-      // nonce has been incremented
-
     // validate signature is 96 bytes (BLS signature)
     if (this._value.signature.length !== 96) {
       throw new Error('Invalid tx, invalid signature length');
