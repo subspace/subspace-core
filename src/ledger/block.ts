@@ -3,6 +3,7 @@
 
 import * as crypto from '../crypto/crypto';
 import { IBlockData, ICompactBlockData, IFullBlockValue } from '../main/interfaces';
+import { bin2Hex } from '../utils/utils';
 import { Content } from './content';
 import { Proof } from './proof';
 import { Tx } from './tx';
@@ -11,7 +12,7 @@ export class Block {
 
   public static createGenesisBlock(previousProofHash: Uint8Array, parentContentHash: Uint8Array): Block {
     const genesisProof = Proof.createGenesisProof(previousProofHash);
-    const genesisContent = Content.createGenesisContent(parentContentHash);
+    const genesisContent = Content.createGenesisContent(parentContentHash, genesisProof.key);
     const genesisBlockValue: IFullBlockValue = {
       proof: genesisProof,
       content: genesisContent,
@@ -59,10 +60,10 @@ export class Block {
 
   // convert to bytes for encoding as part of a level
   public toBytes(): Uint8Array {
-    return Buffer.concat([
+    return Uint8Array.from(Buffer.concat([
       this._value.proof.toBytes(),
       this._value.content.toBytes(),
-    ]);
+    ]));
   }
 
   public toData(): IBlockData {
@@ -78,6 +79,18 @@ export class Block {
       this._value.proof.key,
       this._value.content.key,
     ];
+  }
+
+  public print(): object {
+    return {
+      type: 'Block',
+      key: bin2Hex(this._key),
+      value: {
+        proof: this.value.proof.print(),
+        content: this.value.content.print(),
+        coinbase: this.value.coinbase ? this.value.coinbase.print() : undefined,
+      },
+    };
   }
 
   public isValid(): boolean {

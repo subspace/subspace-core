@@ -7,8 +7,8 @@ import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { COINBASE_REWARD, HASH_LENGTH, PIECE_SIZE } from '../main/constants';
-import { IBlockData, IPiece, ITxData } from '../main/interfaces';
-import { measureProximity } from '../utils/utils';
+import { IBlockData, ITxData } from '../main/interfaces';
+import { bin2Hex, measureProximity } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -48,9 +48,11 @@ export class Node {
      * A new level has been confirmed and encoded into a piece set.
      * Add each piece to the plot, if farming.
      */
-    this.ledger.on('confirmed-level', async (pieceDataSet: IPiece[]) => {
+    this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array) => {
+      console.log('New level confirmation received in node.');
       if (this.isFarming) {
         // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
+        const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash);
         for (const piece of pieceDataSet) {
           await this.farm.addPiece(piece.piece, piece.data);
         }
@@ -63,6 +65,7 @@ export class Node {
      * Encode the block as binary and gossip over the network.
      */
     this.ledger.on('block', (block: Block) => {
+      console.log('New block received in node.');
       return;
       // encode to binary
       // wrap in message
@@ -150,14 +153,23 @@ export class Node {
   public async createLedgerAndFarm(chainCount: number): Promise<void> {
     this.isFarming = true;
     this.getOrCreateAddress();
-    const pieceSet = await this.ledger.createGenesisLevel(chainCount);
+    const [levelRecords, levelHash] = await this.ledger.createGenesisLevel(chainCount);
+    // print(levelRecords);
+    const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
+    console.log(`Created genesis level with ${this.ledger.chainCount} chains.`);
     for (const piece of pieceSet) {
       await this.farm.addPiece(piece.piece, piece.data);
     }
+    console.log(`Plotted ${pieceSet.length} genesis pieces`);
+
+    // print(pieceSet);
 
     // start a farming evaluation loop
-    while (this.isFarming) {
+    for (let i = 0; i < 128; ++i) {
       // find best encoding for challenge
+      console.log('\nSolving a new block challenge');
+      console.log('------------------------------\n');
+      console.log(`${this.farm.getSize()} pieces in plot.`);
       const previousLevelHash = this.ledger.previousLevelHash;
       const parentProofHash = this.ledger.parentProofHash;
       const seed = Buffer.concat([previousLevelHash, parentProofHash]);
@@ -166,8 +178,8 @@ export class Node {
       if (!closestEncoding) {
         throw new Error('Cannot find a piece within plot for target');
       }
-
       const encoding = closestEncoding.encoding;
+      console.log(`Closest piece to target: ${bin2Hex(pieceTarget)} is ${bin2Hex(closestEncoding.data.pieceHash)}`);
       let bestChunkQuality = 0;
       let bestChunk = new Uint8Array();
       const chunkTarget = crypto.hash(pieceTarget);
@@ -181,6 +193,8 @@ export class Node {
           bestChunk = chunk;
         }
       }
+
+      console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)}`);
 
       // create proof of storage
       const unsignedProof = await Proof.create(
@@ -196,9 +210,11 @@ export class Node {
 
       // create coinbase tx
       const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD);
+
+      // const block =
       await this.ledger.createBlock(signedProof, coinbaseTx);
 
-      // plot the new piece set when a level is confirmed
+      // print(block.print());
     }
     return;
   }

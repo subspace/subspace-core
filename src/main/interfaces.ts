@@ -89,14 +89,17 @@ export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 
 /**
  * The value of a simple credit Tx.
+ * Coinbase tx is 152 bytes.
+ * Credit tx is 200 bytes.
+ * Data tx (toDo) is max 4096 bytes
  */
 export interface ITxValue {
-  sender: Uint8Array; // public key of sender
-  receiver: Uint8Array; // address of receiver
-  amount: number; // number of credits being sent
-  nonce: number; // auto incrementing tx nonce for the sender
-  timestamp: number; // create a unix timestamp
-  signature: Uint8Array; // detached signature with sender's private key
+  sender: Uint8Array; // 48 byte public key of sender (optional)
+  receiver: Uint8Array; // 48 byte address of receiver
+  amount: number; // 4 byte number of credits being sent
+  nonce: number; // 4 byte auto incrementing tx nonce for the sender
+  timestamp: number; // 4 byte a unix timestamp
+  signature: Uint8Array; // 96 byte detached signature with sender's private key (credit tx) or receivers private key (coinbase tx)
 }
 
 /**

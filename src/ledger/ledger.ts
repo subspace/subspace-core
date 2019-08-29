@@ -88,7 +88,7 @@ export class Ledger extends EventEmitter {
    * Creates a new genesis level.
    * Returns the initial erasure coded piece set with metadata.
    */
-  public async createGenesisLevel(chainCount: number): Promise<IPiece[]> {
+  public async createGenesisLevel(chainCount: number): Promise<[Uint8Array[], Uint8Array]> {
 
     // init the chains
     this.chainCount = chainCount;
@@ -97,16 +97,20 @@ export class Ledger extends EventEmitter {
     let previousProofHash = new Uint8Array();
     const parentContentHash = new Uint8Array();
     const levelRecords: Uint8Array[] = [];
+    let levelProofs: Uint8Array = new Uint8Array();
 
     // init each chain with a genesis block
     for (let i = 0; i < this.chainCount; ++i) {
       const chain = new Chain(i);
       const block = Block.createGenesisBlock(previousProofHash, parentContentHash);
+      // print(block.print());
       previousProofHash = block.value.proof.key;
 
       // save the proof, append to level data
       this.proofMap.set(block.value.proof.key, block.value.proof.toData());
-      levelRecords.push(block.value.proof.toBytes());
+      const binProof = block.value.proof.toBytes();
+      levelRecords.push(binProof);
+      levelProofs = Buffer.concat([levelProofs, binProof]);
 
       // save the content, append to level data
       this.contentMap.set(block.value.content.key, block.value.content.toData());
@@ -116,23 +120,27 @@ export class Ledger extends EventEmitter {
       chain.addBlock(block.key);
       this.chains.push(chain);
 
+      // add compact block
+      const compactBlockData: ICompactBlockData = [block.value.proof.key, block.value.content.key];
+      this.compactBlockMap.set(block.key, compactBlockData);
+
       // init each chain as unconfirmed
       this.unconfirmedChains.add(i);
       this.unconfirmedBlocksByChain.push(new Set());
     }
 
+    const levelHash = crypto.hash(levelProofs);
     this.parentProofHash = previousProofHash;
-
-    // encode the level
-    return this.encodeLevel(levelRecords);
+    return [levelRecords, levelHash];
   }
 
   /**
    * Creates a subsequent level once a new level is confirmed (at least one new block for each chain).
    * Returns a canonical erasure coded piece set with metadata that will be the same across all nodes.
    */
-  public async createLevel(): Promise<IPiece[]> {
+  public async createLevel(): Promise<[Uint8Array[], Uint8Array]> {
     const levelRecords: Uint8Array[] = [];
+    let levelProofs: Uint8Array = new Uint8Array();
     const uniqueTxSet: Set<Uint8Array> = new Set();
     for (const chain of this.unconfirmedBlocksByChain) {
       for (const blockId of chain.values()) {
@@ -148,7 +156,9 @@ export class Ledger extends EventEmitter {
         }
 
         const proof = Proof.load(proofData);
-        levelRecords.push(proof.toBytes());
+        const binProof = proof.toBytes();
+        levelRecords.push(binProof);
+        levelProofs = Buffer.concat([levelProofs, binProof]);
         const content = Content.load(contentData);
         levelRecords.push(content.toBytes());
 
@@ -168,7 +178,8 @@ export class Ledger extends EventEmitter {
       chain.clear();
     }
 
-    return this.encodeLevel(levelRecords);
+    const levelHash = crypto.hash(levelProofs);
+    return [levelRecords, levelHash];
   }
 
   /**
@@ -176,59 +187,89 @@ export class Ledger extends EventEmitter {
    * Compresses the encoded level into a state block.
    * Returns an erasure coded piece set with metadata.
    */
-  public async encodeLevel(levelRecords: Uint8Array[]): Promise<IPiece[]> {
+  public async encodeLevel(levelRecords: Uint8Array[], levelHash: Uint8Array): Promise<IPiece[]> {
     // prepend each record with its length
     let levelData = new Uint8Array();
     for (const record of levelRecords) {
       levelData = Buffer.concat([levelData, num2Bin(record.length), record]);
     }
+    levelData = Uint8Array.from(levelData);
+
+    let state: State;
+    const pieceDataSet: IPiece[] = [];
 
     // encode level and generate the piece set
     const paddedLevel = codes.padLevel(levelData);
-    const erasureCodedLevel = await codes.erasureCodeLevel(paddedLevel);
-    const pieces = codes.sliceLevel(erasureCodedLevel);
+    if (paddedLevel.length <= 4096) {
+      // if single piece then do not erasure code, slice, or generate index
+      const pieceHash = crypto.hash(paddedLevel);
 
-    // create the piece index
-    const pieceHashes = pieces.map((piece) => crypto.hash(piece));
-    const indexData: Uint8Array = Buffer.concat([...pieceHashes]);
-    const indexPiece = codes.padPiece(indexData);
-    const indexPieceId = crypto.hash(indexPiece);
-    pieces.push(indexPiece);
-    pieceHashes.push(indexPieceId);
+      state = State.create(
+        this.lastStateBlockId,
+        levelHash,
+        pieceHash,
+        DIFFICULTY,
+        VERSION,
+        new Uint8Array(),
+      );
 
-    // build merkle tree and create state block
-    const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
-    const levelHash = crypto.hash([...this.proofMap.keys()]
-      .reduce((sum, id) => Buffer.concat([sum, id])));
+      // create the single piece metadata for this level
+      const pieceData: IPiece = {
+        piece: paddedLevel,
+        data: {
+          pieceHash,
+          levelIndex: this.state.size + 1,
+          pieceIndex: 0,
+          proof: new Uint8Array(),
+        },
+      };
 
-    this.previousLevelHash = levelHash;
+      pieceDataSet.push(pieceData);
 
-    const state = State.create(
-      this.lastStateBlockId,
-      levelHash,
-      root,
-      DIFFICULTY,
-      VERSION,
-      indexPieceId,
-    );
+    } else {
+      // this level has at least two source pieces, erasure code parity shards and add index piece
+      const erasureCodedLevel = await codes.erasureCodeLevel(paddedLevel);
+      const pieces = codes.sliceLevel(erasureCodedLevel);
+
+      // create the piece index
+      const pieceHashes = pieces.map((piece) => crypto.hash(piece));
+      const indexData: Uint8Array = Uint8Array.from(Buffer.concat([...pieceHashes]));
+      const indexPiece = codes.padPiece(indexData);
+      const indexPieceId = crypto.hash(indexPiece);
+      pieces.push(indexPiece);
+      pieceHashes.push(indexPieceId);
+
+      // build merkle tree and create state block
+      const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
+      const levelHash = crypto.hash([...this.proofMap.keys()]
+        .reduce((sum, id) => Buffer.concat([sum, id])));
+
+      this.previousLevelHash = levelHash;
+
+      state = State.create(
+        this.lastStateBlockId,
+        levelHash,
+        root,
+        DIFFICULTY,
+        VERSION,
+        indexPieceId,
+      );
+
+      for (let i = 0; i < pieces.length; ++i) {
+        pieceDataSet[i] = {
+          piece: pieces[i],
+          data: {
+            pieceHash: pieceHashes[i],
+            levelIndex: this.state.size + 1,
+            pieceIndex: i,
+            proof: proofs[i],
+          },
+        };
+      }
+    }
 
     this.state.set(state.key, state.toData());
     this.lastStateBlockId = state.key;
-    const stateIndex = this.state.size;
-
-    // compile the piece data set for plotting
-    const pieceDataSet: IPiece[] = [];
-    for (let i = 0; i < pieces.length; ++i) {
-      pieceDataSet[i] = {
-        piece: pieces[i],
-        data: {
-          pieceHash: pieceHashes[i],
-          levelIndex: stateIndex,
-          pieceIndex: i,
-          proof: proofs[i],
-        },
-      };
-    }
 
     if (!this.isServing) {
       // clear the pending state from memory
@@ -261,7 +302,7 @@ export class Ledger extends EventEmitter {
    * Emits a fully formed Block for gossip by Node.
    * Passes the Block on to be applied to Ledger
    */
-  public async createBlock(proof: Proof, coinbaseTx: Tx): Promise<void> {
+  public async createBlock(proof: Proof, coinbaseTx: Tx): Promise<Block> {
 
     // create the block
     const chainIndex = crypto.jumpHash(proof.key, this.chainCount);
@@ -278,7 +319,7 @@ export class Ledger extends EventEmitter {
     this.emit('block', block);
 
     await this.applyBlock(block);
-    return;
+    return block;
   }
 
   /**
@@ -342,24 +383,30 @@ export class Ledger extends EventEmitter {
         this.unconfirmedTxs.delete(txId);
       }
 
+      // tslint:disable-next-line: no-console
+      console.log('Completed applying block, checking if level is confirmed');
+
       // update level confirmation cache and check if level is confirmed
       this.unconfirmedChains.delete(chainIndex);
       if (!this.unconfirmedChains.size) {
-        const pieceDataSet = await this.createLevel();
-        this.emit('confirmed-level', pieceDataSet);
+        const [levelRecords, levelHash] = await this.createLevel();
+        this.emit('confirmed-level', levelRecords, levelHash);
 
         for (let i = 0; i < this.chainCount; ++i) {
           this.unconfirmedChains.add(i);
         }
 
         if (this.isFarming) {
-          this.on('completed-plotting', () => {
+          this.once('completed-plotting', () => {
+            // tslint:disable-next-line: no-console
+            console.log('completed plotting new piece set');
             resolve();
           });
         } else {
           resolve();
         }
       }
+      resolve();
     });
   }
 

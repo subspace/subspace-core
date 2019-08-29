@@ -2,6 +2,8 @@
   // port to Rust/WASM?
   // write tests
 
+import { inspect } from 'util';
+
 /**
  * Returns the exclusive-or (XOR) of two byte arrays.
  */
@@ -67,17 +69,21 @@ export function num2Date(num: number): string {
 }
 
 /**
- * Converts an integer to binary format.
+ * Converts a positive integer in range 2^32 to binary format (4 bytes).
  */
 export function num2Bin(num: number): Uint8Array {
-  return Buffer.from(num.toString(2));
+  const arr = new ArrayBuffer(4); // an Int32 takes 4 bytes
+  const view = new DataView(arr);
+  view.setUint32(0, num, false); // byteOffset = 0; littleEndian = false
+  return new Uint8Array(arr);
 }
 
 /**
- * Converts a binary number to number.
+ * Converts a binary number (4 bytes) to positive integer in range 2^32.
  */
 export function bin2Num(bin: Uint8Array): number {
-  return Number.parseInt(bin.toString(), 2);
+  const view = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
+  return view.getUint32(0, false); // byteOffset = 0; littleEndian = false
 }
 
 /**
@@ -106,4 +112,12 @@ export function bin2JSON(data: Uint8Array): object {
  */
 export function str2Bin(data: string): Uint8Array {
   return new Uint8Array(Buffer.from(data));
+}
+
+/**
+ * Prints all properties of nested object to the console.
+ */
+export function print(data: object): void {
+  // tslint:disable-next-line: no-console
+  console.log(inspect(data, false, null, true));
 }

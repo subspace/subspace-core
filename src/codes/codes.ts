@@ -10,7 +10,7 @@ export function padPiece(piece: Uint8Array): Uint8Array {
   const remainder = piece.length % PIECE_SIZE;
   if (remainder) {
     const padding = new Uint8Array(PIECE_SIZE - remainder);
-    piece = Buffer.concat([piece, padding]);
+    piece = Uint8Array.from(Buffer.concat([piece, padding]));
   }
   return piece;
 }
@@ -24,7 +24,7 @@ export function padLevel(levelData: Uint8Array): Uint8Array {
     const padding = new Uint8Array(PIECE_SIZE - remainder);
     levelData = Buffer.concat([levelData, padding]);
   }
-  return levelData;
+  return Uint8Array.from(levelData);
 }
 
 const readSolomonErasure = ReedSolomonErasure.fromCurrentDirectory();
@@ -59,7 +59,7 @@ export function sliceLevel(erasureCodedLevelData: Uint8Array): Uint8Array[] {
   const pieceSet: Uint8Array[] = [];
   for (let i = 0; i < pieceCount; ++i) {
     const piece = erasureCodedLevelData.subarray(i * PIECE_SIZE, (i + 1) * PIECE_SIZE);
-    pieceSet.push(piece);
+    pieceSet.push(Uint8Array.from(piece));
   }
   return pieceSet;
 }

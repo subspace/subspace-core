@@ -76,6 +76,10 @@ export class Farm {
     await this.addPieceData(pieceData);
   }
 
+  public getSize(): number {
+    return this.memPlot.size;
+  }
+
   /**
    * Searches index for closest piece id to target by XOR and returns the decoded piece with metadata.
    */

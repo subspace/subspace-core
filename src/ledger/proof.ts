@@ -87,7 +87,7 @@ export class Proof {
    * Returns a compact binary representation of the proof data.
    */
   public toBytes(signed = true): Uint8Array {
-    const asBytes: Uint8Array = Buffer.concat([
+    const asBytes: Uint8Array = Uint8Array.from(Buffer.concat([
       this._value.previousLevelHash,
       this._value.previousProofHash,
       this._value.solution,
@@ -96,7 +96,7 @@ export class Proof {
       this._value.pieceProof,
       this._value.publicKey,
       signed ? this._value.signature : new Uint8Array(),
-    ]);
+    ]));
     return asBytes;
   }
 

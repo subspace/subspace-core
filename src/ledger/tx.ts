@@ -60,7 +60,7 @@ export class Tx {
   }
 
   public get key(): Uint8Array {
-    return this.key;
+    return this._key;
   }
 
   public get value(): ITxValue {
@@ -85,14 +85,14 @@ export class Tx {
    * Returns a compact binary representation of the tx data.
    */
   public toBytes(signed = true): Uint8Array {
-    return Buffer.concat([
+    return Uint8Array.from(Buffer.concat([
       this._value.sender,
       this._value.receiver,
       num2Bin(this._value.amount),
       num2Bin(this._value.nonce),
       num2Bin(this._value.timestamp),
       signed ? this._value.signature : new Uint8Array(),
-    ]);
+    ]));
   }
 
   /**
@@ -132,6 +132,40 @@ export class Tx {
    */
   public isValid(): boolean {
 
+    // ledger validation
+      // sender has funds to cover tx
+      // nonce has been incremented
+
+    // validate signature is 96 bytes (BLS signature)
+    if (this._value.signature.length !== 96) {
+      throw new Error('Invalid tx, invalid signature length');
+    }
+
+    // validate receiver is 48 bytes (BLS public key)
+    if (this._value.receiver.length !== 48) {
+      throw new Error('Invalid tx, invalid receiver key length');
+    }
+
+    // validate nonce is 4 bytes
+    if (num2Bin(this._value.nonce).length !== 4) {
+      throw new Error('Invalid tx, incorrect nonce length');
+    }
+
+    // validate timestamp is 4 bytes
+    if (num2Bin(this._value.timestamp).length !== 4) {
+      throw new Error('Invalid tx, incorrect timestamp length');
+    }
+
+    // validate amount is 4 bytes
+    if (num2Bin(this._value.amount).length !== 4) {
+      throw new Error('Invalid tx, incorrect amount length');
+    }
+
+    // is date within +/- 10 minutes of now
+    if (!crypto.isDateWithinRange(this._value.timestamp, 600000)) {
+      throw new Error('Invalid tx, date is out of range');
+    }
+
     // is signature valid for message and public key
     let sender: Uint8Array;
     this._value.sender.length > 0 ? sender = this._value.sender : sender = this._value.receiver;
@@ -139,14 +173,9 @@ export class Tx {
       throw new Error('Invalid tx, invalid signature for message and public key');
     }
 
-    // is there a receiver with proper length
-    if (this._value.receiver.length !== 48) {
-      throw new Error('Invalid tx, receiver address is incorrect length');
+    if (this._value.sender.length === 0 && this._value.amount !== 1) {
+      throw new Error('Invalid coinbase tx, invalid amount');
     }
-
-    // is amount with range?
-
-    // is date within range?
 
     return true;
   }

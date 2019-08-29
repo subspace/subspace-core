@@ -22,8 +22,8 @@ export class Content {
     return content;
   }
 
-  public static createGenesisContent(parentContentHash: Uint8Array = new Uint8Array()): Content {
-    return Content.create(parentContentHash, new Uint8Array(), []);
+  public static createGenesisContent(parentContentHash: Uint8Array, proofHash: Uint8Array): Content {
+    return Content.create(parentContentHash, proofHash, []);
   }
 
   public static load(contentData: IContentData): Content {
@@ -54,11 +54,11 @@ export class Content {
   }
 
   public toBytes(): Uint8Array {
-    return Buffer.concat([
+    return Uint8Array.from(Buffer.concat([
       this._value.parentContentHash,
       this._value.proofHash,
       ...this._value.payload,
-    ]);
+    ]));
   }
 
   public toData(): IContentData {
