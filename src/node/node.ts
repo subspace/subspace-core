@@ -1,22 +1,25 @@
 // tslint:disable: no-console
 
+// import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
 import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
-import { COINBASE_REWARD, HASH_LENGTH, PIECE_SIZE } from '../main/constants';
+import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { IBlockData, ITxData } from '../main/interfaces';
 import { bin2Hex, measureProximity } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
   // detect type of storage for storage adapter
-  // start a new ledger
   // define the full API
   // include the RPC interface
   // sync an existing ledger
+
+// Descriptive Console Output
+  //
 
 export class Node {
 
@@ -49,7 +52,6 @@ export class Node {
      * Add each piece to the plot, if farming.
      */
     this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array) => {
-      console.log('New level confirmation received in node.');
       if (this.isFarming) {
         // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
         const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash);
@@ -64,8 +66,11 @@ export class Node {
      * A new block was created by this farmer from Ledger after solving the block challenge.
      * Encode the block as binary and gossip over the network.
      */
-    this.ledger.on('block', (block: Block) => {
-      console.log('New block received in node.');
+    this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
+      // console.log('New block received in node.');
+      // console.log(`Encoding length is ${encoding.length}`);
+      await this.ledger.isValidBlock(block, encoding);
+      console.log('New block received and validated by Node.');
       return;
       // include the referenced encoding
       // encode to binary
@@ -155,23 +160,56 @@ export class Node {
   public async createLedgerAndFarm(chainCount: number): Promise<void> {
     this.isFarming = true;
     this.getOrCreateAddress();
+    console.log('\nLaunching a new Subspace Full Node!');
+    console.log('-----------------------------------\n');
+    console.log(`Created a new node identity with address ${bin2Hex(this.wallet.address)}`);
+    console.log(`Starting a new ledger from genesis with ${chainCount} chains.`);
     const [levelRecords, levelHash] = await this.ledger.createGenesisLevel(chainCount);
-    // print(levelRecords);
     const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
-    console.log(`Created genesis level with ${this.ledger.chainCount} chains.`);
+    console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
     for (const piece of pieceSet) {
       await this.farm.addPiece(piece.piece, piece.data);
     }
-    console.log(`Plotted ${pieceSet.length} genesis pieces`);
+    console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
+
+    // if (pieceSet.length === 1) {
+    //   console.log('A single genesis piece has been encoded into the genesis level');
+    //   const pieceData = pieceSet[0];
+
+    //   // original piece data
+    //   console.log(`Address for encoding is ${this.wallet.address}`);
+    //   // console.log(`Original piece is ${pieceData.piece}`);
+    //   console.log(`Attached piece hash is ${pieceData.data.pieceHash}`);
+    //   console.log(`Actual piece hash is ${crypto.hash(pieceData.piece)}`);
+
+    //   // encoded data
+    //   const encoding = codes.encodePiece(pieceData.piece, this.wallet.address);
+    //   const encodingHash = crypto.hash(encoding);
+    //   // console.log(`Encoding is ${encoding}`);
+    //   console.log(`Encoded hash is ${encodingHash}`);
+
+    //   // decoded data
+    //   const decoding = codes.decodePiece(encoding, this.wallet.address);
+    //   const decodedHash = crypto.hash(decoding);
+    //   // console.log(`Decoding is ${decoding}`);
+    //   console.log(`Decoded hash is ${decodedHash}`);
+    // }
 
     // print(pieceSet);
 
     // start a farming evaluation loop
-    for (let i = 0; i < 128; ++i) {
+    for (let i = 0; i < 16000; ++i) {
       // find best encoding for challenge
       console.log('\nSolving a new block challenge');
+      console.log('------------------------------');
+      console.log(`State: ${this.ledger.stateMap.size} levels`);
+      console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
+      const piecesInPlot = this.farm.getSize();
+      const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
+      console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
+      console.log(`Balance: ${this.ledger.accounts.get(this.wallet.address)} credits`);
       console.log('------------------------------\n');
-      console.log(`${this.farm.getSize()} pieces in plot.`);
+
       const previousLevelHash = this.ledger.previousLevelHash;
       const parentProofHash = this.ledger.parentProofHash;
       const seed = Buffer.concat([previousLevelHash, parentProofHash]);
@@ -181,14 +219,14 @@ export class Node {
         throw new Error('Cannot find a piece within plot for target');
       }
       const encoding = closestEncoding.encoding;
-      console.log(`Closest piece to target: ${bin2Hex(pieceTarget)} is ${bin2Hex(closestEncoding.data.pieceHash)}`);
+      console.log(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncoding.data.pieceHash).substring(0, 16)}`);
       let bestChunkQuality = 0;
       let bestChunk = new Uint8Array();
-      const chunkTarget = crypto.hash(pieceTarget);
+      const chunkTarget = crypto.hash(pieceTarget).subarray(0, 8);
 
       // find best chunk for challenge
-      for (let i = 0; i < PIECE_SIZE / HASH_LENGTH; ++ i) {
-        const chunk = encoding.subarray(i * HASH_LENGTH, (i + 1) * HASH_LENGTH);
+      for (let i = 0; i < PIECE_SIZE / CHUNK_LENGTH; ++i) {
+        const chunk = encoding.subarray(i * CHUNK_LENGTH, (i + 1) * CHUNK_LENGTH);
         const quality = measureProximity(chunk, chunkTarget);
         if (quality > bestChunkQuality) {
           bestChunkQuality = quality;
@@ -204,7 +242,7 @@ export class Node {
         parentProofHash,
         bestChunk,
         closestEncoding.data.pieceHash,
-        closestEncoding.data.levelIndex,
+        closestEncoding.data.stateHash,
         closestEncoding.data.proof,
         this.wallet.publicKey,
       );
@@ -214,7 +252,7 @@ export class Node {
       const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD);
 
       // const block =
-      await this.ledger.createBlock(signedProof, coinbaseTx);
+      await this.ledger.createBlock(signedProof, coinbaseTx, encoding);
 
       // print(block.print());
     }

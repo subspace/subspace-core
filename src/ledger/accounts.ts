@@ -1,4 +1,5 @@
 // tslint:disable: no-console
+import { ArrayMap } from 'array-map-set';
 import { bin2Hex } from '../utils/utils';
 
 // ToDo
@@ -14,7 +15,7 @@ export class Account {
   private accounts: Map<Uint8Array, number>;
 
   constructor() {
-    this.accounts = new Map();
+    this.accounts = ArrayMap<Uint8Array, number>();
   }
 
   /**

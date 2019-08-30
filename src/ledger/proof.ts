@@ -3,7 +3,7 @@
 
 import * as crypto from '../crypto/crypto';
 import { IProofData, IProofValue } from '../main/interfaces';
-import { bin2Hex, num2Bin } from '../utils/utils';
+import { bin2Hex } from '../utils/utils';
 
 /**
  * Record class for canonical proofs of storage used to create new blocks for the ledger.
@@ -19,7 +19,7 @@ export class Proof {
     previousProofHash: Uint8Array,
     solution: Uint8Array,
     pieceHash: Uint8Array,
-    pieceLevel: number,
+    pieceStateHash: Uint8Array,
     pieceProof: Uint8Array,
     publicKey: Uint8Array,
   ): Proof {
@@ -28,7 +28,7 @@ export class Proof {
       previousProofHash,
       solution,
       pieceHash,
-      pieceLevel,
+      pieceStateHash,
       pieceProof,
       publicKey,
       signature: new Uint8Array(),
@@ -43,7 +43,7 @@ export class Proof {
    */
   public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array()): Proof {
     const nullArray = new Uint8Array();
-    const proof = Proof.create(nullArray, previousProofHash, nullArray, nullArray, 0, nullArray, nullArray);
+    const proof = Proof.create(nullArray, previousProofHash, nullArray, nullArray, nullArray, nullArray, nullArray);
     proof.setKey();
     return proof;
   }
@@ -57,7 +57,7 @@ export class Proof {
       previousProofHash: proofData[1],
       solution: proofData[2],
       pieceHash: proofData[3],
-      pieceLevel: proofData[4],
+      pieceStateHash: proofData[4],
       pieceProof: proofData[5],
       publicKey: proofData[6],
       signature: proofData[7],
@@ -92,7 +92,7 @@ export class Proof {
       this._value.previousProofHash,
       this._value.solution,
       this._value.pieceHash,
-      num2Bin(this._value.pieceLevel),
+      this._value.pieceStateHash,
       this._value.pieceProof,
       this._value.publicKey,
       signed ? this._value.signature : new Uint8Array(),
@@ -109,7 +109,7 @@ export class Proof {
       this._value.previousProofHash,
       this._value.solution,
       this._value.pieceHash,
-      this._value.pieceLevel,
+      this._value.pieceStateHash,
       this._value.pieceProof,
       this._value.publicKey,
       this._value.signature,
@@ -127,8 +127,8 @@ export class Proof {
         previousLevelHash: bin2Hex(this._value.previousLevelHash),
         previousProofHash: bin2Hex(this._value.previousProofHash),
         solution: bin2Hex(this._value.solution),
-        pieceHash: bin2Hex(this._value.solution),
-        pieceLevel: this._value.pieceLevel,
+        pieceHash: bin2Hex(this._value.pieceHash),
+        pieceStateHash: bin2Hex(this._value.pieceStateHash),
         pieceProof: bin2Hex(this._value.pieceProof),
         publicKey: bin2Hex(this._value.publicKey),
         signature: bin2Hex(this._value.signature),
@@ -147,7 +147,7 @@ export class Proof {
       // ensure fields are null
       if (this._value.solution.length > 0 ||
         this._value.pieceHash.length > 0 ||
-        this._value.pieceLevel !== 0 ||
+        this._value.pieceStateHash.length > 0 ||
         this._value.pieceProof.length > 0 ||
         this._value.publicKey.length > 0 ||
         this._value.signature.length > 0) {
@@ -182,14 +182,16 @@ export class Proof {
     }
 
     // piece level is 4 bytes
-    if (num2Bin(this._value.pieceLevel).length !== 4) {
+    if (this._value.pieceStateHash.length !== 32) {
       throw new Error('Invalid proof, invalid length for piece level');
     }
 
-    // piece proof is greater than 0 bytes
-    if (this._value.pieceProof.length < 32) {
-      throw new Error('Invalid proof, invalid length for piece proof');
-    }
+    // // piece proof is greater than 0 bytes
+    // if (this._value.pieceProof.length < 32) {
+    //   // tslint:disable-next-line: no-console
+    //   console.log(this.print());
+    //   throw new Error('Invalid proof, invalid length for piece proof');
+    // }
 
     // public key is 48 bytes
     if (this._value.publicKey.length !== 48) {

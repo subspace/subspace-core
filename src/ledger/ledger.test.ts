@@ -13,7 +13,6 @@ if (!globalThis.indexedDB) {
 }
 
 import * as crypto from '../crypto/crypto';
-import { bin2Num } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 // import { Account } from './accounts';
 import { Block } from './block';
@@ -59,7 +58,7 @@ test('create-proof', () => {
   const previousProofHash = crypto.randomBytes(32);
   const solution = crypto.randomBytes(8);
   const pieceHash = crypto.randomBytes(32);
-  const pieceLevel = bin2Num(crypto.randomBytes(4));
+  const pieceStateHash = crypto.randomBytes(32);
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
@@ -67,7 +66,7 @@ test('create-proof', () => {
     previousProofHash,
     solution,
     pieceHash,
-    pieceLevel,
+    pieceStateHash,
     pieceProof,
     wallet.publicKey,
   );
@@ -110,7 +109,7 @@ test('create-block', async () => {
   const previousProofHash = crypto.randomBytes(32);
   const solution = crypto.randomBytes(8);
   const pieceHash = crypto.randomBytes(32);
-  const pieceLevel = bin2Num(crypto.randomBytes(4));
+  const pieceStateHash = crypto.randomBytes(32);
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
@@ -118,7 +117,7 @@ test('create-block', async () => {
     previousProofHash,
     solution,
     pieceHash,
-    pieceLevel,
+    pieceStateHash,
     pieceProof,
     wallet.publicKey,
   );

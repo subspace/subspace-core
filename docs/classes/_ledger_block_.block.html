@@ -69,6 +69,13 @@
 <div class="container container-main">
 	<div class="row">
 		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-comment">
+				<div class="tsd-comment tsd-typography">
+					<div class="lead">
+						<p>Record class for a logical block that contains the proof, content header, and coinbase tx.</p>
+					</div>
+				</div>
+			</section>
 			<section class="tsd-panel tsd-hierarchy">
 				<h3>Hierarchy</h3>
 				<ul class="tsd-hierarchy">
@@ -105,6 +112,7 @@
 							<h3>Methods</h3>
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#isvalid" class="tsd-kind-icon">is<wbr>Valid</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#print" class="tsd-kind-icon">print</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_ledger_block_.block.html#setkey" class="tsd-kind-icon">set<wbr>Key</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#tobytes" class="tsd-kind-icon">to<wbr>Bytes</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_block_.block.html#tocompactdata" class="tsd-kind-icon">to<wbr>Compact<wbr>Data</a></li>
@@ -129,7 +137,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L46">ledger/block.ts:46</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L58">ledger/block.ts:58</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -151,7 +159,7 @@
 					<div class="tsd-signature tsd-kind-icon">_key<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L45">ledger/block.ts:45</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L57">ledger/block.ts:57</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -161,7 +169,7 @@
 					<div class="tsd-signature tsd-kind-icon">_value<span class="tsd-signature-symbol">:</span> <a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L46">ledger/block.ts:46</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L58">ledger/block.ts:58</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -178,7 +186,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L53">ledger/block.ts:53</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L65">ledger/block.ts:65</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
@@ -195,7 +203,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L57">ledger/block.ts:57</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L69">ledger/block.ts:69</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_main_interfaces_.ifullblockvalue.html" class="tsd-signature-type">IFullBlockValue</a></h4>
@@ -215,10 +223,37 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L84">ledger/block.ts:84</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L122">ledger/block.ts:122</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Validates that block follows schema and is internally consistent, but not that block is correct.</p>
+								</div>
+							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="print" class="tsd-anchor"></a>
+					<h3>print</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">print<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">object</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L107">ledger/block.ts:107</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns a human readable serialization of the block object.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">object</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -232,9 +267,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L88">ledger/block.ts:88</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L175">ledger/block.ts:175</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Sets the block id as the content addressed hash of its value.</p>
+								</div>
+							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
 						</li>
 					</ul>
@@ -249,9 +289,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L62">ledger/block.ts:62</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L76">ledger/block.ts:76</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns a compact binary representation of the block data for level encoding.</p>
+								</div>
+							</div>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Uint8Array</span></h4>
 						</li>
 					</ul>
@@ -266,9 +311,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L77">ledger/block.ts:77</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L97">ledger/block.ts:97</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns a tiny pointer to the proof and content for storage within in-memory chain objects.</p>
+								</div>
+							</div>
 							<h4 class="tsd-returns-title">Returns <a href="../modules/_main_interfaces_.html#icompactblockdata" class="tsd-signature-type">ICompactBlockData</a></h4>
 						</li>
 					</ul>
@@ -283,9 +333,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L69">ledger/block.ts:69</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L86">ledger/block.ts:86</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns a compact serialized representation of the block data.</p>
+								</div>
+							</div>
 							<h4 class="tsd-returns-title">Returns <a href="../modules/_main_interfaces_.html#iblockdata" class="tsd-signature-type">IBlockData</a></h4>
 						</li>
 					</ul>
@@ -300,9 +355,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L23">ledger/block.ts:23</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L32">ledger/block.ts:32</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns a new block record given correct inputs.</p>
+								</div>
+							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
@@ -332,9 +392,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L13">ledger/block.ts:13</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L19">ledger/block.ts:19</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Creates an empty block record for a new chain as part of the genesis level.</p>
+								</div>
+							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
@@ -358,9 +423,14 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/block.ts#L38">ledger/block.ts:38</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/block.ts#L50">ledger/block.ts:50</a></li>
 								</ul>
 							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Returns a record instance from existing data.</p>
+								</div>
+							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
@@ -408,6 +478,9 @@
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_ledger_block_.block.html#isvalid" class="tsd-kind-icon">is<wbr>Valid</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ledger_block_.block.html#print" class="tsd-kind-icon">print</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
 								<a href="_ledger_block_.block.html#setkey" class="tsd-kind-icon">set<wbr>Key</a>

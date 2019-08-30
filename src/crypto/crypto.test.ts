@@ -75,3 +75,18 @@ test('bls-keys', () => {
   const signature1 = crypto.signMessage(Buffer.from(hashValue), binaryPrivateKey);
   expect(crypto.verifySignature(Buffer.from(hashValue), signature1, binaryPublicKey)).toBe(true);
 });
+
+test('merkle-workflow', () => {
+  const leaves: Uint8Array[] = [
+    crypto.randomBytes(32),
+    crypto.randomBytes(32),
+    crypto.randomBytes(32),
+    crypto.randomBytes(32),
+  ];
+
+  const { root, proofs } = crypto.buildMerkleTree(leaves);
+
+  for (let i = 0; i < leaves.length; ++i) {
+    expect(crypto.isValidMerkleProof(root, proofs[i], leaves[i])).toBe(true);
+  }
+});

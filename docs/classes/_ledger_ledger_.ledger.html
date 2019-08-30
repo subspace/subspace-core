@@ -103,11 +103,11 @@
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#isfarming" class="tsd-kind-icon">is<wbr>Farming</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#isserving" class="tsd-kind-icon">is<wbr>Serving</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#lastconfirmedlevel" class="tsd-kind-icon">last<wbr>Confirmed<wbr>Level</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ledger_ledger_.ledger.html#laststateblockid" class="tsd-kind-icon">last<wbr>State<wbr>Block<wbr>Id</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ledger_ledger_.ledger.html#laststatehash" class="tsd-kind-icon">last<wbr>State<wbr>Hash</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#parentproofhash" class="tsd-kind-icon">parent<wbr>Proof<wbr>Hash</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#previouslevelhash" class="tsd-kind-icon">previous<wbr>Level<wbr>Hash</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ledger_ledger_.ledger.html#proofmap" class="tsd-kind-icon">proof<wbr>Map</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#state" class="tsd-kind-icon">state</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#statemap" class="tsd-kind-icon">state<wbr>Map</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ledger_ledger_.ledger.html#storage" class="tsd-kind-icon">storage</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ledger_ledger_.ledger.html#txmap" class="tsd-kind-icon">tx<wbr>Map</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_ledger_ledger_.ledger.html#unconfirmedblocksbychain" class="tsd-kind-icon">unconfirmed<wbr>Blocks<wbr>ByChain</a></li>
@@ -126,7 +126,9 @@
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#creategenesislevel" class="tsd-kind-icon">create<wbr>Genesis<wbr>Level</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#createlevel" class="tsd-kind-icon">create<wbr>Level</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited"><a href="_ledger_ledger_.ledger.html#emit" class="tsd-kind-icon">emit</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#encodelargelevel" class="tsd-kind-icon">encode<wbr>Large<wbr>Level</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#encodelevel" class="tsd-kind-icon">encode<wbr>Level</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#encodesmalllevel" class="tsd-kind-icon">encode<wbr>Small<wbr>Level</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited"><a href="_ledger_ledger_.ledger.html#eventnames" class="tsd-kind-icon">event<wbr>Names</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited"><a href="_ledger_ledger_.ledger.html#getmaxlisteners" class="tsd-kind-icon">get<wbr>Max<wbr>Listeners</a></li>
 								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_ledger_ledger_.ledger.html#isvalidblock" class="tsd-kind-icon">is<wbr>Valid<wbr>Block</a></li>
@@ -161,7 +163,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L78">ledger/ledger.ts:78</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L79">ledger/ledger.ts:79</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -186,7 +188,7 @@
 					<div class="tsd-signature tsd-kind-icon">accounts<span class="tsd-signature-symbol">:</span> <a href="_ledger_accounts_.account.html" class="tsd-signature-type">Account</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L65">ledger/ledger.ts:65</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L65">ledger/ledger.ts:65</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -196,7 +198,7 @@
 					<div class="tsd-signature tsd-kind-icon">chain<wbr>Count<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> =&nbsp;0</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L63">ledger/ledger.ts:63</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L63">ledger/ledger.ts:63</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -206,27 +208,27 @@
 					<div class="tsd-signature tsd-kind-icon">chains<span class="tsd-signature-symbol">:</span> <a href="_ledger_chain_.chain.html" class="tsd-signature-type">Chain</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol"> =&nbsp;[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L68">ledger/ledger.ts:68</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L68">ledger/ledger.ts:68</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="compactblockmap" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> compact<wbr>Block<wbr>Map</h3>
-					<div class="tsd-signature tsd-kind-icon">compact<wbr>Block<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><a href="../modules/_main_interfaces_.html#icompactblockdata" class="tsd-signature-type">ICompactBlockData</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Map()</span></div>
+					<div class="tsd-signature tsd-kind-icon">compact<wbr>Block<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;ArrayMap&lt;Uint8Array, ICompactBlockData&gt;()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L72">ledger/ledger.ts:72</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L73">ledger/ledger.ts:73</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="contentmap" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> content<wbr>Map</h3>
-					<div class="tsd-signature tsd-kind-icon">content<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><a href="../modules/_main_interfaces_.html#icontentdata" class="tsd-signature-type">IContentData</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Map()</span></div>
+					<div class="tsd-signature tsd-kind-icon">content<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;ArrayMap&lt;Uint8Array, IContentData&gt;()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L74">ledger/ledger.ts:74</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L75">ledger/ledger.ts:75</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -236,7 +238,7 @@
 					<div class="tsd-signature tsd-kind-icon">is<wbr>Farming<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L56">ledger/ledger.ts:56</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L56">ledger/ledger.ts:56</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -246,7 +248,7 @@
 					<div class="tsd-signature tsd-kind-icon">is<wbr>Serving<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L57">ledger/ledger.ts:57</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L57">ledger/ledger.ts:57</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -256,17 +258,17 @@
 					<div class="tsd-signature tsd-kind-icon">last<wbr>Confirmed<wbr>Level<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">0</span><span class="tsd-signature-symbol"> =&nbsp;0</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L64">ledger/ledger.ts:64</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L64">ledger/ledger.ts:64</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
-					<a name="laststateblockid" class="tsd-anchor"></a>
-					<h3><span class="tsd-flag ts-flagPrivate">Private</span> last<wbr>State<wbr>Block<wbr>Id</h3>
-					<div class="tsd-signature tsd-kind-icon">last<wbr>State<wbr>Block<wbr>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
+					<a name="laststatehash" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> last<wbr>State<wbr>Hash</h3>
+					<div class="tsd-signature tsd-kind-icon">last<wbr>State<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L67">ledger/ledger.ts:67</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L67">ledger/ledger.ts:67</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -276,7 +278,7 @@
 					<div class="tsd-signature tsd-kind-icon">parent<wbr>Proof<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L60">ledger/ledger.ts:60</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L60">ledger/ledger.ts:60</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -286,27 +288,27 @@
 					<div class="tsd-signature tsd-kind-icon">previous<wbr>Level<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol"> =&nbsp;new Uint8Array()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L59">ledger/ledger.ts:59</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L59">ledger/ledger.ts:59</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="proofmap" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> proof<wbr>Map</h3>
-					<div class="tsd-signature tsd-kind-icon">proof<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><a href="../modules/_main_interfaces_.html#iproofdata" class="tsd-signature-type">IProofData</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Map()</span></div>
+					<div class="tsd-signature tsd-kind-icon">proof<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;ArrayMap&lt;Uint8Array, IProofData&gt;()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L73">ledger/ledger.ts:73</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L74">ledger/ledger.ts:74</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class">
-					<a name="state" class="tsd-anchor"></a>
-					<h3>state</h3>
-					<div class="tsd-signature tsd-kind-icon">state<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><a href="../modules/_main_interfaces_.html#istatedata" class="tsd-signature-type">IStateData</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Map()</span></div>
+					<a name="statemap" class="tsd-anchor"></a>
+					<h3>state<wbr>Map</h3>
+					<div class="tsd-signature tsd-kind-icon">state<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;ArrayMap&lt;Uint8Array, IStateData&gt;()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L66">ledger/ledger.ts:66</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L66">ledger/ledger.ts:66</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -316,17 +318,17 @@
 					<div class="tsd-signature tsd-kind-icon">storage<span class="tsd-signature-symbol">:</span> <a href="_storage_storage_.storage.html" class="tsd-signature-type">Storage</a></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L69">ledger/ledger.ts:69</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L70">ledger/ledger.ts:70</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="txmap" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> tx<wbr>Map</h3>
-					<div class="tsd-signature tsd-kind-icon">tx<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><a href="../modules/_main_interfaces_.html#itxdata" class="tsd-signature-type">ITxData</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Map()</span></div>
+					<div class="tsd-signature tsd-kind-icon">tx<wbr>Map<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;ArrayMap&lt;Uint8Array, ITxData&gt;()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L75">ledger/ledger.ts:75</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L76">ledger/ledger.ts:76</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -336,7 +338,7 @@
 					<div class="tsd-signature tsd-kind-icon">unconfirmed<wbr>Blocks<wbr>ByChain<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Array</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;[]</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L77">ledger/ledger.ts:77</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L78">ledger/ledger.ts:78</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -346,17 +348,17 @@
 					<div class="tsd-signature tsd-kind-icon">unconfirmed<wbr>Chains<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Set()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L78">ledger/ledger.ts:78</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L79">ledger/ledger.ts:79</a></li>
 						</ul>
 					</aside>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
 					<a name="unconfirmedtxs" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagPrivate">Private</span> unconfirmed<wbr>Txs</h3>
-					<div class="tsd-signature tsd-kind-icon">unconfirmed<wbr>Txs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;new Set()</span></div>
+					<div class="tsd-signature tsd-kind-icon">unconfirmed<wbr>Txs<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Set</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> =&nbsp;ArraySet()</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L76">ledger/ledger.ts:76</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L77">ledger/ledger.ts:77</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -430,7 +432,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L306">ledger/ledger.ts:306</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L472">ledger/ledger.ts:472</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -460,7 +462,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L381">ledger/ledger.ts:381</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L570">ledger/ledger.ts:570</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -484,13 +486,13 @@
 					<a name="createblock" class="tsd-anchor"></a>
 					<h3>create<wbr>Block</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">create<wbr>Block<span class="tsd-signature-symbol">(</span>proof<span class="tsd-signature-symbol">: </span><a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a>, coinbaseTx<span class="tsd-signature-symbol">: </span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">create<wbr>Block<span class="tsd-signature-symbol">(</span>proof<span class="tsd-signature-symbol">: </span><a href="_ledger_proof_.proof.html" class="tsd-signature-type">Proof</a>, coinbaseTx<span class="tsd-signature-symbol">: </span><a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a>, encoding<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L263">ledger/ledger.ts:263</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L313">ledger/ledger.ts:313</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -508,8 +510,11 @@
 								<li>
 									<h5>coinbaseTx: <a href="_ledger_tx_.tx.html" class="tsd-signature-type">Tx</a></h5>
 								</li>
+								<li>
+									<h5>encoding: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
 							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -517,13 +522,13 @@
 					<a name="creategenesislevel" class="tsd-anchor"></a>
 					<h3>create<wbr>Genesis<wbr>Level</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">create<wbr>Genesis<wbr>Level<span class="tsd-signature-symbol">(</span>chainCount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">create<wbr>Genesis<wbr>Level<span class="tsd-signature-symbol">(</span>chainCount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L90">ledger/ledger.ts:90</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L91">ledger/ledger.ts:91</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -538,7 +543,7 @@
 									<h5>chainCount: <span class="tsd-signature-type">number</span></h5>
 								</li>
 							</ul>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -546,13 +551,13 @@
 					<a name="createlevel" class="tsd-anchor"></a>
 					<h3>create<wbr>Level</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">create<wbr>Level<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">create<wbr>Level<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L133">ledger/ledger.ts:133</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L143">ledger/ledger.ts:143</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -561,7 +566,7 @@
 									Returns a canonical erasure coded piece set with metadata that will be the same across all nodes.</p>
 								</div>
 							</div>
-							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-symbol">[</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">, </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">]</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -594,16 +599,42 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
-					<a name="encodelevel" class="tsd-anchor"></a>
-					<h3>encode<wbr>Level</h3>
+					<a name="encodelargelevel" class="tsd-anchor"></a>
+					<h3>encode<wbr>Large<wbr>Level</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">encode<wbr>Level<span class="tsd-signature-symbol">(</span>levelRecords<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">encode<wbr>Large<wbr>Level<span class="tsd-signature-symbol">(</span>paddedLevelData<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, levelHash<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L178">ledger/ledger.ts:178</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L247">ledger/ledger.ts:247</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>paddedLevelData: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+								<li>
+									<h5>levelHash: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="encodelevel" class="tsd-anchor"></a>
+					<h3>encode<wbr>Level</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">encode<wbr>Level<span class="tsd-signature-symbol">(</span>levelRecords<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span>, levelHash<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L192">ledger/ledger.ts:192</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -618,8 +649,37 @@
 								<li>
 									<h5>levelRecords: <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">[]</span></h5>
 								</li>
+								<li>
+									<h5>levelHash: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="encodesmalllevel" class="tsd-anchor"></a>
+					<h3>encode<wbr>Small<wbr>Level</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">encode<wbr>Small<wbr>Level<span class="tsd-signature-symbol">(</span>paddedLevelData<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span>, levelHash<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L219">ledger/ledger.ts:219</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>paddedLevelData: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+								<li>
+									<h5>levelHash: <span class="tsd-signature-type">Uint8Array</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_main_interfaces_.ipiece.html" class="tsd-signature-type">IPiece</a><span class="tsd-signature-symbol">[]</span></h4>
 						</li>
 					</ul>
 				</section>
@@ -665,13 +725,13 @@
 					<a name="isvalidblock" class="tsd-anchor"></a>
 					<h3>is<wbr>Valid<wbr>Block</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
-						<li class="tsd-signature tsd-kind-icon">is<wbr>Valid<wbr>Block<span class="tsd-signature-symbol">(</span>block<span class="tsd-signature-symbol">: </span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">is<wbr>Valid<wbr>Block<span class="tsd-signature-symbol">(</span>block<span class="tsd-signature-symbol">: </span><a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a>, encoding<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L288">ledger/ledger.ts:288</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L339">ledger/ledger.ts:339</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -685,6 +745,9 @@
 							<ul class="tsd-parameters">
 								<li>
 									<h5>block: <a href="_ledger_block_.block.html" class="tsd-signature-type">Block</a></h5>
+								</li>
+								<li>
+									<h5>encoding: <span class="tsd-signature-type">Uint8Array</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></h4>
@@ -701,12 +764,15 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L368">ledger/ledger.ts:368</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L542">ledger/ledger.ts:542</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
-									<p>Validates a Tx against the Ledger and ensures it is well-formed.</p>
+									<p>Validates a Tx against the Ledger and ensures it is well-formed.
+										Validates schema.
+										Ensures the sender has funds to cover.
+									Ensures the nonce has been incremented.</p>
 								</div>
 							</div>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -1130,7 +1196,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/ledger/ledger.ts#L51">ledger/ledger.ts:51</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/ledger/ledger.ts#L51">ledger/ledger.ts:51</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -1225,7 +1291,7 @@
 								<a href="_ledger_ledger_.ledger.html#lastconfirmedlevel" class="tsd-kind-icon">last<wbr>Confirmed<wbr>Level</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
-								<a href="_ledger_ledger_.ledger.html#laststateblockid" class="tsd-kind-icon">last<wbr>State<wbr>Block<wbr>Id</a>
+								<a href="_ledger_ledger_.ledger.html#laststatehash" class="tsd-kind-icon">last<wbr>State<wbr>Hash</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
 								<a href="_ledger_ledger_.ledger.html#parentproofhash" class="tsd-kind-icon">parent<wbr>Proof<wbr>Hash</a>
@@ -1237,7 +1303,7 @@
 								<a href="_ledger_ledger_.ledger.html#proofmap" class="tsd-kind-icon">proof<wbr>Map</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class">
-								<a href="_ledger_ledger_.ledger.html#state" class="tsd-kind-icon">state</a>
+								<a href="_ledger_ledger_.ledger.html#statemap" class="tsd-kind-icon">state<wbr>Map</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
 								<a href="_ledger_ledger_.ledger.html#storage" class="tsd-kind-icon">storage</a>
@@ -1279,7 +1345,13 @@
 								<a href="_ledger_ledger_.ledger.html#emit" class="tsd-kind-icon">emit</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ledger_ledger_.ledger.html#encodelargelevel" class="tsd-kind-icon">encode<wbr>Large<wbr>Level</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
 								<a href="_ledger_ledger_.ledger.html#encodelevel" class="tsd-kind-icon">encode<wbr>Level</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_ledger_ledger_.ledger.html#encodesmalllevel" class="tsd-kind-icon">encode<wbr>Small<wbr>Level</a>
 							</li>
 							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-overwrite tsd-is-inherited">
 								<a href="_ledger_ledger_.ledger.html#eventnames" class="tsd-kind-icon">event<wbr>Names</a>

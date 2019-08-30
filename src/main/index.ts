@@ -17,14 +17,15 @@ import { Node } from '../node/node';
  * storagePath (location for disk based storage)
  * seed (for public key)
  */
+
 const run = async () => {
   const node = await Node.init(
     // Use `memory` for Node.js for now
-    typeof globalThis.document ? 'memory' : 'rocks',
+    typeof globalThis.document ? 'memory' : 'memory',
     'mem-db',
   );
   await node.getOrCreateAddress();
-  await node.createLedgerAndFarm(1);
+  await node.createLedgerAndFarm(16);
 };
 
 run();

@@ -63,7 +63,7 @@ export interface IProofValue {
   previousProofHash: Uint8Array;  // 32 byte hash of the last unconfirmed proof seen
   solution: Uint8Array; // 8 byte encoded chunk closest to encoding target
   pieceHash: Uint8Array; // 32 byte original piece id of encoding that includes the solution
-  pieceLevel: number; // 4 byte state level to obtain the merkle root for this piece
+  pieceStateHash: Uint8Array; // 32 byte state hash from which to obtain the merkle root for the piece used in this proof
   pieceProof: Uint8Array; // unknown length merkle proof that piece is in that past level
   publicKey: Uint8Array; // 48 byte public key of node creating proof
   signature: Uint8Array; // 96 byte detached signature of this proof with node's private key
@@ -72,7 +72,7 @@ export interface IProofValue {
 /**
  * Compact representation of a Proof value.
  */
-export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, number, Uint8Array, Uint8Array, Uint8Array ];
+export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array ];
 
 /**
  * The malleable content associated with a block that includes a summary of Tx ids, not the Tx values themselves.
@@ -141,7 +141,7 @@ export interface IEncoding {
  */
 export interface IPieceData {
   pieceHash: Uint8Array;
-  levelIndex: number;
+  stateHash: Uint8Array;
   pieceIndex: number;
   proof: Uint8Array;
 }
