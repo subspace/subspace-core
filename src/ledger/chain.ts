@@ -1,3 +1,5 @@
+import { ArraySet } from "array-map-set";
+
 // tslint:disable: variable-name
 
 // ToDo
@@ -17,7 +19,7 @@ export class Chain {
   constructor(index: number) {
     this._index = index;
     this._height = 0;
-    this._blocks = new Set();
+    this._blocks = ArraySet();
     this._head = new Uint8Array();
   }
 

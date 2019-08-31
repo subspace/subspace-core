@@ -1,7 +1,9 @@
 // tslint:disable: no-console
+import { ArrayMap } from 'array-map-set';
 import { bin2Hex } from '../utils/utils';
 
 // ToDo
+  // track nonce for each address
   // persist to disk
   // how big can this get in memory: 400 MB per 10M accounts
 
@@ -13,7 +15,7 @@ export class Account {
   private accounts: Map<Uint8Array, number>;
 
   constructor() {
-    this.accounts = new Map();
+    this.accounts = ArrayMap<Uint8Array, number>();
   }
 
   /**

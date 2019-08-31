@@ -67,7 +67,7 @@
 				<a href="#subspace-core" id="subspace-core" style="color: inherit; text-decoration: none;">
 					<h1>Subspace Core</h1>
 				</a>
-				<p>A monorepo that incudes everything needed to run a full node for the Subspace Ledger.</p>
+				<p>A monorepo that includes everything needed to run a full node for the Subspace Ledger.</p>
 				<a href="#design" id="design" style="color: inherit; text-decoration: none;">
 					<h2>Design</h2>
 				</a>
@@ -99,8 +99,15 @@
 					<h3>User Interfaces</h3>
 				</a>
 				<p>Subspace Network Daemon (SND), a CLI built using <a href="https://github.com/tj/commander.js/">Commander</a><br></p>
-				<p>Run with <code>bin/subspace.js</code> from the root of the repository or just using <code>subspace</code> when installed globally.</p>
+				<p>Run with <code>bin/subspace.js</code> from the root of the repository or just using <code>subspace</code> when installed globally using <code>npm install -g @subspace/subspace-core</code>.</p>
 				<p>A simple GUI can be viewed from <a href="/app/web/index.html">/app/web/index.html</a> built with vanilla <a href="https://vuejs.org/">Vue</a> and <a href="https://bulma.io/">Bulma</a>. This will run the browserified version of the protocol as a standalone network node with its own copy of the ledger from genesis -- primarily for testing purposes right now.</p>
+				<a href="#docker" id="docker" style="color: inherit; text-decoration: none;">
+					<h4>Docker</h4>
+				</a>
+				<p>CLI interface using Docker is also available. You can run it like this:</p>
+				<pre><code class="language-bash">docker run --rm -it subspacelabs/subspace-core</code></pre>
+				<p>If you prefer to build it yourself, here is how:</p>
+				<pre><code class="language-bash">docker build -t subspacelabs/subspace-core .</code></pre>
 				<a href="#modules" id="modules" style="color: inherit; text-decoration: none;">
 					<h2>Modules</h2>
 				</a>
@@ -260,7 +267,13 @@
 						<a href="modules/_ledger_ledger_.html">"ledger/ledger"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_ledger_test_.html">"ledger/ledger.test"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
 						<a href="modules/_ledger_ledger_tests_.html">"ledger/ledger.tests"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_ledger_level_.html">"ledger/level"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_ledger_proof_.html">"ledger/proof"</a>
@@ -290,6 +303,24 @@
 						<a href="modules/_node_node_.html">"node/node"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
+						<a href="modules/_plot_diskstorage_.html">"plot/<wbr>Disk<wbr>Storage"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_plot_istorage_.html">"plot/IStorage"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_plot_memorystorage_.html">"plot/<wbr>Memory<wbr>Storage"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_plot_plot_.html">"plot/<wbr>Plot"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_plot_constants_.html">"plot/constants"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_plot_encoding_.html">"plot/encoding"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
 						<a href="modules/_storage_browseradapter_.html">"storage/<wbr>Browser<wbr>Adapter"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
@@ -314,7 +345,7 @@
 						<a href="modules/_wallet_wallet_.html">"wallet/wallet"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
-						<a href="modules/_wallet_wallet_tests_.html">"wallet/wallet.tests"</a>
+						<a href="modules/_wallet_wallet_test_.html">"wallet/wallet.test"</a>
 					</li>
 				</ul>
 			</nav>

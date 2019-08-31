@@ -6,13 +6,12 @@ import { Tx } from "../ledger/tx";
 import { HASH_LENGTH } from '../main/constants';
 import { IKeyPair } from "../main/interfaces";
 import { Storage } from "../storage/storage";
-import { num2Bin, str2Bin } from "../utils/utils";
+import { bin2Num, num2Bin, str2Bin } from "../utils/utils";
 
 // ToDo
-  // only use keys from within wallet module
   // each address should have its own nonce
-  // create from user generated seeds
   // encrypt private keys at rest
+  // create from user generated seeds
   // HD Wallet Functions (child keys)
 
 const STORAGE_ADDRESS = crypto.hash(str2Bin('address'));
@@ -30,6 +29,7 @@ export class Wallet {
     const storage = new Storage(storageAdapter, 'wallet');
     const wallet = new Wallet(storage);
     await wallet.loadAddresses();
+    await wallet.loadNonce();
     return wallet;
   }
 
@@ -82,6 +82,7 @@ export class Wallet {
         binaryPublicKey,
       };
     }
+    return;
   }
 
   /**
@@ -109,6 +110,14 @@ export class Wallet {
     if (await this.storage.get(address)) {
       await this.storage.del(address);
       this.addresses.delete(address);
+      const binaryAddresses = Buffer.concat([...this.addresses]);
+      await this.storage.put(STORAGE_ADDRESS, binaryAddresses);
+
+      if (this.address.toString() === address.toString()) {
+        this.address = new Uint8Array();
+        this.publicKey = new Uint8Array();
+        this.privateKey = new Uint8Array();
+      }
     } else {
       throw new Error('Cannot delete keys, no keys for this address');
     }
@@ -117,11 +126,13 @@ export class Wallet {
   /**
    * Deletes all key pairs and associated addresses from disk.
    */
-  public async clearAddresses(): Promise<void> {
+  public async clear(): Promise<void> {
     for (const address of this.addresses) {
       await this.deleteKeyPair(address);
     }
     await this.storage.del(STORAGE_ADDRESS);
+    await this.storage.del(NONCE_ADDRESS);
+    this._nonce = 0;
   }
 
   /**
@@ -144,6 +155,10 @@ export class Wallet {
     return coinbaseTx;
   }
 
+  public async close(): Promise<void> {
+    await this.storage.close();
+  }
+
   /**
    * Creates a simple credit tx using a farmers keys and nonce.
    */
@@ -161,8 +176,15 @@ export class Wallet {
     if (binaryAddresses) {
       for (let i = 0; i < binaryAddresses.length / HASH_LENGTH; ++i) {
         const address = binaryAddresses.subarray(i * HASH_LENGTH, (i + 1) * HASH_LENGTH);
-        this.addresses.add(address);
+        this.addresses.add(Uint8Array.from(address));
       }
+    }
+  }
+
+  private async loadNonce(): Promise<void> {
+    const nonce = await this.storage.get(NONCE_ADDRESS);
+    if (nonce) {
+      this._nonce = bin2Num(nonce);
     }
   }
 

@@ -72,7 +72,8 @@
 			<section class="tsd-panel tsd-comment">
 				<div class="tsd-comment tsd-typography">
 					<div class="lead">
-						<p>A canonical (non-malleable / unique) Proof of storage in response to a ledger challenge.</p>
+						<p>A canonical (non-malleable / unique) Proof of storage in response to a ledger challenge.
+						252 bytes + merkle proof</p>
 					</div>
 				</div>
 			</section>
@@ -92,8 +93,8 @@
 							<h3>Properties</h3>
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#piecehash" class="tsd-kind-icon">piece<wbr>Hash</a></li>
-								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#piecelevel" class="tsd-kind-icon">piece<wbr>Level</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#pieceproof" class="tsd-kind-icon">piece<wbr>Proof</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#piecestatehash" class="tsd-kind-icon">piece<wbr>State<wbr>Hash</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#previouslevelhash" class="tsd-kind-icon">previous<wbr>Level<wbr>Hash</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#previousproofhash" class="tsd-kind-icon">previous<wbr>Proof<wbr>Hash</a></li>
 								<li class="tsd-kind-property tsd-parent-kind-interface"><a href="_main_interfaces_.iproofvalue.html#publickey" class="tsd-kind-icon">public<wbr>Key</a></li>
@@ -112,17 +113,7 @@
 					<div class="tsd-signature tsd-kind-icon">piece<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L64">main/interfaces.ts:64</a></li>
-						</ul>
-					</aside>
-				</section>
-				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
-					<a name="piecelevel" class="tsd-anchor"></a>
-					<h3>piece<wbr>Level</h3>
-					<div class="tsd-signature tsd-kind-icon">piece<wbr>Level<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
-					<aside class="tsd-sources">
-						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L65">main/interfaces.ts:65</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L65">main/interfaces.ts:65</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -132,7 +123,17 @@
 					<div class="tsd-signature tsd-kind-icon">piece<wbr>Proof<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L66">main/interfaces.ts:66</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L67">main/interfaces.ts:67</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface">
+					<a name="piecestatehash" class="tsd-anchor"></a>
+					<h3>piece<wbr>State<wbr>Hash</h3>
+					<div class="tsd-signature tsd-kind-icon">piece<wbr>State<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L66">main/interfaces.ts:66</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -142,7 +143,7 @@
 					<div class="tsd-signature tsd-kind-icon">previous<wbr>Level<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L61">main/interfaces.ts:61</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L62">main/interfaces.ts:62</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -152,7 +153,7 @@
 					<div class="tsd-signature tsd-kind-icon">previous<wbr>Proof<wbr>Hash<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L62">main/interfaces.ts:62</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L63">main/interfaces.ts:63</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -162,7 +163,7 @@
 					<div class="tsd-signature tsd-kind-icon">public<wbr>Key<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L67">main/interfaces.ts:67</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L68">main/interfaces.ts:68</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -172,7 +173,7 @@
 					<div class="tsd-signature tsd-kind-icon">signature<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L68">main/interfaces.ts:68</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L69">main/interfaces.ts:69</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -182,7 +183,7 @@
 					<div class="tsd-signature tsd-kind-icon">solution<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 					<aside class="tsd-sources">
 						<ul>
-							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/730bb9d/src/main/interfaces.ts#L63">main/interfaces.ts:63</a></li>
+							<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/8a1127e/src/main/interfaces.ts#L64">main/interfaces.ts:64</a></li>
 						</ul>
 					</aside>
 				</section>
@@ -201,9 +202,6 @@
 			</nav>
 			<nav class="tsd-navigation secondary menu-sticky">
 				<ul class="before-current">
-					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
-						<a href="_main_interfaces_.iblockvalue.html" class="tsd-kind-icon">IBlock<wbr>Value</a>
-					</li>
 					<li class=" tsd-kind-interface tsd-parent-kind-external-module">
 						<a href="_main_interfaces_.icompactblockvalue.html" class="tsd-kind-icon">ICompact<wbr>Block<wbr>Value</a>
 					</li>
@@ -240,10 +238,10 @@
 								<a href="_main_interfaces_.iproofvalue.html#piecehash" class="tsd-kind-icon">piece<wbr>Hash</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.iproofvalue.html#piecelevel" class="tsd-kind-icon">piece<wbr>Level</a>
+								<a href="_main_interfaces_.iproofvalue.html#pieceproof" class="tsd-kind-icon">piece<wbr>Proof</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
-								<a href="_main_interfaces_.iproofvalue.html#pieceproof" class="tsd-kind-icon">piece<wbr>Proof</a>
+								<a href="_main_interfaces_.iproofvalue.html#piecestatehash" class="tsd-kind-icon">piece<wbr>State<wbr>Hash</a>
 							</li>
 							<li class=" tsd-kind-property tsd-parent-kind-interface">
 								<a href="_main_interfaces_.iproofvalue.html#previouslevelhash" class="tsd-kind-icon">previous<wbr>Level<wbr>Hash</a>

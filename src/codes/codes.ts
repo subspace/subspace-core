@@ -1,4 +1,5 @@
 import { ReedSolomonErasure } from "@subspace/reed-solomon-erasure.wasm";
+import * as crypto from '../crypto/crypto';
 import { BLOCKS_PER_PIECE, HASH_LENGTH, PIECE_SIZE, ROUNDS} from '../main/constants';
 import { xorUint8Array } from '../utils/utils';
 
@@ -6,25 +7,35 @@ import { xorUint8Array } from '../utils/utils';
   // optimize/import encode/decode in Rust
   // actual hourglass function (from filecoin rust proofs?)
 
+/**
+ * Adds deterministic hashes to a piece s.t. it is a exactly 4096 bytes.
+ */
 export function padPiece(piece: Uint8Array): Uint8Array {
-  const remainder = piece.length % PIECE_SIZE;
-  if (remainder) {
-    const padding = new Uint8Array(PIECE_SIZE - remainder);
-    piece = Buffer.concat([piece, padding]);
+  const paddingLength = PIECE_SIZE - piece.length;
+  const numberOfFullHashes = Math.floor(paddingLength / HASH_LENGTH);
+  const lastPartialHashLength = paddingLength % HASH_LENGTH;
+
+  let hashPadding = crypto.hash(piece);
+  for (let i = 0; i < numberOfFullHashes; ++i) {
+    piece = Buffer.concat([piece, hashPadding]);
+    hashPadding = crypto.hash(hashPadding);
   }
-  return piece;
+
+  return Buffer.concat([piece, hashPadding.subarray(0, lastPartialHashLength)]);
 }
 
 /**
- * Adds trailing 0s to level source data s.t. it is a multiple of 4096 bytes.
+ * Adds deterministic hashes to level source data s.t. it is a multiple of 4096 bytes.
  */
 export function padLevel(levelData: Uint8Array): Uint8Array {
-  const remainder = levelData.length % PIECE_SIZE;
-  if (remainder) {
-    const padding = new Uint8Array(PIECE_SIZE - remainder);
-    levelData = Buffer.concat([levelData, padding]);
+  const numberOfFullPieces = Math.floor(levelData.length / PIECE_SIZE);
+  const finalPieceLength = levelData.length % PIECE_SIZE;
+  if (finalPieceLength) {
+    const lastPartialPiece = levelData.subarray(PIECE_SIZE * numberOfFullPieces);
+    const padding = padPiece(lastPartialPiece);
+    levelData = Buffer.concat([levelData.subarray(0, PIECE_SIZE * numberOfFullPieces), padding]);
   }
-  return levelData;
+  return Uint8Array.from(levelData);
 }
 
 const readSolomonErasure = ReedSolomonErasure.fromCurrentDirectory();
@@ -59,7 +70,7 @@ export function sliceLevel(erasureCodedLevelData: Uint8Array): Uint8Array[] {
   const pieceSet: Uint8Array[] = [];
   for (let i = 0; i < pieceCount; ++i) {
     const piece = erasureCodedLevelData.subarray(i * PIECE_SIZE, (i + 1) * PIECE_SIZE);
-    pieceSet.push(piece);
+    pieceSet.push(Uint8Array.from(piece));
   }
   return pieceSet;
 }
@@ -89,7 +100,7 @@ export function encodePiece(piece: Uint8Array, key: Uint8Array, rounds = ROUNDS)
           const encodedFirstBlock = xorUint8Array(output.subarray(0, HASH_LENGTH), key);
           output.set(encodedFirstBlock, 0);
       } else {
-          // encode the first block of subsequent rounds with the final encoded block of the previous round
+          // encode the first block of subsequent rounds with the last encoded block of the previous round
           const finalEncodedBlock = output.subarray(HASH_LENGTH * (BLOCKS_PER_PIECE - 1), HASH_LENGTH * BLOCKS_PER_PIECE);
           const originalFirstBlock = output.subarray(0, HASH_LENGTH);
           const encodedFirstBlock = xorUint8Array(finalEncodedBlock, originalFirstBlock);

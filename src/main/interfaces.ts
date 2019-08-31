@@ -30,11 +30,11 @@ export interface IFullBlockValue {
    coinbase?: Tx;
  }
 
-export interface IBlockValue {
-  proof: IProofValue;
-  content: IContentValue;
-  coinbase?: ITxValue;
-}
+// export interface IBlockValue {
+//   proof: IProofValue;
+//   content: IContentValue;
+//   coinbase?: ITxValue;
+// }
 
 /**
  * Compact representation of a Block value.
@@ -56,30 +56,33 @@ export type ICompactBlockData = [Uint8Array, Uint8Array];
 
 /**
  * A canonical (non-malleable / unique) Proof of storage in response to a ledger challenge.
+ * 252 bytes + merkle proof
  */
 export interface IProofValue {
-  previousLevelHash: Uint8Array; // hash of all proofs in the previous level (32 bytes)
-  previousProofHash: Uint8Array;  // hash of the last unconfirmed proof seen
-  solution: Uint8Array; // closest encoded chunk to encoding target (8 bytes)
-  pieceHash: Uint8Array; // original piece id of encoding that includes the solution (32 bytes)
-  pieceLevel: number; // state level to obtain the merkle root for this piece
-  pieceProof: Uint8Array; // merkle proof that piece is in that past level (??? bytes)
-  publicKey: Uint8Array; // public key of node creating proof (32 bytes)
-  signature: Uint8Array; // detached signature of this proof with node's private key (32 bytes)
+  previousLevelHash: Uint8Array; // 32 byte hash of all proofs in the previous level
+  previousProofHash: Uint8Array;  // 32 byte hash of the last unconfirmed proof seen
+  solution: Uint8Array; // 8 byte encoded chunk closest to encoding target
+  pieceHash: Uint8Array; // 32 byte original piece id of encoding that includes the solution
+  pieceStateHash: Uint8Array; // 32 byte state hash from which to obtain the merkle root for the piece used in this proof
+  pieceProof: Uint8Array; // unknown length merkle proof that piece is in that past level
+  publicKey: Uint8Array; // 48 byte public key of node creating proof
+  signature: Uint8Array; // 96 byte detached signature of this proof with node's private key
 }
 
 /**
  * Compact representation of a Proof value.
  */
-export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, number, Uint8Array, Uint8Array, Uint8Array ];
+export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array ];
 
 /**
  * The malleable content associated with a block that includes a summary of Tx ids, not the Tx values themselves.
+ * 64 bytes + (32 * # txs in block)
+ * Max size needs to be set...
  */
 export interface IContentValue {
-  parentContentHash: Uint8Array; // hash of parent content block (32 bytes)
-  proofHash: Uint8Array; // hash of proof for this block (32 bytes)
-  payload: Uint8Array[]; // all tx ids in this block
+  parentContentHash: Uint8Array; // 32 byte hash of parent content block
+  proofHash: Uint8Array; // 32 byte hash of proof for this block
+  payload: Uint8Array[]; // Array of all 32 byte tx ids in this block
 }
 
 /**
@@ -89,14 +92,17 @@ export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 
 /**
  * The value of a simple credit Tx.
+ * Coinbase tx is 152 bytes.
+ * Credit tx is 200 bytes.
+ * Data tx (toDo) is max 4096 bytes
  */
 export interface ITxValue {
-  sender: Uint8Array; // public key of sender
-  receiver: Uint8Array; // address of receiver
-  amount: number; // number of credits being sent
-  nonce: number; // auto incrementing tx nonce for the sender
-  timestamp: number; // create a unix timestamp
-  signature: Uint8Array; // detached signature with sender's private key
+  sender: Uint8Array; // 48 byte public key of sender (optional)
+  receiver: Uint8Array; // 48 byte address of receiver
+  amount: number; // 4 byte number of credits being sent
+  nonce: number; // 4 byte auto incrementing tx nonce for the sender
+  timestamp: number; // 4 byte a unix timestamp
+  signature: Uint8Array; // 96 byte detached signature with sender's private key (credit tx) or receivers private key (coinbase tx)
 }
 
 /**
@@ -135,7 +141,7 @@ export interface IEncoding {
  */
 export interface IPieceData {
   pieceHash: Uint8Array;
-  levelIndex: number;
+  stateHash: Uint8Array;
   pieceIndex: number;
   proof: Uint8Array;
 }

@@ -6,7 +6,7 @@ import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { IEncoding, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { bin2Num, num2Bin } from "../utils/utils";
+import { bin2Hex, bin2Num, num2Bin } from "../utils/utils";
 
 // ToDo
   // Plots
@@ -74,6 +74,11 @@ export class Farm {
 
     this.memTree.addNode(pieceData.pieceHash, this.pieceOffset);
     await this.addPieceData(pieceData);
+    console.log(`[+] Finished plotting encoding ${bin2Hex(crypto.hash(encodedPiece)).substring(0, 16)} from piece ${bin2Hex(pieceData.pieceHash).substring(0, 16)}.`);
+  }
+
+  public getSize(): number {
+    return this.memPlot.size;
   }
 
   /**
@@ -143,6 +148,8 @@ export class Farm {
           break;
       }
       if (encoding) {
+        // console.log(`Got encoding and data for piece ${pieceHash} from farm:`);
+        // console.log(encoding);
         const data = await this.getPieceData(pieceHash);
         return { encoding, data };
       }
@@ -205,8 +212,8 @@ export class Farm {
    */
   private async addPieceData(pieceData: IPieceData): Promise<void> {
     const binaryPieceData = Buffer.concat([
-      num2Bin(pieceData.levelIndex),
       num2Bin(pieceData.pieceIndex),
+      pieceData.stateHash,
       pieceData.proof,
     ]);
     await this.storage.put(pieceData.pieceHash, binaryPieceData);
@@ -223,8 +230,8 @@ export class Farm {
     return {
       pieceHash,
       pieceIndex: bin2Num(binaryPieceData.subarray(0, 4)),
-      levelIndex: bin2Num(binaryPieceData.subarray(4, 8)),
-      proof: binaryPieceData.subarray(8),
+      stateHash: Uint8Array.from(binaryPieceData.subarray(4, 36)),
+      proof: binaryPieceData.subarray(36),
     };
   }
 

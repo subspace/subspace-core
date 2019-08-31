@@ -18,6 +18,7 @@ test('mem-plot', async () => {
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
+  const stateHash = crypto.randomBytes(32);
   const { proofs } = crypto.buildMerkleTree(pieceHashes);
   const pieces: IPiece[] = [];
   for (let i = 0; i < pieceSet.length; ++i) {
@@ -25,7 +26,7 @@ test('mem-plot', async () => {
       piece: pieceSet[i],
       data: {
         pieceHash: pieceHashes[i],
-        levelIndex: 0,
+        stateHash,
         pieceIndex: i,
         proof: proofs[i],
       },
@@ -74,6 +75,7 @@ test('disk-plot', async () => {
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
+  const stateHash = crypto.randomBytes(32);
   const { proofs } = crypto.buildMerkleTree(pieceHashes);
   const pieces: IPiece[] = [];
   for (let i = 0; i < pieceSet.length; ++i) {
@@ -81,7 +83,7 @@ test('disk-plot', async () => {
       piece: pieceSet[i],
       data: {
         pieceHash: pieceHashes[i],
-        levelIndex: 0,
+        stateHash,
         pieceIndex: i,
         proof: proofs[i],
       },
