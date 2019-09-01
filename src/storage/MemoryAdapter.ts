@@ -1,19 +1,15 @@
-// @ts-ignore
+import {ArrayMap} from "array-map-set";
 import IAdapter from './IAdapter';
 
 export default class MemoryAdapter implements IAdapter {
-  public db: Map<Uint8Array, Uint8Array>;
-
-  public constructor() {
-    this.db = new Map();
-  }
+  public db: Map<Uint8Array, Uint8Array> = ArrayMap();
 
   public async put(key: Uint8Array, value: Uint8Array): Promise<void> {
-    await this.db.set(key, value);
+    this.db.set(key, value);
   }
 
   public async get(key: Uint8Array): Promise<Uint8Array | null> {
-    const value = await this.db.get(key);
+    const value = this.db.get(key);
     if (value) {
       return value;
     } else {
@@ -22,7 +18,7 @@ export default class MemoryAdapter implements IAdapter {
   }
 
   public async del(key: Uint8Array): Promise<void> {
-    await this.db.delete(key);
+    this.db.delete(key);
   }
 
   public async getKeys(): Promise<Uint8Array[]> {

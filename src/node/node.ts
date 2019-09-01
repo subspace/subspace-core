@@ -204,7 +204,7 @@ export class Node {
       console.log('------------------------------');
       console.log(`State: ${this.ledger.stateMap.size} levels`);
       console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
-      const piecesInPlot = this.farm.getSize();
+      const piecesInPlot = await this.farm.getSize();
       const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
       console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
       console.log(`Balance: ${this.ledger.accounts.get(this.wallet.address)} credits`);

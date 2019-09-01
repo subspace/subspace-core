@@ -31,26 +31,22 @@ export class Farm {
       adapter = 'memory';
     }
     const storage = new Storage(adapter, `farm-${mode}`);
-    const diskPlot = new Storage(adapter, 'plot');
-    const farm = new Farm(storage, diskPlot, mode);
-    return farm;
+    const plot = new Storage(adapter, 'plot');
+    return new Farm(storage, plot);
   }
 
   // if we have multiple plots of the same data we don't want to store the metadata each time, so it should be stored separately
     // use plot storage instead to store pieceData
 
-  private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
   private storage: Storage;
   private memTree: Tree<Uint8Array, number>;
-  private memPlot: Map<number, Uint8Array> = new Map();
-  private diskPlot: Storage;
+  private plot: Storage;
   private pieceOffset = 0;
   private address: Uint8Array;
 
-  constructor(storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
-    this.mode = mode;
+  constructor(storage: Storage, plot: Storage) {
     this.storage = storage;
-    this.diskPlot = diskPlot;
+    this.plot = plot;
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.memTree = new Tree(nodeManager);
     this.address = new Uint8Array();
@@ -63,22 +59,15 @@ export class Farm {
     const encodedPiece = codes.encodePiece(piece, this.address);
     this.pieceOffset ++;
 
-    switch (this.mode) {
-      case Farm.MODE_MEM_DB:
-        this.memPlot.set(this.pieceOffset, encodedPiece);
-        break;
-      case Farm.MODE_DISK_DB:
-        await this.diskPlot.put(num2Bin(this.pieceOffset), encodedPiece);
-        break;
-    }
+    await this.plot.put(num2Bin(this.pieceOffset), encodedPiece);
 
     this.memTree.addNode(pieceData.pieceHash, this.pieceOffset);
     await this.addPieceData(pieceData);
     console.log(`[+] Finished plotting encoding ${bin2Hex(crypto.hash(encodedPiece)).substring(0, 16)} from piece ${bin2Hex(pieceData.pieceHash).substring(0, 16)}.`);
   }
 
-  public getSize(): number {
-    return this.memPlot.size;
+  public getSize(): Promise<number> {
+    return this.plot.getLength();
   }
 
   /**
@@ -88,15 +77,7 @@ export class Farm {
     const node = this.memTree.getClosestNode(target);
     if (node) {
       const [pieceHash, offset] = node;
-      let encoding: Uint8Array | null | undefined;
-      switch (this.mode) {
-        case Farm.MODE_MEM_DB:
-          encoding = this.memPlot.get(offset);
-          break;
-        case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(num2Bin(offset));
-          break;
-      }
+      const encoding = await this.plot.get(num2Bin(offset));
       if (encoding) {
         const piece = codes.decodePiece(encoding, this.address);
         const data = await this.getPieceData(pieceHash);
@@ -111,15 +92,7 @@ export class Farm {
   public async getExactPiece(pieceId: Uint8Array): Promise<IPiece | void> {
     const offset = this.memTree.getNodeValue(pieceId);
     if (offset) {
-      let encoding: Uint8Array | null | undefined;
-      switch (this.mode) {
-        case Farm.MODE_MEM_DB:
-          encoding = this.memPlot.get(offset);
-          break;
-        case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(num2Bin(offset));
-          break;
-      }
+      const encoding = await this.plot.get(num2Bin(offset));
       if (encoding) {
         const piece = codes.decodePiece(encoding, this.address);
         const pieceHash = crypto.hash(piece);
@@ -138,15 +111,7 @@ export class Farm {
     const node = this.memTree.getClosestNode(target);
     if (node) {
       const [pieceHash, offset] = node;
-      let encoding: Uint8Array | null | undefined;
-      switch (this.mode) {
-        case Farm.MODE_MEM_DB:
-          encoding = this.memPlot.get(offset);
-          break;
-        case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(num2Bin(offset));
-          break;
-      }
+      const encoding = await this.plot.get(num2Bin(offset));
       if (encoding) {
         // console.log(`Got encoding and data for piece ${pieceHash} from farm:`);
         // console.log(encoding);
@@ -162,15 +127,7 @@ export class Farm {
   public async getExactEncoding(pieceId: Uint8Array): Promise<IEncoding | void> {
     const offset = this.memTree.getNodeValue(pieceId);
     if (offset) {
-      let encoding: Uint8Array | null | undefined;
-      switch (this.mode) {
-        case Farm.MODE_MEM_DB:
-          encoding = this.memPlot.get(offset);
-          break;
-        case Farm.MODE_DISK_DB:
-          encoding = await this.diskPlot.get(num2Bin(offset));
-          break;
-      }
+      const encoding = await this.plot.get(num2Bin(offset));
       if (encoding) {
         const data = await this.getPieceData(pieceId);
         return { encoding, data };
@@ -184,14 +141,7 @@ export class Farm {
   public async removePiece(pieceId: Uint8Array): Promise<void> {
     const offset = this.memTree.getNodeValue(pieceId);
     if (offset) {
-      switch (this.mode) {
-        case Farm.MODE_MEM_DB:
-          this.memPlot.delete(offset);
-          break;
-        case Farm.MODE_DISK_DB:
-          await this.diskPlot.del(num2Bin(offset));
-          break;
-      }
+      await this.plot.del(num2Bin(offset));
       this.memTree.removeNode(pieceId);
       await this.removePieceData(pieceId);
     }
