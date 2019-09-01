@@ -28,7 +28,7 @@ export class Node {
    */
   public static async init(storageAdapter = 'rocks', mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db'): Promise<Node> {
     const wallet = await Wallet.init(storageAdapter);
-    const farm = await Farm.init(storageAdapter, mode);
+    const farm = await Farm.init(wallet.address, storageAdapter, mode);
     const ledger = await Ledger.init(storageAdapter);
     return new Node(wallet, farm, ledger);
   }
@@ -149,7 +149,7 @@ export class Node {
   //   const paddedData = codes.padLevel(data);
   //   const encodedData = await codes.erasureCodeLevel(paddedData);
   //   const pieceSet = codes.sliceLevel(encodedData);
-  //   await this.farm.initPlot(this.address, pieceSet);
+  //   await this.farm.seedPlot(this.address, pieceSet);
   //   console.log(`Completed plotting ${pieceSet.length} pieces.`);
   // }
 

@@ -442,7 +442,7 @@ export class Ledger extends EventEmitter {
       // console.log(`Decoded piece hash is ${pieceHash.toString()}`);
       // console.log(`Piece hash referenced in block is:  ${block.value.proof.value.pieceHash.toString()}`);
       // print(block.print());
-      console.log('ERROR: Invalid block proof, encoding does not decode back to parent piece.');
+      throw new Error('Invalid block proof, encoding does not decode back to parent piece');
     }
 
     // verify the content points to the correct chain
