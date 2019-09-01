@@ -49,7 +49,8 @@ import { Tx } from './tx';
 export class Ledger extends EventEmitter {
 
   public static async init(storageAdapter: string): Promise<Ledger> {
-    const ledger = new Ledger(storageAdapter, 'ledger');
+    const storage = await Storage.create(storageAdapter, 'ledger');
+    const ledger = new Ledger(storage);
     return ledger;
   }
 
@@ -78,9 +79,9 @@ export class Ledger extends EventEmitter {
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
 
-  constructor(storageAdapter: string, path: string) {
+  constructor(storage: Storage) {
     super();
-    this.storage = new Storage(storageAdapter, path);
+    this.storage = storage;
     this.accounts = new Account();
   }
 

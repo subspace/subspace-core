@@ -14,30 +14,27 @@ import RocksAdapter from './RocksAdapter';
  * A generic persistent storage interface to a simple key-value store that provides a standard interface across host environments. Currently supports node js and browser run times.
  */
 export class Storage {
-
-  private adapter: IAdapter;
-
-  constructor(
-    public readonly adapterName: string,
-    public nameSpace?: string,
-  ) {
+  public static async create(
+    adapterName: string,
+    nameSpace?: string,
+  ): Promise<Storage> {
     let path: string = `${__dirname}/../../data`;
     if (nameSpace) {
       path = path.concat(`/${nameSpace}`);
     }
     switch (adapterName) {
       case 'browser':
-        this.adapter = new BrowserAdapter(path);
-        break;
+        return new Storage(new BrowserAdapter(path));
       case 'rocks':
-        this.adapter = new RocksAdapter(path);
-        break;
+        return new Storage(new RocksAdapter(path));
       case 'memory':
-        this.adapter = new MemoryAdapter();
-        break;
+        return new Storage(new MemoryAdapter());
       default:
         throw new Error('Wrong adapter name, supported adapters: browser, memory, rocks');
     }
+  }
+
+  constructor(private readonly adapter: IAdapter) {
   }
 
   /**

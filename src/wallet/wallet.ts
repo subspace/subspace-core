@@ -26,7 +26,7 @@ export class Wallet {
    * Returns a new wallet instance, loading any stored keys and nonce from disk.
    */
   public static async init(storageAdapter: string): Promise<Wallet> {
-    const storage = new Storage(storageAdapter, 'wallet');
+    const storage = await Storage.create(storageAdapter, 'wallet');
     const wallet = new Wallet(storage);
     await wallet.loadAddresses();
     await wallet.loadNonce();

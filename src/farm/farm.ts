@@ -30,8 +30,8 @@ export class Farm {
     if (mode === 'mem-db') {
       adapter = 'memory';
     }
-    const storage = new Storage(adapter, `farm-${mode}`);
-    const plot = new Storage(adapter, 'plot');
+    const storage = await Storage.create(adapter, `farm-${mode}`);
+    const plot = await Storage.create(adapter, 'plot');
     return new Farm(storage, plot);
   }
 
