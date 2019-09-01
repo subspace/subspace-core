@@ -6,7 +6,7 @@ import {ArrayMap, ArraySet} from "array-map-set";
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
+import {CHUNK_LENGTH, DIFFICULTY, ERASURE_CODING_SHARDS_LIMIT, PIECE_SIZE, VERSION} from '../main/constants';
 import {ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { bin2Hex, num2Bin } from '../utils/utils';
@@ -250,16 +250,17 @@ export class Ledger extends EventEmitter {
     // this level has at least two source pieces, erasure code parity shards and add index piece
     // max pieces to erasure code in one go are 254
     const pieceCount = paddedLevelData.length / PIECE_SIZE;
+    // Because total shards limit will also have the same amount of parity shards
+    const dataShardsLimit = ERASURE_CODING_SHARDS_LIMIT / 2;
     let erasureCodedLevel = new Uint8Array();
     console.log(`Piece count is: ${pieceCount}`);
-    if (pieceCount > 254) {
-      const rounds = Math.ceil(pieceCount / 254);
+    if (pieceCount > dataShardsLimit) {
+      const rounds = Math.ceil(pieceCount / dataShardsLimit);
       console.log(`Rounds of erasure coding are: ${rounds}`);
       for (let r = 0; r < rounds; ++r) {
-        const roundData = paddedLevelData.subarray(r * 254 * PIECE_SIZE, (r + 1) * 254 * PIECE_SIZE);
+        const roundData = paddedLevelData.subarray(r * dataShardsLimit * PIECE_SIZE, (r + 1) * dataShardsLimit * PIECE_SIZE);
         erasureCodedLevel = Buffer.concat([erasureCodedLevel, await codes.erasureCodeLevel(roundData)]);
       }
-      // erasure code in multiples of 254
     } else {
       erasureCodedLevel = await codes.erasureCodeLevel(paddedLevelData);
     }
