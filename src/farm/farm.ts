@@ -52,7 +52,6 @@ export class Farm {
     this.diskPlot = diskPlot;
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.memTree = new Tree(nodeManager);
-    console.log('Farm node address', address.join(', '));
     this.address = address;
   }
 
