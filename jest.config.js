@@ -6,4 +6,5 @@ module.exports = {
   "moduleFileExtensions": [
     "js"
   ],
+  "testEnvironment": "node",
 };
