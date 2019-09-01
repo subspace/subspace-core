@@ -427,7 +427,7 @@ export class Ledger extends EventEmitter {
       const state = State.load(pieceStateData);
       const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
       if (!validPieceProof) {
-        console.log('ERROR: Invalid block proof, piece proof is not a valid merkle path');
+        throw new Error('Invalid block proof, piece proof is not a valid merkle path');
       }
     }
 
