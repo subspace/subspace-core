@@ -1,6 +1,7 @@
 import BrowserAdapter from './BrowserAdapter';
 import IAdapter from './IAdapter';
 import MemoryAdapter from './MemoryAdapter';
+import RawDiskAdapter from "./RawDiskAdapter";
 import RocksAdapter from './RocksAdapter';
 
 // ToDo
@@ -29,6 +30,8 @@ export class Storage {
         return new Storage(new RocksAdapter(path));
       case 'memory':
         return new Storage(new MemoryAdapter());
+      case 'raw-disk':
+        return new Storage(await RawDiskAdapter.create(`${path}-raw`, 1024 ** 3)); // 1G plot
       default:
         throw new Error('Wrong adapter name, supported adapters: browser, memory, rocks');
     }

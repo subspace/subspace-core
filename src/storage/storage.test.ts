@@ -98,3 +98,4 @@ const storageTest = (adapterName: string, namespace?: string) => {
 storageTest('rocks', 'storage');
 storageTest('memory', 'storage');
 storageTest('browser');
+storageTest('raw-disk');
