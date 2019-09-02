@@ -27,14 +27,18 @@ Run with `bin/subspace.js` from the root of the repository or just using `subspa
 A simple GUI can be viewed from [/app/web/index.html](/app/web/index.html) built with vanilla [Vue](https://vuejs.org/) and [Bulma](https://bulma.io/). This will run the browserified version of the protocol as a standalone network node with its own copy of the ledger from genesis -- primarily for testing purposes right now.
 
 #### Docker
-CLI interface using Docker is also available. You can run it like this:
+CLI interface using Docker is also available. You can run it like this for x86_64 and ARM architectures:
 ```bash
 docker run --rm -it subspacelabs/subspace-core
+docker run --rm -it subspacelabs/subspace-core:arm64v8
+docker run --rm -it subspacelabs/subspace-core:arm32v7
 ```
 
 If you prefer to build it yourself, here is how:
 ```bash
 docker build -t subspacelabs/subspace-core .
+docker build -t subspacelabs/subspace-core:arm64v8 -f Dockerfile-arm64v8 .
+docker build -t subspacelabs/subspace-core:arm32v7 -f Dockerfile-arm32v7 .
 ```
 
 ## Modules

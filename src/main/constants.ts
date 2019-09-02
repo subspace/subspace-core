@@ -6,3 +6,4 @@ export const COINBASE_REWARD = 1;
 export const DIFFICULTY = 64;
 export const VERSION = 1;
 export const CHUNK_LENGTH = 8;
+export const ERASURE_CODING_SHARDS_LIMIT = 254;

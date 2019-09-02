@@ -34,6 +34,7 @@ export class Wallet {
   }
 
   public readonly addresses: Set<Uint8Array> = new Set();
+  // TODO: This is wrong and causes issues
   public address = new Uint8Array();
   public publicKey = new Uint8Array();
   public privateKey = new Uint8Array();
