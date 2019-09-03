@@ -9,6 +9,7 @@ import { Storage } from "../storage/storage";
 import { bin2Num, num2Bin, str2Bin } from "../utils/utils";
 
 // ToDo
+  // address should be loaded on init or created
   // each address should have its own nonce
   // encrypt private keys at rest
   // create from user generated seeds
@@ -135,26 +136,6 @@ export class Wallet {
     this._nonce = 0;
   }
 
-  /**
-   * Signs a proof deliberately so as not to expose BLS Private Keys outside wallet module.
-   */
-  public signProof(proof: Proof): Proof {
-    if (proof.value.publicKey.length > 0) {
-      proof.sign(this.privateKey);
-    }
-    proof.setKey();
-    return proof;
-  }
-
-  /**
-   * Creates a coinbase (block reward) tx using a farmers keys and nonce.
-   */
-  public async createCoinBaseTx(reward: number): Promise<Tx> {
-    const coinbaseTx = Tx.createCoinbase(this.publicKey, reward, this.nonce, this.privateKey);
-    await this.incrementNonce();
-    return coinbaseTx;
-  }
-
   public async close(): Promise<void> {
     await this.storage.close();
   }
@@ -166,6 +147,26 @@ export class Wallet {
     const tx = Tx.create(this.publicKey, receiver, amount, this.nonce, this.privateKey);
     await this.incrementNonce();
     return tx;
+  }
+
+  /**
+   * Creates a coinbase (block reward) tx using a farmers keys and nonce.
+   */
+  public async createCoinBaseTx(reward: number): Promise<Tx> {
+    const coinbaseTx = Tx.createCoinbase(this.publicKey, reward, this.nonce, this.privateKey);
+    await this.incrementNonce();
+    return coinbaseTx;
+  }
+
+  /**
+   * Signs a proof deliberately so as not to expose BLS Private Keys outside wallet module.
+   */
+  public signProof(proof: Proof): Proof {
+    if (proof.value.publicKey.length > 0) {
+      proof.sign(this.privateKey);
+    }
+    proof.setKey();
+    return proof;
   }
 
   /**
