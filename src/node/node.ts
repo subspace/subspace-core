@@ -198,7 +198,7 @@ export class Node {
     // print(pieceSet);
 
     // start a farming evaluation loop
-    for (let i = 0; i < 16000; ++i) {
+    while (this.isFarming) {
       // find best encoding for challenge
       console.log('\nSolving a new block challenge');
       console.log('------------------------------');

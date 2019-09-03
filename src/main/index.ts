@@ -25,7 +25,7 @@ const run = async () => {
     'mem-db',
   );
   await node.getOrCreateAddress();
-  await node.createLedgerAndFarm(16);
+  await node.createLedgerAndFarm(32);
 };
 
 run();
