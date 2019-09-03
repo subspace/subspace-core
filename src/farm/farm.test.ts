@@ -16,8 +16,8 @@ import { IPiece } from '../main/interfaces';
 import { Farm } from './farm';
 
 test('mem-plot', async () => {
-  const farm = await Farm.init('memory', 'mem-db');
-  const key = crypto.randomBytes(32);
+  const address = crypto.randomBytes(32);
+  const farm = await Farm.init(address, 'memory', 'mem-db');
   const data = crypto.randomBytes(520191);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
@@ -39,7 +39,7 @@ test('mem-plot', async () => {
   }
 
   // bulk add
-  await farm.initPlot(key, pieces);
+  await farm.seedPlot(pieces);
 
   // get closest
   const target = crypto.randomBytes(32);
@@ -47,7 +47,7 @@ test('mem-plot', async () => {
   const closestEncoding = await farm.getClosestEncoding(target);
   if (closestPiece && closestEncoding) {
     expect(pieceSet).toContainEqual(closestPiece.piece);
-    expect(codes.decodePiece(closestEncoding.encoding, key).toString()).toBe(closestPiece.piece.toString());
+    expect(codes.decodePiece(closestEncoding.encoding, address).toString()).toBe(closestPiece.piece.toString());
   } else {
     fail(true);
   }
@@ -58,7 +58,7 @@ test('mem-plot', async () => {
   const exactEncoding = await farm.getExactEncoding(pieceId);
   if (exactPiece && exactEncoding) {
     expect(pieceSet).toContainEqual(exactPiece.piece);
-    expect(codes.decodePiece(exactEncoding.encoding, key).toString()).toBe(exactPiece.piece.toString());
+    expect(codes.decodePiece(exactEncoding.encoding, address).toString()).toBe(exactPiece.piece.toString());
   } else {
     fail(true);
   }
@@ -73,8 +73,8 @@ test('mem-plot', async () => {
 });
 
 test('disk-plot', async () => {
-  const farm = await Farm.init('rocks', 'disk-db');
-  const key = crypto.randomBytes(32);
+  const address = crypto.randomBytes(32);
+  const farm = await Farm.init(address, 'rocks', 'disk-db');
   const data = crypto.randomBytes(520191);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
@@ -96,7 +96,7 @@ test('disk-plot', async () => {
   }
 
   // bulk add
-  await farm.initPlot(key, pieces);
+  await farm.seedPlot(pieces);
 
   // get closest
   const target = crypto.randomBytes(32);
@@ -104,7 +104,7 @@ test('disk-plot', async () => {
   const closestEncoding = await farm.getClosestEncoding(target);
   if (closestPiece && closestEncoding) {
     expect(pieceSet).toContainEqual(closestPiece.piece);
-    expect(codes.decodePiece(closestEncoding.encoding, key).toString()).toBe(closestPiece.piece.toString());
+    expect(codes.decodePiece(closestEncoding.encoding, address).toString()).toBe(closestPiece.piece.toString());
   } else {
     fail(true);
   }
@@ -115,7 +115,7 @@ test('disk-plot', async () => {
   const exactEncoding = await farm.getExactEncoding(pieceId);
   if (exactPiece && exactEncoding) {
     expect(pieceSet).toContainEqual(exactPiece.piece);
-    expect(codes.decodePiece(exactEncoding.encoding, key).toString()).toBe(exactPiece.piece.toString());
+    expect(codes.decodePiece(exactEncoding.encoding, address).toString()).toBe(exactPiece.piece.toString());
   } else {
     fail(true);
   }

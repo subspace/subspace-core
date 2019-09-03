@@ -1,5 +1,5 @@
 # Install dependencies, build TypeScript
-FROM subspacelabs/node:12-dev
+FROM subspacelabs/node:12-arm32v7-dev
 
 COPY src /code/src
 COPY types /code/types
@@ -14,7 +14,7 @@ COPY docker/build-ts.sh /build-ts.sh
 RUN ["/build-ts.sh"]
 
 # Build final image without build-time dependencies
-FROM subspacelabs/node:12
+FROM subspacelabs/node:12-arm32v7
 
 COPY docker/entrypoint.sh /entrypoint.sh
 

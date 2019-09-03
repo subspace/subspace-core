@@ -26,14 +26,13 @@ export class Farm {
   /**
    * Returns a new farm instance.
    */
-  public static async init(adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
+  public static async init(address: Uint8Array, adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
     if (mode === 'mem-db') {
       adapter = 'memory';
     }
     const storage = new Storage(adapter, `farm-${mode}`);
     const diskPlot = new Storage(adapter, 'plot');
-    const farm = new Farm(storage, diskPlot, mode);
-    return farm;
+    return new Farm(address, storage, diskPlot, mode);
   }
 
   // if we have multiple plots of the same data we don't want to store the metadata each time, so it should be stored separately
@@ -41,19 +40,19 @@ export class Farm {
 
   public address: Uint8Array;
   private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
-  private storage: Storage;
-  private memTree: Tree<Uint8Array, number>;
-  private memPlot: Map<number, Uint8Array> = new Map();
-  private diskPlot: Storage;
+  private readonly storage: Storage;
+  private readonly memTree: Tree<Uint8Array, number>;
+  private readonly memPlot: Map<number, Uint8Array> = new Map();
+  private readonly diskPlot: Storage;
   private pieceOffset = 0;
 
-  constructor(storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
+  constructor(address: Uint8Array, storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
     this.mode = mode;
     this.storage = storage;
     this.diskPlot = diskPlot;
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.memTree = new Tree(nodeManager);
-    this.address = new Uint8Array();
+    this.address = address;
   }
 
   /**
@@ -200,8 +199,7 @@ export class Farm {
   /**
    * Initializes a new plot from seed data (typically at genesis).
    */
-  public async initPlot(address: Uint8Array, pieceSet: IPiece[]): Promise<void> {
-    this.address = address;
+  public async seedPlot(pieceSet: IPiece[]): Promise<void> {
     for (const piece of pieceSet) {
       await this.addPiece(piece.piece, piece.data);
     }

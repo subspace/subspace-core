@@ -153,7 +153,7 @@ export class Node {
   //   const paddedData = codes.padLevel(data);
   //   const encodedData = await codes.erasureCodeLevel(paddedData);
   //   const pieceSet = codes.sliceLevel(encodedData);
-  //   await this.farm.initPlot(this.address, pieceSet);
+  //   await this.farm.seedPlot(this.address, pieceSet);
   //   console.log(`Completed plotting ${pieceSet.length} pieces.`);
   // }
 

@@ -6,7 +6,7 @@ import {ArrayMap, ArraySet} from "array-map-set";
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
+import {CHUNK_LENGTH, DIFFICULTY, ERASURE_CODING_SHARDS_LIMIT, PIECE_SIZE, VERSION} from '../main/constants';
 import {ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { bin2Hex, num2Bin } from '../utils/utils';
@@ -270,6 +270,7 @@ export class Ledger extends EventEmitter {
         erasureCodedLevelElements.push(await codes.erasureCodeLevel(roundData));
       }
       // erasure code in multiples of 127
+
     } else {
       erasureCodedLevelElements.push(await codes.erasureCodeLevel(paddedLevelData));
     }
@@ -440,7 +441,7 @@ export class Ledger extends EventEmitter {
       const state = State.load(pieceStateData);
       const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
       if (!validPieceProof) {
-        console.log('ERROR: Invalid block proof, piece proof is not a valid merkle path');
+        throw new Error('Invalid block proof, piece proof is not a valid merkle path');
       }
     }
 
@@ -455,7 +456,7 @@ export class Ledger extends EventEmitter {
       // console.log(`Decoded piece hash is ${pieceHash.toString()}`);
       // console.log(`Piece hash referenced in block is:  ${block.value.proof.value.pieceHash.toString()}`);
       // print(block.print());
-      console.log('ERROR: Invalid block proof, encoding does not decode back to parent piece.');
+      throw new Error('Invalid block proof, encoding does not decode back to parent piece');
     }
 
     // verify the content points to the correct chain
