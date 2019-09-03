@@ -26,19 +26,19 @@ export class Farm {
   /**
    * Returns a new farm instance.
    */
-  public static async init(address: Uint8Array, adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
+  public static async init(adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
     if (mode === 'mem-db') {
       adapter = 'memory';
     }
     const storage = new Storage(adapter, `farm-${mode}`);
     const diskPlot = new Storage(adapter, 'plot');
-    return new Farm(address, storage, diskPlot, mode);
+    return new Farm(storage, diskPlot, mode);
   }
 
   // if we have multiple plots of the same data we don't want to store the metadata each time, so it should be stored separately
     // use plot storage instead to store pieceData
 
-  public address: Uint8Array;
+  public address: Uint8Array = new Uint8Array();
   private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
   private readonly storage: Storage;
   private readonly memTree: Tree<Uint8Array, number>;
@@ -46,13 +46,12 @@ export class Farm {
   private readonly diskPlot: Storage;
   private pieceOffset = 0;
 
-  constructor(address: Uint8Array, storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
+  constructor(storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
     this.mode = mode;
     this.storage = storage;
     this.diskPlot = diskPlot;
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.memTree = new Tree(nodeManager);
-    this.address = address;
   }
 
   /**

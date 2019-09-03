@@ -51,4 +51,4 @@ const run = async (
  * No validation
  */
 
-run(16, 'memory', false);
+run(32, 'memory', false);

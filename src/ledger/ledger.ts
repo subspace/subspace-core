@@ -6,7 +6,7 @@ import {ArrayMap, ArraySet} from "array-map-set";
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import {CHUNK_LENGTH, DIFFICULTY, ERASURE_CODING_SHARDS_LIMIT, PIECE_SIZE, VERSION} from '../main/constants';
+import {CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION} from '../main/constants';
 import {ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { bin2Hex, num2Bin } from '../utils/utils';
