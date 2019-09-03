@@ -26,10 +26,10 @@ export class Node {
   /**
    * Instantiate a new empty node with only environment variables.
    */
-  public static async init(storageAdapter = 'rocks', mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db'): Promise<Node> {
+  public static async init(storageAdapter = 'rocks', mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db', validateRecords: boolean): Promise<Node> {
     const wallet = await Wallet.init(storageAdapter);
     const farm = await Farm.init(storageAdapter, mode);
-    const ledger = await Ledger.init(storageAdapter);
+    const ledger = await Ledger.init(storageAdapter, validateRecords);
     return new Node(wallet, farm, ledger);
   }
 
@@ -69,8 +69,11 @@ export class Node {
     this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
       // console.log('New block received in node.');
       // console.log(`Encoding length is ${encoding.length}`);
-      await this.ledger.isValidBlock(block, encoding);
-      console.log('New block received and validated by Node.');
+      console.log('New block received by Node.');
+      if (this.ledger.isValidating) {
+        await this.ledger.isValidBlock(block, encoding);
+        console.log('New block validated by node');
+      }
       return;
       // include the referenced encoding
       // encode to binary

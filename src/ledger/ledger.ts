@@ -48,13 +48,14 @@ import { Tx } from './tx';
 
 export class Ledger extends EventEmitter {
 
-  public static async init(storageAdapter: string): Promise<Ledger> {
-    const ledger = new Ledger(storageAdapter, 'ledger');
+  public static async init(storageAdapter: string, validateRecords: boolean): Promise<Ledger> {
+    const ledger = new Ledger(storageAdapter, 'ledger', validateRecords);
     return ledger;
   }
 
   public isFarming = true;
   public isServing = true;
+  public isValidating: boolean;
 
   public previousLevelHash = new Uint8Array();
   public parentProofHash = new Uint8Array();
@@ -78,10 +79,11 @@ export class Ledger extends EventEmitter {
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
 
-  constructor(storageAdapter: string, path: string) {
+  constructor(storageAdapter: string, path: string, validateRecords: boolean) {
     super();
     this.storage = new Storage(storageAdapter, path);
     this.accounts = new Account();
+    this.isValidating = validateRecords;
   }
 
   /**
@@ -351,7 +353,7 @@ export class Ledger extends EventEmitter {
 
     // pass up to node for gossip across the network
     // this.emit('block', block, encoding);
-    if (!encoding) {
+    if (this.isValidating) {
       await this.isValidBlock(block, encoding);
     }
     console.log(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);

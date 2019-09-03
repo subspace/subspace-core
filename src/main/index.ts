@@ -9,23 +9,46 @@ if (!globalThis.indexedDB) {
 import { Node } from '../node/node';
 
 /**
- * Optional Init Params
- * chainCount (1 to 1024)
- * nodeMode (full node, farmer, validator, light client)
- * plotMode (memory, disk, raw memory, raw disk, on the fly)
- * plotDifficulty (encoding rounds)
- * storagePath (location for disk based storage)
- * seed (for public key)
+ * Init Params
+ * chainCount: 1 to 1024 -- number of chains in the ledger, the more chains the longer it will take to confirm new levels but the lower the probability of a fork on any given chain.
+ * Calculate expected number of blocks to confirmation as chainCount * log(2) chainCount
+ * plotMode: mem-db or disk-db -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
+ * validateRecords: true or false -- whether to validate new blocks and tx on receipt, default false for DevNet testing -- since BLS signature validation is slow, it takes a long time to plot
  */
 
-const run = async () => {
-  const node = await Node.init(
-    // Use `memory` for Node.js for now
-    typeof globalThis.document ? 'memory' : 'memory',
-    'mem-db',
-  );
-  await node.getOrCreateAddress();
-  await node.createLedgerAndFarm(32);
+const run = async (
+  chainCount: number,
+  plotMode = 'memory',
+  validateRecords = true,
+  ) => {
+
+    let storageAdapter: 'memory' | 'browser' | 'rocks';
+    let plotAdapter: 'mem-db' | 'disk-db';
+    switch (plotMode) {
+      case 'memory':
+        storageAdapter = 'memory';
+        plotAdapter = 'mem-db';
+        break;
+      case 'disk':
+        storageAdapter = 'rocks';
+        plotAdapter = 'disk-db';
+        break;
+      default:
+        storageAdapter = 'memory';
+        plotAdapter = 'mem-db';
+        break;
+    }
+
+    const node = await Node.init(storageAdapter, plotAdapter, validateRecords);
+    await node.getOrCreateAddress();
+    await node.createLedgerAndFarm(chainCount);
 };
 
-run();
+/**
+ * Default Args
+ * 32 chains
+ * In memory plotting and storage
+ * No validation
+ */
+
+run(1024, 'mem-db', false);
