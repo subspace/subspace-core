@@ -248,18 +248,18 @@ export class Ledger extends EventEmitter {
   public async encodeLargeLevel(paddedLevelData: Uint8Array, levelHash: Uint8Array): Promise<IPiece[]> {
 
     // this level has at least two source pieces, erasure code parity shards and add index piece
-    // max pieces to erasure code in one go are 254
+    // max pieces to erasure code in one go are 127
     const pieceCount = paddedLevelData.length / PIECE_SIZE;
     let erasureCodedLevel = new Uint8Array();
     console.log(`Piece count is: ${pieceCount}`);
-    if (pieceCount > 254) {
-      const rounds = Math.ceil(pieceCount / 254);
+    if (pieceCount > 127) {
+      const rounds = Math.ceil(pieceCount / 127);
       console.log(`Rounds of erasure coding are: ${rounds}`);
       for (let r = 0; r < rounds; ++r) {
-        const roundData = paddedLevelData.subarray(r * 254 * PIECE_SIZE, (r + 1) * 254 * PIECE_SIZE);
+        const roundData = paddedLevelData.subarray(r * 127 * PIECE_SIZE, (r + 1) * 127 * PIECE_SIZE);
         erasureCodedLevel = Buffer.concat([erasureCodedLevel, await codes.erasureCodeLevel(roundData)]);
       }
-      // erasure code in multiples of 254
+      // erasure code in multiples of 127
     } else {
       erasureCodedLevel = await codes.erasureCodeLevel(paddedLevelData);
     }
