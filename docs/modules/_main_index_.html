@@ -85,26 +85,36 @@
 					<a name="run" class="tsd-anchor"></a>
 					<h3><span class="tsd-flag ts-flagConst">Const</span> run</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-external-module tsd-is-not-exported">
-						<li class="tsd-signature tsd-kind-icon">run<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
+						<li class="tsd-signature tsd-kind-icon">run<span class="tsd-signature-symbol">(</span>chainCount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span>, plotMode<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span>, validateRecords<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/985de18/src/main/index.ts#L21">main/index.ts:21</a></li>
+									<li>Defined in <a href="https://github.com/subspace/subspace-core/blob/3d73b09/src/main/index.ts#L19">main/index.ts:19</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
 								<div class="lead">
-									<p>Optional Init Params
-										chainCount (1 to 1024)
-										nodeMode (full node, farmer, validator, light client)
-										plotMode (memory, disk, raw memory, raw disk, on the fly)
-										plotDifficulty (encoding rounds)
-										storagePath (location for disk based storage)
-									seed (for public key)</p>
+									<p>Init Params
+										chainCount: 1 to 1024 -- number of chains in the ledger, the more chains the longer it will take to confirm new levels but the lower the probability of a fork on any given chain.
+										Calculate expected number of blocks to confirmation as chainCount * log(2) chainCount
+										plotMode: mem-db or disk-db -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
+									validateRecords: true or false -- whether to validate new blocks and tx on receipt, default false for DevNet testing -- since BLS signature validation is slow, it takes a long time to plot</p>
 								</div>
 							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>chainCount: <span class="tsd-signature-type">number</span></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagDefault value">Default value</span> plotMode: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> =&nbsp;&quot;memory&quot;</span></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagDefault value">Default value</span> validateRecords: <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol"> =&nbsp;true</span></h5>
+								</li>
+							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 						</li>
 					</ul>

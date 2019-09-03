@@ -41,7 +41,6 @@ const run = async (
 
     const node = await Node.init(storageAdapter, plotAdapter, validateRecords);
     await node.getOrCreateAddress();
-    console.log(node.wallet.address);
     await node.createLedgerAndFarm(chainCount);
 };
 

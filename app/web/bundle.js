@@ -25,12 +25,15 @@
         const paddingLength = constants_1.PIECE_SIZE - piece.length;
         const numberOfFullHashes = Math.floor(paddingLength / constants_1.HASH_LENGTH);
         const lastPartialHashLength = paddingLength % constants_1.HASH_LENGTH;
-        let hashPadding = crypto.hash(piece);
+        let hashPad = crypto.hash(piece);
+        const hashPads = [];
         for (let i = 0; i < numberOfFullHashes; ++i) {
-            piece = Buffer.concat([piece, hashPadding]);
-            hashPadding = crypto.hash(hashPadding);
+            hashPads.push(hashPad);
+            hashPad = crypto.hash(hashPad);
         }
-        return Buffer.concat([piece, hashPadding.subarray(0, lastPartialHashLength)]);
+        hashPads.push(hashPad.subarray(0, lastPartialHashLength));
+        const hashPadding = Buffer.concat(hashPads);
+        return Buffer.concat([piece, hashPadding]);
     }
     exports.padPiece = padPiece;
     /**
@@ -262,12 +265,15 @@
     }
     exports.generateBLSKeys = generateBLSKeys;
     /**
-     * Signs a binary message given a BLS private key.
+     * Signs the hash of a binary message given a BLS private key.
      */
     function signMessage(binaryMessage, binaryPrivateKey) {
+        const messageHash = hash(binaryMessage);
         const privateKey = bls_signatures_1.PrivateKey.fromBytes(binaryPrivateKey, false);
-        const signature = privateKey.sign(binaryMessage);
+        const signature = privateKey.sign(messageHash);
         const binarySignature = signature.serialize();
+        signature.delete();
+        privateKey.delete();
         return binarySignature;
     }
     exports.signMessage = signMessage;
@@ -277,9 +283,13 @@
     function verifySignature(binaryMessage, binarySignature, binaryPublicKey) {
         const signature = bls_signatures_1.Signature.fromBytes(binarySignature);
         const publicKey = bls_signatures_1.PublicKey.fromBytes(binaryPublicKey);
-        const aggregationInfo = bls_signatures_1.AggregationInfo.fromMsg(publicKey, binaryMessage);
+        const messageHash = hash(binaryMessage);
+        const aggregationInfo = bls_signatures_1.AggregationInfo.fromMsg(publicKey, messageHash);
         signature.setAggregationInfo(aggregationInfo);
         const isValid = signature.verify();
+        signature.delete();
+        publicKey.delete();
+        aggregationInfo.delete();
         return isValid;
     }
     exports.verifySignature = verifySignature;
@@ -1048,7 +1058,7 @@
     // gateway node -- answers rpc requests for records over the DHT
     // farmer -- answers rpc requests for pieces
     class Ledger extends events_1.EventEmitter {
-        constructor(storageAdapter, path) {
+        constructor(storageAdapter, path, validateRecords) {
             super();
             this.isFarming = true;
             this.isServing = true;
@@ -1070,9 +1080,10 @@
             this.unconfirmedChains = new Set(); // does not have any new blocks since last level was confirmed
             this.storage = new storage_1.Storage(storageAdapter, path);
             this.accounts = new accounts_1.Account();
+            this.isValidating = validateRecords;
         }
-        static async init(storageAdapter) {
-            const ledger = new Ledger(storageAdapter, 'ledger');
+        static async init(storageAdapter, validateRecords) {
+            const ledger = new Ledger(storageAdapter, 'ledger', validateRecords);
             return ledger;
         }
         /**
@@ -1086,7 +1097,7 @@
             let previousProofHash = new Uint8Array();
             const parentContentHash = new Uint8Array();
             const levelRecords = [];
-            let levelProofs = new Uint8Array();
+            const levelProofHashes = [];
             // init each chain with a genesis block
             for (let i = 0; i < this.chainCount; ++i) {
                 const chain = new chain_1.Chain(i);
@@ -1100,7 +1111,7 @@
                 this.proofMap.set(block.value.proof.key, block.value.proof.toData());
                 const binProof = block.value.proof.toBytes();
                 levelRecords.push(binProof);
-                levelProofs = Buffer.concat([levelProofs, binProof]);
+                levelProofHashes.push(binProof);
                 // save the content, append to level data
                 this.contentMap.set(block.value.content.key, block.value.content.toData());
                 levelRecords.push(block.value.content.toBytes());
@@ -1114,7 +1125,8 @@
                 this.unconfirmedChains.add(i);
                 this.unconfirmedBlocksByChain.push(array_map_set_1.ArraySet());
             }
-            const levelHash = crypto.hash(levelProofs);
+            const levelProofHashData = Buffer.concat(levelProofHashes);
+            const levelHash = crypto.hash(levelProofHashData);
             this.parentProofHash = previousProofHash;
             return [levelRecords, levelHash];
         }
@@ -1122,9 +1134,9 @@
          * Creates a subsequent level once a new level is confirmed (at least one new block for each chain).
          * Returns a canonical erasure coded piece set with metadata that will be the same across all nodes.
          */
-        async createLevel() {
+        createLevel() {
             const levelRecords = [];
-            let levelProofs = new Uint8Array();
+            const levelProofHashes = [];
             const uniqueTxSet = new Set();
             for (const chain of this.unconfirmedBlocksByChain) {
                 for (const blockId of chain.values()) {
@@ -1137,27 +1149,30 @@
                     if (!proofData || !contentData) {
                         throw new Error('Cannot create new level, cannot fetch requisite proof or content data');
                     }
+                    // need to store as bytes
+                    // add a from bytes method
                     const proof = proof_1.Proof.load(proofData);
                     const binProof = proof.toBytes();
                     levelRecords.push(binProof);
-                    levelProofs = Buffer.concat([levelProofs, binProof]);
+                    levelProofHashes.push(compactBlockData[0]);
                     const content = content_1.Content.load(contentData);
                     levelRecords.push(content.toBytes());
                     for (const txId of content.value.payload) {
                         uniqueTxSet.add(txId);
                     }
-                    for (const txId of uniqueTxSet) {
-                        const txData = this.txMap.get(txId);
-                        if (!txData) {
-                            throw new Error('Cannot create new level, cannot fetch requisite transaction data');
-                        }
-                        const tx = tx_1.Tx.load(txData);
-                        levelRecords.push(tx.toBytes());
-                    }
                 }
                 chain.clear();
             }
-            const levelHash = crypto.hash(levelProofs);
+            for (const txId of uniqueTxSet) {
+                const txData = this.txMap.get(txId);
+                if (!txData) {
+                    throw new Error('Cannot create new level, cannot fetch requisite transaction data');
+                }
+                const tx = tx_1.Tx.load(txData);
+                levelRecords.push(tx.toBytes());
+            }
+            const levelProofHashesData = Buffer.concat(levelProofHashes);
+            const levelHash = crypto.hash(levelProofHashesData);
             return [levelRecords, levelHash];
         }
         /**
@@ -1168,10 +1183,12 @@
         async encodeLevel(levelRecords, levelHash) {
             this.previousLevelHash = levelHash;
             let levelData = new Uint8Array();
+            const levelElements = [];
             for (const record of levelRecords) {
-                levelData = Buffer.concat([levelData, utils_1.num2Bin(record.length), record]);
+                levelElements.push(utils_1.num2Bin(record.length));
+                levelElements.push(record);
             }
-            levelData = Uint8Array.from(levelData);
+            levelData = Buffer.concat(levelElements);
             const paddedLevelData = codes.padLevel(levelData);
             const pieceDataSet = paddedLevelData.length <= 4096 ?
                 this.encodeSmallLevel(paddedLevelData, levelHash) :
@@ -1204,22 +1221,23 @@
         }
         async encodeLargeLevel(paddedLevelData, levelHash) {
             // this level has at least two source pieces, erasure code parity shards and add index piece
-            // max pieces to erasure code in one go are 254
+            // max pieces to erasure code in one go are 127
             const pieceCount = paddedLevelData.length / constants_1.PIECE_SIZE;
-            let erasureCodedLevel = new Uint8Array();
+            const erasureCodedLevelElements = [];
             console.log(`Piece count is: ${pieceCount}`);
-            if (pieceCount > 254) {
-                const rounds = Math.ceil(pieceCount / 254);
+            if (pieceCount > 127) {
+                const rounds = Math.ceil(pieceCount / 127);
                 console.log(`Rounds of erasure coding are: ${rounds}`);
                 for (let r = 0; r < rounds; ++r) {
-                    const roundData = paddedLevelData.subarray(r * 254 * constants_1.PIECE_SIZE, (r + 1) * 254 * constants_1.PIECE_SIZE);
-                    erasureCodedLevel = Buffer.concat([erasureCodedLevel, await codes.erasureCodeLevel(roundData)]);
+                    const roundData = paddedLevelData.subarray(r * 127 * constants_1.PIECE_SIZE, (r + 1) * 127 * constants_1.PIECE_SIZE);
+                    erasureCodedLevelElements.push(await codes.erasureCodeLevel(roundData));
                 }
-                // erasure code in multiples of 254
+                // erasure code in multiples of 127
             }
             else {
-                erasureCodedLevel = await codes.erasureCodeLevel(paddedLevelData);
+                erasureCodedLevelElements.push(await codes.erasureCodeLevel(paddedLevelData));
             }
+            const erasureCodedLevel = Buffer.concat(erasureCodedLevelElements);
             const pieces = codes.sliceLevel(erasureCodedLevel);
             // create the index piece
             const pieceHashes = pieces.map((piece) => crypto.hash(piece));
@@ -1281,7 +1299,9 @@
             console.log(`Created new block ${utils_1.bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
             // pass up to node for gossip across the network
             // this.emit('block', block, encoding);
-            await this.isValidBlock(block, encoding);
+            if (this.isValidating) {
+                await this.isValidBlock(block, encoding);
+            }
             console.log(`Validated new block ${utils_1.bin2Hex(block.key).substring(0, 16)}`);
             await this.applyBlock(block);
             console.log(`Applied new block ${utils_1.bin2Hex(block.key).substring(0, 16)} to ledger.`);
@@ -1441,7 +1461,7 @@
                 // update level confirmation cache and check if level is confirmed
                 this.unconfirmedChains.delete(chainIndex);
                 if (!this.unconfirmedChains.size) {
-                    const [levelRecords, levelHash] = await this.createLevel();
+                    const [levelRecords, levelHash] = this.createLevel();
                     this.emit('confirmed-level', levelRecords, levelHash);
                     console.log('New level has been confirmed.');
                     console.log('Chain lengths:');
@@ -1474,7 +1494,7 @@
          */
         async isValidTx(tx) {
             // validate schema, will throw if invalid
-            tx.isValid();
+            // tx.isValid();
             // does sender have funds to cover tx (if not coinbase)
             if (tx.value.sender.length > 0) {
                 const senderBalance = this.accounts.get(tx.senderAddress);
@@ -2071,22 +2091,40 @@
     }
     const node_1 = require("../node/node");
     /**
-     * Optional Init Params
-     * chainCount (1 to 1024)
-     * nodeMode (full node, farmer, validator, light client)
-     * plotMode (memory, disk, raw memory, raw disk, on the fly)
-     * plotDifficulty (encoding rounds)
-     * storagePath (location for disk based storage)
-     * seed (for public key)
+     * Init Params
+     * chainCount: 1 to 1024 -- number of chains in the ledger, the more chains the longer it will take to confirm new levels but the lower the probability of a fork on any given chain.
+     * Calculate expected number of blocks to confirmation as chainCount * log(2) chainCount
+     * plotMode: mem-db or disk-db -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
+     * validateRecords: true or false -- whether to validate new blocks and tx on receipt, default false for DevNet testing -- since BLS signature validation is slow, it takes a long time to plot
      */
-    const run = async () => {
-        const node = await node_1.Node.init(
-        // Use `memory` for Node.js for now
-        typeof globalThis.document ? 'memory' : 'memory', 'mem-db');
+    const run = async (chainCount, plotMode = 'memory', validateRecords = true) => {
+        let storageAdapter;
+        let plotAdapter;
+        switch (plotMode) {
+            case 'memory':
+                storageAdapter = 'memory';
+                plotAdapter = 'mem-db';
+                break;
+            case 'disk':
+                storageAdapter = 'rocks';
+                plotAdapter = 'disk-db';
+                break;
+            default:
+                storageAdapter = 'memory';
+                plotAdapter = 'mem-db';
+                break;
+        }
+        const node = await node_1.Node.init(storageAdapter, plotAdapter, validateRecords);
         await node.getOrCreateAddress();
-        await node.createLedgerAndFarm(16);
+        await node.createLedgerAndFarm(chainCount);
     };
-    run();
+    /**
+     * Default Args
+     * 16 chains
+     * In memory plotting and storage
+     * No validation
+     */
+    run(16, 'memory', false);
 });
 
 },{"../node/node":14,"fake-indexeddb/auto":465}],14:[function(require,module,exports){
@@ -2149,8 +2187,11 @@
             this.ledger.on('block', async (block, encoding) => {
                 // console.log('New block received in node.');
                 // console.log(`Encoding length is ${encoding.length}`);
-                await this.ledger.isValidBlock(block, encoding);
-                console.log('New block received and validated by Node.');
+                console.log('New block received by Node.');
+                if (this.ledger.isValidating) {
+                    await this.ledger.isValidBlock(block, encoding);
+                    console.log('New block validated by node');
+                }
                 return;
                 // include the referenced encoding
                 // encode to binary
@@ -2208,10 +2249,10 @@
         /**
          * Instantiate a new empty node with only environment variables.
          */
-        static async init(storageAdapter = 'rocks', mode = 'mem-db') {
+        static async init(storageAdapter = 'rocks', mode = 'mem-db', validateRecords) {
             const wallet = await wallet_1.Wallet.init(storageAdapter);
             const farm = await farm_1.Farm.init(storageAdapter, mode);
-            const ledger = await ledger_1.Ledger.init(storageAdapter);
+            const ledger = await ledger_1.Ledger.init(storageAdapter, validateRecords);
             return new Node(wallet, farm, ledger);
         }
         /**
@@ -2224,6 +2265,7 @@
                 await this.wallet.createKeyPair(seed);
                 await this.wallet.setMasterKeyPair();
             }
+            this.farm.address = this.wallet.address;
         }
         /**
          * Tests the plotting workflow for some random data.
@@ -2275,7 +2317,7 @@
             // }
             // print(pieceSet);
             // start a farming evaluation loop
-            for (let i = 0; i < 16000; ++i) {
+            while (this.isFarming) {
                 // find best encoding for challenge
                 console.log('\nSolving a new block challenge');
                 console.log('------------------------------');
@@ -2799,6 +2841,7 @@
     const storage_1 = require("../storage/storage");
     const utils_1 = require("../utils/utils");
     // ToDo
+    // address should be loaded on init or created
     // each address should have its own nonce
     // encrypt private keys at rest
     // create from user generated seeds
@@ -2912,24 +2955,6 @@
             await this.storage.del(NONCE_ADDRESS);
             this._nonce = 0;
         }
-        /**
-         * Signs a proof deliberately so as not to expose BLS Private Keys outside wallet module.
-         */
-        signProof(proof) {
-            if (proof.value.publicKey.length > 0) {
-                proof.sign(this.privateKey);
-            }
-            proof.setKey();
-            return proof;
-        }
-        /**
-         * Creates a coinbase (block reward) tx using a farmers keys and nonce.
-         */
-        async createCoinBaseTx(reward) {
-            const coinbaseTx = tx_1.Tx.createCoinbase(this.publicKey, reward, this.nonce, this.privateKey);
-            await this.incrementNonce();
-            return coinbaseTx;
-        }
         async close() {
             await this.storage.close();
         }
@@ -2940,6 +2965,24 @@
             const tx = tx_1.Tx.create(this.publicKey, receiver, amount, this.nonce, this.privateKey);
             await this.incrementNonce();
             return tx;
+        }
+        /**
+         * Creates a coinbase (block reward) tx using a farmers keys and nonce.
+         */
+        async createCoinBaseTx(reward) {
+            const coinbaseTx = tx_1.Tx.createCoinbase(this.publicKey, reward, this.nonce, this.privateKey);
+            await this.incrementNonce();
+            return coinbaseTx;
+        }
+        /**
+         * Signs a proof deliberately so as not to expose BLS Private Keys outside wallet module.
+         */
+        signProof(proof) {
+            if (proof.value.publicKey.length > 0) {
+                proof.sign(this.privateKey);
+            }
+            proof.setKey();
+            return proof;
         }
         /**
          * Loads all addresses from disk on initialization.
@@ -39841,8 +39884,7 @@ module.exports = MD5
             const levels = tree.length - 1;
             let currentLevel = 0;
             let right = itemIndex % 2;
-            let nextStepOffset = (itemIndex - right) / 2;
-            let index = nextStepOffset;
+            let index = itemIndex - right;
             // Last level is the root itself, hence we exclude it
             while (currentLevel < levels) {
                 const treeLevel = tree[currentLevel];
@@ -39851,9 +39893,8 @@ module.exports = MD5
                     ? treeLevel[index]
                     : (treeLevel[index + 1] || treeLevel[index]);
                 proof.push(right, ...otherItem);
-                right = index % 2;
-                nextStepOffset = (index - right) / 2;
-                index = nextStepOffset;
+                right = (index / 2) % 2;
+                index = index / 2 - right;
                 ++currentLevel;
             }
             return Uint8Array.from(proof);
