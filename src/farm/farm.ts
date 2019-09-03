@@ -39,13 +39,13 @@ export class Farm {
   // if we have multiple plots of the same data we don't want to store the metadata each time, so it should be stored separately
     // use plot storage instead to store pieceData
 
+  public address: Uint8Array;
   private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
   private storage: Storage;
   private memTree: Tree<Uint8Array, number>;
   private memPlot: Map<number, Uint8Array> = new Map();
   private diskPlot: Storage;
   private pieceOffset = 0;
-  private address: Uint8Array;
 
   constructor(storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
     this.mode = mode;

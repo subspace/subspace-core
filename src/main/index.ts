@@ -41,14 +41,15 @@ const run = async (
 
     const node = await Node.init(storageAdapter, plotAdapter, validateRecords);
     await node.getOrCreateAddress();
+    console.log(node.wallet.address);
     await node.createLedgerAndFarm(chainCount);
 };
 
 /**
  * Default Args
- * 32 chains
+ * 16 chains
  * In memory plotting and storage
  * No validation
  */
 
-run(1024, 'mem-db', false);
+run(16, 'memory', false);

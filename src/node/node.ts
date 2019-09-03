@@ -142,6 +142,7 @@ export class Node {
       await this.wallet.createKeyPair(seed);
       await this.wallet.setMasterKeyPair();
     }
+    this.farm.address = this.wallet.address;
   }
 
   /**
