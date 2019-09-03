@@ -11,7 +11,7 @@ const program = new commander.Command();
 program
   .command('run')
   .action(async () => {
-    const node = await Node.init('rocks', 'mem-db');
+    const node = await Node.init('rocks', 'mem-db', true);
     await node.getOrCreateAddress();
     if (node.wallet.address) {
       const address = Buffer.from(node.wallet.address).toString('hex');

@@ -59,6 +59,7 @@
     "level-js": "^4.0.1",
     "level-rocksdb": "^4.0.0",
     "levelup": "^4.1.0",
+    "live-server": "^1.2.1",
     "merkle-tree-binary": "^2.0.1"
   }
 }

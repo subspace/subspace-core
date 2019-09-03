@@ -12,7 +12,8 @@ import { Farm } from './farm';
 
 test('mem-plot', async () => {
   const address = crypto.randomBytes(32);
-  const farm = await Farm.init(address, 'memory', 'mem-db');
+  const farm = await Farm.init('memory', 'mem-db');
+  farm.address = address;
   const data = crypto.randomBytes(520191);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
@@ -69,7 +70,8 @@ test('mem-plot', async () => {
 
 test('disk-plot', async () => {
   const address = crypto.randomBytes(32);
-  const farm = await Farm.init(address, 'rocks', 'disk-db');
+  const farm = await Farm.init('rocks', 'disk-db');
+  farm.address = address;
   const data = crypto.randomBytes(520191);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);

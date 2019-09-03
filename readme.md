@@ -2,6 +2,25 @@
 
 A monorepo that includes everything needed to run a full node for the Subspace Ledger.
 
+## Usage
+
+### Install and run from GitHub
+```
+git clone https://wwww.github.com/subspace/subspace-core
+cd subspace-core
+npm install
+npm run build
+ts-node src/main/index.ts
+```
+
+Default params may be changed in `src/main/index.ts`
+
+### Install and run from NPM (pending)
+
+
+### Install and run with docker (pending)
+
+
 ## Design
 
 ### Target Runtime

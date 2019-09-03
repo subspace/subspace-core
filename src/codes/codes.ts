@@ -15,13 +15,17 @@ export function padPiece(piece: Uint8Array): Uint8Array {
   const numberOfFullHashes = Math.floor(paddingLength / HASH_LENGTH);
   const lastPartialHashLength = paddingLength % HASH_LENGTH;
 
-  let hashPadding = crypto.hash(piece);
+  let hashPad = crypto.hash(piece);
+  const hashPads: Uint8Array[] = [];
   for (let i = 0; i < numberOfFullHashes; ++i) {
-    piece = Buffer.concat([piece, hashPadding]);
-    hashPadding = crypto.hash(hashPadding);
+    hashPads.push(hashPad);
+    hashPad = crypto.hash(hashPad);
   }
 
-  return Buffer.concat([piece, hashPadding.subarray(0, lastPartialHashLength)]);
+  hashPads.push(hashPad.subarray(0, lastPartialHashLength));
+  const hashPadding = Buffer.concat(hashPads);
+
+  return Buffer.concat([piece, hashPadding]);
 }
 
 /**
