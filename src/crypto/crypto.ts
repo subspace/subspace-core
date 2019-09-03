@@ -83,12 +83,15 @@ export function generateBLSKeys(seed?: Uint8Array): IKeyPair {
 }
 
 /**
- * Signs a binary message given a BLS private key.
+ * Signs the hash of a binary message given a BLS private key.
  */
 export function signMessage(binaryMessage: Uint8Array, binaryPrivateKey: Uint8Array): Uint8Array {
+  const messageHash = hash(binaryMessage);
   const privateKey = PrivateKey.fromBytes(binaryPrivateKey, false);
-  const signature = privateKey.sign(binaryMessage);
+  const signature = privateKey.sign(messageHash);
   const binarySignature = signature.serialize();
+  signature.delete();
+  privateKey.delete();
   return binarySignature;
 }
 
@@ -98,8 +101,12 @@ export function signMessage(binaryMessage: Uint8Array, binaryPrivateKey: Uint8Ar
 export function verifySignature(binaryMessage: Uint8Array, binarySignature: Uint8Array, binaryPublicKey: Uint8Array): boolean {
   const signature = Signature.fromBytes(binarySignature);
   const publicKey = PublicKey.fromBytes(binaryPublicKey);
-  const aggregationInfo = AggregationInfo.fromMsg(publicKey, binaryMessage);
+  const messageHash = hash(binaryMessage);
+  const aggregationInfo = AggregationInfo.fromMsg(publicKey, messageHash);
   signature.setAggregationInfo(aggregationInfo);
   const isValid = signature.verify();
+  signature.delete();
+  publicKey.delete();
+  aggregationInfo.delete();
   return isValid;
 }

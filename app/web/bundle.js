@@ -355,8 +355,7 @@
             }
             this.memTree.addNode(pieceData.pieceHash, this.pieceOffset);
             await this.addPieceData(pieceData);
-            // console.log(`Added encoding to plot: `);
-            // console.log(encodedPiece);
+            console.log(`[+] Finished plotting encoding ${utils_1.bin2Hex(crypto.hash(encodedPiece)).substring(0, 16)} from piece ${utils_1.bin2Hex(pieceData.pieceHash).substring(0, 16)}.`);
         }
         getSize() {
             return this.memPlot.size;
@@ -1059,10 +1058,10 @@
             this.chainCount = 0;
             this.lastConfirmedLevel = 0;
             this.stateMap = array_map_set_1.ArrayMap();
-            this.lastStateHash = new Uint8Array();
-            this.chains = [];
             // memory pool, may be cleared after each level is confirmed (if not serving)
             this.compactBlockMap = array_map_set_1.ArrayMap();
+            this.lastStateHash = new Uint8Array();
+            this.chains = [];
             this.proofMap = array_map_set_1.ArrayMap();
             this.contentMap = array_map_set_1.ArrayMap();
             this.txMap = array_map_set_1.ArrayMap();
@@ -1092,6 +1091,7 @@
             for (let i = 0; i < this.chainCount; ++i) {
                 const chain = new chain_1.Chain(i);
                 const block = block_1.Block.createGenesisBlock(previousProofHash, parentContentHash);
+                console.log(`Created new genesis block for chain ${i}`);
                 const encoding = new Uint8Array();
                 this.emit('block', block, encoding);
                 // print(block.print());
@@ -1204,7 +1204,22 @@
         }
         async encodeLargeLevel(paddedLevelData, levelHash) {
             // this level has at least two source pieces, erasure code parity shards and add index piece
-            const erasureCodedLevel = await codes.erasureCodeLevel(paddedLevelData);
+            // max pieces to erasure code in one go are 254
+            const pieceCount = paddedLevelData.length / constants_1.PIECE_SIZE;
+            let erasureCodedLevel = new Uint8Array();
+            console.log(`Piece count is: ${pieceCount}`);
+            if (pieceCount > 254) {
+                const rounds = Math.ceil(pieceCount / 254);
+                console.log(`Rounds of erasure coding are: ${rounds}`);
+                for (let r = 0; r < rounds; ++r) {
+                    const roundData = paddedLevelData.subarray(r * 254 * constants_1.PIECE_SIZE, (r + 1) * 254 * constants_1.PIECE_SIZE);
+                    erasureCodedLevel = Buffer.concat([erasureCodedLevel, await codes.erasureCodeLevel(roundData)]);
+                }
+                // erasure code in multiples of 254
+            }
+            else {
+                erasureCodedLevel = await codes.erasureCodeLevel(paddedLevelData);
+            }
             const pieces = codes.sliceLevel(erasureCodedLevel);
             // create the index piece
             const pieceHashes = pieces.map((piece) => crypto.hash(piece));
@@ -1263,10 +1278,13 @@
             const parentContentHash = compactParentBlock[1];
             const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
             const block = block_1.Block.create(proof, parentContentHash, txIds, coinbaseTx);
+            console.log(`Created new block ${utils_1.bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
             // pass up to node for gossip across the network
             // this.emit('block', block, encoding);
             await this.isValidBlock(block, encoding);
+            console.log(`Validated new block ${utils_1.bin2Hex(block.key).substring(0, 16)}`);
             await this.applyBlock(block);
+            console.log(`Applied new block ${utils_1.bin2Hex(block.key).substring(0, 16)} to ledger.`);
             return block;
         }
         /**
@@ -1324,8 +1342,6 @@
             }
             // piece level is seen in state
             if (!this.stateMap.has(block.value.proof.value.pieceStateHash) && block.value.proof.value.pieceStateHash.length > 0) {
-                console.log(block.value.proof.value.pieceStateHash);
-                console.log(this.stateMap.keys());
                 throw new Error('Invalid block proof, referenced piece level is unknown');
             }
             // piece proof is valid for a given state level, assuming their is more than one piece in the level
@@ -1337,7 +1353,7 @@
                 const state = state_1.State.load(pieceStateData);
                 const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
                 if (!validPieceProof) {
-                    console.log('Invalid block proof, piece proof is not a valid merkle path');
+                    console.log('ERROR: Invalid block proof, piece proof is not a valid merkle path');
                 }
             }
             // encoding decodes pack to piece
@@ -1351,7 +1367,7 @@
                 // console.log(`Decoded piece hash is ${pieceHash.toString()}`);
                 // console.log(`Piece hash referenced in block is:  ${block.value.proof.value.pieceHash.toString()}`);
                 // print(block.print());
-                console.log('Invalid block proof, encoding does not decode back to parent piece');
+                console.log('ERROR: Invalid block proof, encoding does not decode back to parent piece.');
             }
             // verify the content points to the correct chain
             // if parent block is the genesis block then the proof hash will hash to different a chain
@@ -1421,19 +1437,25 @@
                     this.unconfirmedTxs.delete(txId);
                 }
                 // tslint:disable-next-line: no-console
-                console.log('Completed applying block, checking if level is confirmed');
+                console.log('Checking if pending level has confirmed during applyBlock()');
                 // update level confirmation cache and check if level is confirmed
                 this.unconfirmedChains.delete(chainIndex);
                 if (!this.unconfirmedChains.size) {
                     const [levelRecords, levelHash] = await this.createLevel();
                     this.emit('confirmed-level', levelRecords, levelHash);
+                    console.log('New level has been confirmed.');
+                    console.log('Chain lengths:');
+                    console.log('--------------');
+                    for (const chain of this.chains) {
+                        console.log(`Chain ${chain.index}: ${chain.size}`);
+                    }
                     for (let i = 0; i < this.chainCount; ++i) {
                         this.unconfirmedChains.add(i);
                     }
                     if (this.isFarming) {
                         this.once('completed-plotting', () => {
                             // tslint:disable-next-line: no-console
-                            console.log('completed plotting new piece set');
+                            console.log('Completed plotting piece set for last confirmed level');
                             resolve();
                         });
                     }
@@ -1467,6 +1489,7 @@
             // how to get the last tx for this account?
             // create secondary index in rocks for address and compile...
             // track the nonce in each address field in accounts
+            console.log(`Validated new ${tx.value.sender.length > 0 ? "credit" : "coinbase"} tx ${utils_1.bin2Hex(tx.key).substring(0, 16)}`);
             return true;
         }
         /**
@@ -1481,6 +1504,7 @@
             }
             // always credit the receiver
             this.accounts.update(tx.receiverAddress, tx.value.amount);
+            console.log(`Applied new ${tx.value.sender.length > 0 ? "credit" : "coinbase"} tx ${utils_1.bin2Hex(tx.key).substring(0, 16)} to ledger.`);
             // apply the fee to the farmer?
             // note when tx is referenced (added to a block)
             // note when tx is confirmed (a block referencing is captured in a level)
@@ -2058,7 +2082,7 @@
     const run = async () => {
         const node = await node_1.Node.init(
         // Use `memory` for Node.js for now
-        typeof globalThis.document ? 'memory' : 'rocks', 'mem-db');
+        typeof globalThis.document ? 'memory' : 'memory', 'mem-db');
         await node.getOrCreateAddress();
         await node.createLedgerAndFarm(16);
     };
@@ -2091,10 +2115,11 @@
     const wallet_1 = require("../wallet/wallet");
     // ToDo
     // detect type of storage for storage adapter
-    // start a new ledger
     // define the full API
     // include the RPC interface
     // sync an existing ledger
+    // Descriptive Console Output
+    //
     class Node {
         constructor(wallet, farm, ledger) {
             this.isFarming = true;
@@ -2108,7 +2133,6 @@
              * Add each piece to the plot, if farming.
              */
             this.ledger.on('confirmed-level', async (levelRecords, levelHash) => {
-                console.log('New level confirmation received in node.');
                 if (this.isFarming) {
                     // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
                     const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash);
@@ -2123,10 +2147,10 @@
              * Encode the block as binary and gossip over the network.
              */
             this.ledger.on('block', async (block, encoding) => {
-                console.log('New block received in node.');
-                console.log(`Encoding length is ${encoding.length}`);
+                // console.log('New block received in node.');
+                // console.log(`Encoding length is ${encoding.length}`);
                 await this.ledger.isValidBlock(block, encoding);
-                console.log('block is valid!');
+                console.log('New block received and validated by Node.');
                 return;
                 // include the referenced encoding
                 // encode to binary
@@ -2219,14 +2243,17 @@
         async createLedgerAndFarm(chainCount) {
             this.isFarming = true;
             this.getOrCreateAddress();
+            console.log('\nLaunching a new Subspace Full Node!');
+            console.log('-----------------------------------\n');
+            console.log(`Created a new node identity with address ${utils_1.bin2Hex(this.wallet.address)}`);
+            console.log(`Starting a new ledger from genesis with ${chainCount} chains.`);
             const [levelRecords, levelHash] = await this.ledger.createGenesisLevel(chainCount);
-            // print(levelRecords);
             const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
-            console.log(`Created genesis level with ${this.ledger.chainCount} chains.`);
+            console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
             for (const piece of pieceSet) {
                 await this.farm.addPiece(piece.piece, piece.data);
             }
-            console.log(`Plotted ${pieceSet.length} genesis pieces`);
+            console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
             // if (pieceSet.length === 1) {
             //   console.log('A single genesis piece has been encoded into the genesis level');
             //   const pieceData = pieceSet[0];
@@ -2248,11 +2275,17 @@
             // }
             // print(pieceSet);
             // start a farming evaluation loop
-            for (let i = 0; i < 256; ++i) {
+            for (let i = 0; i < 16000; ++i) {
                 // find best encoding for challenge
                 console.log('\nSolving a new block challenge');
+                console.log('------------------------------');
+                console.log(`State: ${this.ledger.stateMap.size} levels`);
+                console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
+                const piecesInPlot = this.farm.getSize();
+                const plotSize = (piecesInPlot * constants_1.PIECE_SIZE) / 1000000;
+                console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
+                console.log(`Balance: ${this.ledger.accounts.get(this.wallet.address)} credits`);
                 console.log('------------------------------\n');
-                console.log(`${this.farm.getSize()} pieces in plot.`);
                 const previousLevelHash = this.ledger.previousLevelHash;
                 const parentProofHash = this.ledger.parentProofHash;
                 const seed = Buffer.concat([previousLevelHash, parentProofHash]);
@@ -2262,7 +2295,7 @@
                     throw new Error('Cannot find a piece within plot for target');
                 }
                 const encoding = closestEncoding.encoding;
-                console.log(`Closest piece to target: ${utils_1.bin2Hex(pieceTarget)} is ${utils_1.bin2Hex(closestEncoding.data.pieceHash)}`);
+                console.log(`Closest piece to target: ${utils_1.bin2Hex(pieceTarget).substr(0, 16)} is ${utils_1.bin2Hex(closestEncoding.data.pieceHash).substring(0, 16)}`);
                 let bestChunkQuality = 0;
                 let bestChunk = new Uint8Array();
                 const chunkTarget = crypto.hash(pieceTarget).subarray(0, 8);
