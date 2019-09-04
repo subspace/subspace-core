@@ -6,7 +6,7 @@ import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { IEncoding, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { bin2Hex, bin2Num, num2Bin } from "../utils/utils";
+import { bin2Num, num2Bin } from "../utils/utils";
 
 // ToDo
   // Plots
@@ -72,7 +72,7 @@ export class Farm {
 
     this.memTree.addNode(pieceData.pieceHash, this.pieceOffset);
     await this.addPieceData(pieceData);
-    console.log(`[+] Finished plotting encoding ${bin2Hex(crypto.hash(encodedPiece)).substring(0, 16)} from piece ${bin2Hex(pieceData.pieceHash).substring(0, 16)}.`);
+    // console.log(`[+] Finished plotting encoding ${bin2Hex(crypto.hash(encodedPiece)).substring(0, 16)} from piece ${bin2Hex(pieceData.pieceHash).substring(0, 16)}.`);
   }
 
   public getSize(): number {

@@ -86,4 +86,4 @@ const storageTest = (storage: Storage) => {
 
 storageTest(new Storage('rocks', 'storage'));
 storageTest(new Storage('memory', 'storage'));
-storageTest(new Storage('browser'));
+// storageTest(new Storage('browser'));

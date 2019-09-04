@@ -58,7 +58,7 @@ export default class BrowserAdapter implements IAdapter {
   public async clear(): Promise<void> {
     const keys = await this.getKeys();
     for (const key of keys) {
-      await this.del(key);
+      await this.del(Buffer.from(key));
     }
   }
 

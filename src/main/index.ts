@@ -40,7 +40,7 @@ const run = async (
     }
 
     const node = await Node.init(storageAdapter, plotAdapter, validateRecords);
-    await node.getOrCreateAddress();
+    await node.getOrCreateAccount();
     await node.createLedgerAndFarm(chainCount);
 };
 
@@ -51,4 +51,4 @@ const run = async (
  * No validation
  */
 
-run(32, 'memory', false);
+run(1, 'memory', false);

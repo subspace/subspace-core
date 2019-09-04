@@ -12,9 +12,9 @@ program
   .command('run')
   .action(async () => {
     const node = await Node.init('rocks', 'mem-db', true);
-    await node.getOrCreateAddress();
-    if (node.wallet.address) {
-      const address = Buffer.from(node.wallet.address).toString('hex');
+    await node.getOrCreateAccount();
+    if (node.farm.address) {
+      const address = Buffer.from(node.farm.address).toString('hex');
       console.log(`Created new node with address: ${address.substring(0, 8)}`);
     }
   });

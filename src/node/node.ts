@@ -10,7 +10,7 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { IBlockData, ITxData } from '../main/interfaces';
 import { bin2Hex, measureProximity } from '../utils/utils';
-import { Wallet } from '../wallet/wallet';
+import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
   // detect type of storage for storage adapter
@@ -27,7 +27,7 @@ export class Node {
    * Instantiate a new empty node with only environment variables.
    */
   public static async init(storageAdapter = 'rocks', mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db', validateRecords: boolean): Promise<Node> {
-    const wallet = await Wallet.init(storageAdapter);
+    const wallet = await Wallet.open(storageAdapter);
     const farm = await Farm.init(storageAdapter, mode);
     const ledger = await Ledger.init(storageAdapter, validateRecords);
     return new Node(wallet, farm, ledger);
@@ -60,6 +60,8 @@ export class Node {
         }
         this.ledger.emit('completed-plotting');
       }
+
+      // update account for each tx that links to an account for this node
     });
 
     /**
@@ -124,6 +126,7 @@ export class Node {
       // validate
       // apply
       // re-gossip
+      // check for account updates for this node
       const tx = Tx.load(txData);
       if (this.ledger.isValidTx(tx)) {
         this.ledger.applyTx(tx);
@@ -135,14 +138,12 @@ export class Node {
   /**
    * Looks for an existing address within the wallet, creating a new one if one does not exist.
    */
-  public async getOrCreateAddress(): Promise<void> {
-    const existingAddress = await this.wallet.setMasterKeyPair();
-    if (!existingAddress) {
-      const seed = crypto.randomBytes(32);
-      await this.wallet.createKeyPair(seed);
-      await this.wallet.setMasterKeyPair();
-    }
-    this.farm.address = this.wallet.address;
+  public async getOrCreateAccount(): Promise<IWalletAccount> {
+    const accounts = this.wallet.getAccounts();
+    let account: IWalletAccount;
+    accounts.length ? account = accounts[0] : account = await this.wallet.createAccount('test', 'A test account');
+    this.farm.address = account.address;
+    return account;
   }
 
   /**
@@ -163,10 +164,10 @@ export class Node {
    */
   public async createLedgerAndFarm(chainCount: number): Promise<void> {
     this.isFarming = true;
-    this.getOrCreateAddress();
+    const account = await this.getOrCreateAccount();
     console.log('\nLaunching a new Subspace Full Node!');
     console.log('-----------------------------------\n');
-    console.log(`Created a new node identity with address ${bin2Hex(this.wallet.address)}`);
+    console.log(`Created a new node identity with address ${bin2Hex(account.address)}`);
     console.log(`Starting a new ledger from genesis with ${chainCount} chains.`);
     const [levelRecords, levelHash] = await this.ledger.createGenesisLevel(chainCount);
     const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
@@ -175,31 +176,6 @@ export class Node {
       await this.farm.addPiece(piece.piece, piece.data);
     }
     console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
-
-    // if (pieceSet.length === 1) {
-    //   console.log('A single genesis piece has been encoded into the genesis level');
-    //   const pieceData = pieceSet[0];
-
-    //   // original piece data
-    //   console.log(`Address for encoding is ${this.wallet.address}`);
-    //   // console.log(`Original piece is ${pieceData.piece}`);
-    //   console.log(`Attached piece hash is ${pieceData.data.pieceHash}`);
-    //   console.log(`Actual piece hash is ${crypto.hash(pieceData.piece)}`);
-
-    //   // encoded data
-    //   const encoding = codes.encodePiece(pieceData.piece, this.wallet.address);
-    //   const encodingHash = crypto.hash(encoding);
-    //   // console.log(`Encoding is ${encoding}`);
-    //   console.log(`Encoded hash is ${encodingHash}`);
-
-    //   // decoded data
-    //   const decoding = codes.decodePiece(encoding, this.wallet.address);
-    //   const decodedHash = crypto.hash(decoding);
-    //   // console.log(`Decoding is ${decoding}`);
-    //   console.log(`Decoded hash is ${decodedHash}`);
-    // }
-
-    // print(pieceSet);
 
     // start a farming evaluation loop
     while (this.isFarming) {
@@ -211,7 +187,7 @@ export class Node {
       const piecesInPlot = this.farm.getSize();
       const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
       console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
-      console.log(`Balance: ${this.ledger.accounts.get(this.wallet.address)} credits`);
+      console.log(`Balance: ${this.ledger.accounts.get(this.farm.address)} credits`);
       console.log('------------------------------\n');
 
       const previousLevelHash = this.ledger.previousLevelHash;
@@ -240,6 +216,8 @@ export class Node {
 
       console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)}`);
 
+      const account = this.wallet.getAccount(this.farm.address);
+
       // create proof of storage
       const unsignedProof = await Proof.create(
         previousLevelHash,
@@ -248,12 +226,12 @@ export class Node {
         closestEncoding.data.pieceHash,
         closestEncoding.data.stateHash,
         closestEncoding.data.proof,
-        this.wallet.publicKey,
+        account.publicKey,
       );
       const signedProof = this.wallet.signProof(unsignedProof);
 
       // create coinbase tx
-      const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD);
+      const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD, account.publicKey);
 
       // const block =
       await this.ledger.createBlock(signedProof, coinbaseTx, encoding);

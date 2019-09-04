@@ -94,6 +94,13 @@ export function bin2Hex(bin: Uint8Array): string {
 }
 
 /**
+ * Converts a hexadecimal string to binary representation.
+ */
+export function hex2Bin(hex: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(hex, 'hex'));
+}
+
+/**
  * Converts a JSON object to binary data.
  */
 export function JSON2Bin(data: object): Uint8Array {
@@ -103,7 +110,7 @@ export function JSON2Bin(data: object): Uint8Array {
 /**
  * Converts binary data back to a JSON object.
  */
-export function bin2JSON(data: Uint8Array): object {
+export function bin2JSON(data: Uint8Array): any {
   return JSON.parse(Buffer.from(data).toString());
 }
 
