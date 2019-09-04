@@ -8,7 +8,6 @@ import { Tx } from "../ledger/tx";
 import { Storage } from "../storage/storage";
 import { bin2Hex, bin2JSON, hex2Bin, JSON2Bin, num2Date } from "../utils/utils";
 
-  // link with parent modules
   // have to know which account to load, would come from farm module or from user input
 
 // ToDo
