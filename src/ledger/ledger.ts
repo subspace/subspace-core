@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
-import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData } from '../main/interfaces';
+import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData, ITxValue } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { bin2Hex, num2Bin } from '../utils/utils';
 import { Account } from './accounts';
@@ -144,7 +144,7 @@ export class Ledger extends EventEmitter {
    * Creates a subsequent level once a new level is confirmed (at least one new block for each chain).
    * Returns a canonical erasure coded piece set with metadata that will be the same across all nodes.
    */
-  public createLevel(): [Uint8Array[], Uint8Array] {
+  public createLevel(): [Uint8Array[], Uint8Array, ITxValue[]] {
     const levelRecords: Uint8Array[] = [];
     const levelProofHashes: Uint8Array[] = [];
     const uniqueTxSet: Set<Uint8Array> = new Set();
@@ -178,18 +178,21 @@ export class Ledger extends EventEmitter {
       chain.clear();
     }
 
+    const confirmedTxValues: ITxValue[] = [];
+
     for (const txId of uniqueTxSet) {
       const txData = this.txMap.get(txId);
       if (!txData) {
         throw new Error('Cannot create new level, cannot fetch requisite transaction data');
       }
       const tx = Tx.load(txData);
+      confirmedTxValues.push(tx.value);
       levelRecords.push(tx.toBytes());
     }
 
     const levelProofHashesData = Buffer.concat(levelProofHashes);
     const levelHash = crypto.hash(levelProofHashesData);
-    return [levelRecords, levelHash];
+    return [levelRecords, levelHash, confirmedTxValues];
   }
 
   /**
@@ -542,8 +545,8 @@ export class Ledger extends EventEmitter {
       // update level confirmation cache and check if level is confirmed
       this.unconfirmedChains.delete(chainIndex);
       if (!this.unconfirmedChains.size) {
-        const [levelRecords, levelHash] = this.createLevel();
-        this.emit('confirmed-level', levelRecords, levelHash);
+        const [levelRecords, levelHash, confirmedTxs] = this.createLevel();
+        this.emit('confirmed-level', levelRecords, levelHash, confirmedTxs);
         console.log('New level has been confirmed.');
         console.log('Chain lengths:');
         console.log('--------------');

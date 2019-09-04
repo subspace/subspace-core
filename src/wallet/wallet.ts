@@ -9,14 +9,13 @@ import { Storage } from "../storage/storage";
 import { bin2Hex, bin2JSON, hex2Bin, JSON2Bin, num2Date } from "../utils/utils";
 
   // link with parent modules
-  // revise tests
   // have to know which account to load, would come from farm module or from user input
 
 // ToDo
   // sync wallet on startup (in // w/ledger sync)
+  // use a cryptographically secure random number generator
   // encrypt private keys at rest
   // recover from a seed
-  // use a secure random number generator
   // HD Wallet Functions (child keys)
 
 export interface IWalletAccount {
@@ -54,6 +53,7 @@ export class Wallet {
     return wallet;
   }
 
+  public readonly addresses: Set<string> = new Set();
   private accounts = ArrayMap<Uint8Array, IWalletAccount>();
   private storage: Storage;
 
@@ -96,6 +96,7 @@ export class Wallet {
     };
 
     this.accounts.set(address, account);
+    this.addresses.add(bin2Hex(account.address));
     await this.storage.put(address, JSON2Bin(account));
     return account;
   }
@@ -163,6 +164,7 @@ export class Wallet {
       throw new Error('Cannot delete account, no account exists for the given address');
     }
     this.accounts.delete(address);
+    this.addresses.delete(bin2Hex(address));
     await this.storage.del(address);
   }
 
@@ -264,6 +266,7 @@ export class Wallet {
   public async clear(): Promise<void> {
     await this.storage.clear();
     this.accounts.clear();
+    this.addresses.clear();
   }
 
   /**
@@ -312,6 +315,7 @@ export class Wallet {
       }
       const account: IWalletAccount = this.fromBinary(binaryAccount);
       this.accounts.set(account.address, account);
+      this.addresses.add(bin2Hex(account.address));
     }
   }
 

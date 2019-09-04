@@ -77,6 +77,7 @@ test('get-accounts', async () => {
   expect(accounts[1]).toMatchObject(account2);
   expect(accounts[2]).toMatchObject(account3);
   expect(wallet.getAccounts().length).toBe(3);
+  expect(wallet.addresses.size).toBe(3);
 });
 
 test('update-account', async () => {
@@ -84,6 +85,7 @@ test('update-account', async () => {
   await wallet.updateAccount(account2);
   await wallet.updateAccount(account3);
   expect(wallet.getAccounts().length).toBe(3);
+  expect(wallet.addresses.size).toBe(3);
 });
 
 test('delete-account', async () => {
@@ -91,6 +93,7 @@ test('delete-account', async () => {
   expect(() => wallet.getAccount(account1.address)).toThrow();
   await expect(wallet.getAccountFromStorage(account1.address)).rejects.toThrow();
   expect(wallet.getAccounts().length).toBe(2);
+  expect(wallet.addresses.size).toBe(2);
 });
 
 test('create-coinbase-tx', async () => {
@@ -153,6 +156,7 @@ test('close-load-clear', async () => {
 
   const reopenedWallet = await Wallet.open('rocks', 'wallet-test');
   expect(reopenedWallet.getAccounts().length).toBe(2);
+  expect(wallet.addresses.size).toBe(2);
 
   const account2FromMap = reopenedWallet.getAccount(account2.address);
   const account2FromStorage = await reopenedWallet.getAccountFromStorage(account2.address);
@@ -164,6 +168,7 @@ test('close-load-clear', async () => {
 
   await reopenedWallet.clear();
   expect(reopenedWallet.getAccounts.length).toBe(0);
+  expect(reopenedWallet.addresses.size).toBe(0);
   await expect(reopenedWallet.getAccountFromStorage(account2.address)).rejects.toThrow();
   expect(() => reopenedWallet.getAccount(account2.address)).toThrow();
   await expect(reopenedWallet.getAccountFromStorage(account3.address)).rejects.toThrow();

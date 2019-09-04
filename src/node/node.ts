@@ -51,7 +51,7 @@ export class Node {
      * A new level has been confirmed and encoded into a piece set.
      * Add each piece to the plot, if farming.
      */
-    this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array) => {
+    this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array, confirmedTxs: Tx[]) => {
       if (this.isFarming) {
         // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
         const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash);
@@ -62,6 +62,12 @@ export class Node {
       }
 
       // update account for each tx that links to an account for this node
+      const addresses = this.wallet.addresses;
+      for (const tx of confirmedTxs) {
+        if (addresses.has(bin2Hex(tx.senderAddress)) || addresses.has(bin2Hex(tx.receiverAddress))) {
+          await wallet.onTxConfirmed(tx);
+        }
+      }
     });
 
     /**
@@ -121,7 +127,6 @@ export class Node {
      * Apply the tx to the ledger and gossip to all other peers.
      */
     this.rpc.on('tx', (txData: ITxData) => {
-      return;
       // filter
       // validate
       // apply
@@ -129,6 +134,10 @@ export class Node {
       // check for account updates for this node
       const tx = Tx.load(txData);
       if (this.ledger.isValidTx(tx)) {
+        const addresses = this.wallet.addresses;
+        if (addresses.has(bin2Hex(tx.receiverAddress))) {
+          this.wallet.onTxReceived(tx);
+        }
         this.ledger.applyTx(tx);
         this.rpc.gossip(txData);
       }
