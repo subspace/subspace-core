@@ -70,8 +70,6 @@ const storageTest = (storage: Storage) => {
 
   test(`${storage.adapterName}-clear`, async () => {
     await storage.clear();
-    const keys = await storage.getKeys();
-    expect(keys.length).toBe(0);
     const length = await storage.getLength();
     expect(length).toBe(0);
     const sv1 = await storage.get(k1);
@@ -86,4 +84,4 @@ const storageTest = (storage: Storage) => {
 
 storageTest(new Storage('rocks', 'storage'));
 storageTest(new Storage('memory', 'storage'));
-// storageTest(new Storage('browser'));
+// storageTest(new Storage('browser', 'storage'));

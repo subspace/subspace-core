@@ -4,8 +4,6 @@ import MemoryAdapter from './MemoryAdapter';
 import RocksAdapter from './RocksAdapter';
 
 // ToDo
-  // close storage (handle error/callback)
-  // fix browser storage using level-js: https://github.com/Level/level-js
   // handle JSON storage / type serialization
   // return boolean for del
   // mobile storage
