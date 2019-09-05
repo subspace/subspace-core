@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
-import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData, ITxValue } from '../main/interfaces';
+import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { bin2Hex, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
@@ -48,11 +48,21 @@ import { Tx } from './tx';
 
 export class Ledger extends EventEmitter {
 
-  public static async init(storageAdapter: string, validateRecords: boolean): Promise<Ledger> {
-    const ledger = new Ledger(storageAdapter, 'ledger', validateRecords);
+  public static async init(
+    storageAdapter: string,
+    validateRecords: boolean,
+    encodingRounds: number,
+  ): Promise<Ledger> {
+    const ledger = new Ledger(
+      storageAdapter,
+      'ledger',
+      validateRecords,
+      encodingRounds,
+    );
     return ledger;
   }
 
+  public readonly encodingRounds: number;
   public isFarming = true;
   public isServing = true;
   public isValidating: boolean;
@@ -79,11 +89,17 @@ export class Ledger extends EventEmitter {
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
 
-  constructor(storageAdapter: string, path: string, validateRecords: boolean) {
+  constructor(
+    storageAdapter: string,
+    path: string,
+    validateRecords: boolean,
+    encodingRounds: number,
+  ) {
     super();
     this.storage = new Storage(storageAdapter, path);
     this.accounts = new Account();
     this.isValidating = validateRecords;
+    this.encodingRounds = encodingRounds;
   }
 
   /**
@@ -144,7 +160,7 @@ export class Ledger extends EventEmitter {
    * Creates a subsequent level once a new level is confirmed (at least one new block for each chain).
    * Returns a canonical erasure coded piece set with metadata that will be the same across all nodes.
    */
-  public createLevel(): [Uint8Array[], Uint8Array, ITxValue[]] {
+  public createLevel(): [Uint8Array[], Uint8Array, Tx[]] {
     const levelRecords: Uint8Array[] = [];
     const levelProofHashes: Uint8Array[] = [];
     const uniqueTxSet: Set<Uint8Array> = new Set();
@@ -178,7 +194,7 @@ export class Ledger extends EventEmitter {
       chain.clear();
     }
 
-    const confirmedTxValues: ITxValue[] = [];
+    const confirmedTxs: Tx[] = [];
 
     for (const txId of uniqueTxSet) {
       const txData = this.txMap.get(txId);
@@ -186,13 +202,13 @@ export class Ledger extends EventEmitter {
         throw new Error('Cannot create new level, cannot fetch requisite transaction data');
       }
       const tx = Tx.load(txData);
-      confirmedTxValues.push(tx.value);
+      confirmedTxs.push(tx);
       levelRecords.push(tx.toBytes());
     }
 
     const levelProofHashesData = Buffer.concat(levelProofHashes);
     const levelHash = crypto.hash(levelProofHashesData);
-    return [levelRecords, levelHash, confirmedTxValues];
+    return [levelRecords, levelHash, confirmedTxs];
   }
 
   /**
@@ -450,7 +466,7 @@ export class Ledger extends EventEmitter {
 
     // encoding decodes pack to piece
     const proverAddress = crypto.hash(block.value.proof.value.publicKey);
-    const piece = codes.decodePiece(encoding, proverAddress);
+    const piece = codes.decodePiece(encoding, proverAddress, this.encodingRounds);
     // console.log(`Encoding in  Block.isValidBlock() decodes to: ${piece}`);
     const pieceHash = crypto.hash(piece);
     if (pieceHash.toString() !== block.value.proof.value.pieceHash.toString()) {

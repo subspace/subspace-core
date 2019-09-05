@@ -17,6 +17,18 @@ import { num2Bin, smallBin2Num, smallNum2Bin } from "../utils/utils";
     // disk based tree
     // hybrid tree
 
+// current implementation
+  // single plot
+  // memory or rocks plotting
+  // memory or rocks metadata store
+  // memory based tree
+
+// next implementation
+  // multiple plots of the same type (based on space available)
+  // memory, rocks, or raw disk plotting
+  // memory or rocks storage of metadata
+  // memory or disk based tree
+
 /**
  * Manages all plots for this node. Plots store encoded pieces which are used to solve the block challenge.
  */
@@ -26,39 +38,78 @@ export class Farm {
   /**
    * Returns a new farm instance.
    */
-  public static async init(adapter: string, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB): Promise<Farm> {
+  public static async init(
+    adapter: string,
+    mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB,
+    farmSize: number,
+    encodingRounds: number,
+  ): Promise<Farm> {
+
+    const numberOfPlots = 1024;
+    const plotSize = Math.floor(farmSize / numberOfPlots);
+
+    for (let i = 0; i < plotSize; ++i) {
+
+    }
+
+    switch (mode) {
+      case Farm.MODE_MEM_DB:
+        // many mem plots
+        // one memory store
+        // one memory tree
+        break;
+      case Farm.MODE_DISK_DB:
+        // many disk plots
+        // one disk store
+        // one disk tree
+        break;
+    }
+
+    // determine the type of plot
+    // determine the type of metadata store
+    // determine the type of tree
+    // determine the number of plots
+
     if (mode === 'mem-db') {
       adapter = 'memory';
     }
     const storage = new Storage(adapter, `farm-${mode}`);
     const diskPlot = new Storage(adapter, 'plot');
-    return new Farm(storage, diskPlot, mode);
+    return new Farm(
+      storage,
+      diskPlot,
+      mode,
+      encodingRounds,
+    );
   }
 
   // if we have multiple plots of the same data we don't want to store the metadata each time, so it should be stored separately
     // use plot storage instead to store pieceData
 
-  public address: Uint8Array = new Uint8Array();
   private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
-  private readonly storage: Storage;
-  private readonly memTree: Tree<Uint8Array, number>;
-  private readonly memPlot: Map<number, Uint8Array> = new Map();
-  private readonly diskPlot: Storage;
-  private pieceOffset = 0;
+  private readonly encodingRounds: number;
+  private readonly metadataStore: Storage;
+  private readonly pieceIndex: Tree<Uint8Array, number>;
+  private readonly plots: Plot[];
+  private pieceOffset: number;
 
-  constructor(storage: Storage, diskPlot: Storage, mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB) {
+  constructor(
+    mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB,
+    encodingRounds: number,
+  ) {
     this.mode = mode;
-    this.storage = storage;
-    this.diskPlot = diskPlot;
+    this.metadataStore = storage;
+    this.plots = []
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.memTree = new Tree(nodeManager);
+    this.encodingRounds = encodingRounds;
   }
 
   /**
    * Adds a new encoded piece to plot, index, and metadata store.
    */
   public async addPiece(piece: Uint8Array, pieceData: IPieceData): Promise<void> {
-    const encodedPiece = codes.encodePiece(piece, this.address);
+    const encodedPiece = codes.encodePiece(piece, this.address, this.encodingRounds);
     this.pieceOffset ++;
 
     switch (this.mode) {
@@ -75,7 +126,7 @@ export class Farm {
     // console.log(`[+] Finished plotting encoding ${bin2Hex(crypto.hash(encodedPiece)).substring(0, 16)} from piece ${bin2Hex(pieceData.pieceHash).substring(0, 16)}.`);
   }
 
-  public getSize(): number {
+  public async getSize(): Promise<number> {
     return this.memPlot.size;
   }
 
@@ -96,7 +147,7 @@ export class Farm {
           break;
       }
       if (encoding) {
-        const piece = codes.decodePiece(encoding, this.address);
+        const piece = codes.decodePiece(encoding, this.address, this.encodingRounds);
         const data = await this.getPieceData(pieceHash);
         return { piece, data };
       }
@@ -119,7 +170,7 @@ export class Farm {
           break;
       }
       if (encoding) {
-        const piece = codes.decodePiece(encoding, this.address);
+        const piece = codes.decodePiece(encoding, this.address, this.encodingRounds);
         const pieceHash = crypto.hash(piece);
         if (pieceHash.toString() === pieceId.toString()) {
           const data = await this.getPieceData(pieceId);

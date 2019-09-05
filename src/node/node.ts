@@ -26,13 +26,21 @@ export class Node {
   /**
    * Instantiate a new empty node with only environment variables.
    */
-  public static async init(storageAdapter = 'rocks', mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db', validateRecords: boolean): Promise<Node> {
+  public static async init(
+    nodeType: string,
+    storageAdapter = 'rocks',
+    plotMode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db',
+    farmSize: number,
+    validateRecords: boolean,
+    encodingRounds: number,
+  ): Promise<Node> {
     const wallet = await Wallet.open(storageAdapter);
-    const farm = await Farm.init(storageAdapter, mode);
-    const ledger = await Ledger.init(storageAdapter, validateRecords);
-    return new Node(wallet, farm, ledger);
+    const farm = await Farm.init(storageAdapter, plotMode, farmSize, encodingRounds);
+    const ledger = await Ledger.init(storageAdapter, validateRecords, encodingRounds);
+    return new Node(nodeType, wallet, farm, ledger);
   }
 
+  public readonly type: string;
   public isFarming = true;
   public isRelay = true;
   public isServing = true;
@@ -42,10 +50,11 @@ export class Node {
   public ledger: Ledger;
   public rpc: any; // just a placeholder for now
 
-  constructor(wallet: Wallet, farm: Farm, ledger: Ledger) {
+  constructor(nodeType: string, wallet: Wallet, farm: Farm, ledger: Ledger) {
     this.wallet = wallet;
     this.farm = farm;
     this.ledger = ledger;
+    this.type = nodeType;
 
     /**
      * A new level has been confirmed and encoded into a piece set.
@@ -198,7 +207,7 @@ export class Node {
     console.log('------------------------------');
     console.log(`State: ${this.ledger.stateMap.size} levels`);
     console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
-    const piecesInPlot = this.farm.getSize();
+    const piecesInPlot = await this.farm.getSize();
     const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
     console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
     console.log(`Balance: ${this.ledger.accounts.get(this.farm.address)} credits`);
