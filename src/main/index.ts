@@ -1,5 +1,11 @@
 // tslint:disable: no-console
 
+if (!globalThis.indexedDB) {
+  // Only import when not preset (in Node.js)
+  // tslint:disable-next-line:no-var-requires no-submodule-imports
+  require('fake-indexeddb/auto');
+}
+
 import { Node } from '../node/node';
 
 /**
