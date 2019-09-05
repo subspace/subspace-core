@@ -539,7 +539,6 @@ export class Ledger extends EventEmitter {
         this.unconfirmedTxs.delete(txId);
       }
 
-      // tslint:disable-next-line: no-console
       console.log('Checking if pending level has confirmed during applyBlock()');
 
       // update level confirmation cache and check if level is confirmed
@@ -560,7 +559,6 @@ export class Ledger extends EventEmitter {
 
         if (this.isFarming) {
           this.once('completed-plotting', () => {
-            // tslint:disable-next-line: no-console
             console.log('Completed plotting piece set for last confirmed level');
             resolve();
           });

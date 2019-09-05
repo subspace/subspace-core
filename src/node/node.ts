@@ -188,66 +188,67 @@ export class Node {
 
     // start a farming evaluation loop
     while (this.isFarming) {
-      // find best encoding for challenge
-      console.log('\nSolving a new block challenge');
-      console.log('------------------------------');
-      console.log(`State: ${this.ledger.stateMap.size} levels`);
-      console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
-      const piecesInPlot = this.farm.getSize();
-      const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
-      console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
-      console.log(`Balance: ${this.ledger.accounts.get(this.farm.address)} credits`);
-      console.log('------------------------------\n');
-
-      const previousLevelHash = this.ledger.previousLevelHash;
-      const parentProofHash = this.ledger.parentProofHash;
-      const seed = Buffer.concat([previousLevelHash, parentProofHash]);
-      const pieceTarget = crypto.hash(seed);
-      const closestEncoding = await this.farm.getClosestEncoding(pieceTarget);
-      if (!closestEncoding) {
-        throw new Error('Cannot find a piece within plot for target');
-      }
-      const encoding = closestEncoding.encoding;
-      console.log(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncoding.data.pieceHash).substring(0, 16)}`);
-      let bestChunkQuality = 0;
-      let bestChunk = new Uint8Array();
-      const chunkTarget = crypto.hash(pieceTarget).subarray(0, 8);
-
-      // find best chunk for challenge
-      for (let i = 0; i < PIECE_SIZE / CHUNK_LENGTH; ++i) {
-        const chunk = encoding.subarray(i * CHUNK_LENGTH, (i + 1) * CHUNK_LENGTH);
-        const quality = measureProximity(chunk, chunkTarget);
-        if (quality > bestChunkQuality) {
-          bestChunkQuality = quality;
-          bestChunk = chunk;
-        }
-      }
-
-      console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)}`);
-
-      const account = this.wallet.getAccount(this.farm.address);
-
-      // create proof of storage
-      const unsignedProof = await Proof.create(
-        previousLevelHash,
-        parentProofHash,
-        bestChunk,
-        closestEncoding.data.pieceHash,
-        closestEncoding.data.stateHash,
-        closestEncoding.data.proof,
-        account.publicKey,
-      );
-      const signedProof = this.wallet.signProof(unsignedProof);
-
-      // create coinbase tx
-      const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD, account.publicKey);
-
-      // const block =
-      await this.ledger.createBlock(signedProof, coinbaseTx, encoding);
-
-      // print(block.print());
+      await this.farmBlock();
     }
-    return;
+  }
+
+  public async farmBlock(): Promise<void> {
+    // find best encoding for challenge
+    console.log('\nSolving a new block challenge');
+    console.log('------------------------------');
+    console.log(`State: ${this.ledger.stateMap.size} levels`);
+    console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
+    const piecesInPlot = this.farm.getSize();
+    const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
+    console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
+    console.log(`Balance: ${this.ledger.accounts.get(this.farm.address)} credits`);
+    console.log('------------------------------\n');
+
+    const previousLevelHash = this.ledger.previousLevelHash;
+    const parentProofHash = this.ledger.parentProofHash;
+    const seed = Buffer.concat([previousLevelHash, parentProofHash]);
+    const pieceTarget = crypto.hash(seed);
+    const closestEncoding = await this.farm.getClosestEncoding(pieceTarget);
+    if (!closestEncoding) {
+      throw new Error('Cannot find a piece within plot for target');
+    }
+    const encoding = closestEncoding.encoding;
+    console.log(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncoding.data.pieceHash).substring(0, 16)}`);
+    let bestChunkQuality = 0;
+    let bestChunk = new Uint8Array();
+    const chunkTarget = crypto.hash(pieceTarget).subarray(0, 8);
+
+    // find best chunk for challenge
+    for (let i = 0; i < PIECE_SIZE / CHUNK_LENGTH; ++i) {
+      const chunk = encoding.subarray(i * CHUNK_LENGTH, (i + 1) * CHUNK_LENGTH);
+      const quality = measureProximity(chunk, chunkTarget);
+      if (quality > bestChunkQuality) {
+        bestChunkQuality = quality;
+        bestChunk = chunk;
+      }
+    }
+
+    console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)}`);
+
+    const account = this.wallet.getAccount(this.farm.address);
+
+    // create proof of storage
+    const unsignedProof = await Proof.create(
+      previousLevelHash,
+      parentProofHash,
+      bestChunk,
+      closestEncoding.data.pieceHash,
+      closestEncoding.data.stateHash,
+      closestEncoding.data.proof,
+      account.publicKey,
+    );
+    const signedProof = this.wallet.signProof(unsignedProof);
+
+    // create coinbase tx
+    const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD, account.publicKey);
+
+    // const block =
+    await this.ledger.createBlock(signedProof, coinbaseTx, encoding);
   }
 
   /**
