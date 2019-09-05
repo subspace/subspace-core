@@ -9,7 +9,7 @@ import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
 import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData, ITxValue } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { bin2Hex, num2Bin } from '../utils/utils';
+import { bin2Hex, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
@@ -206,7 +206,7 @@ export class Ledger extends EventEmitter {
     const levelElements: Uint8Array[] = [];
 
     for (const record of levelRecords) {
-      levelElements.push(num2Bin(record.length));
+      levelElements.push(smallNum2Bin(record.length));
       levelElements.push(record);
     }
 

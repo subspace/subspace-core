@@ -3,7 +3,7 @@
 
 import * as crypto from '../crypto/crypto';
 import { IStateData, IStateValue } from '../main/interfaces';
-import { bin2Hex, num2Bin, num2Date } from '../utils/utils';
+import { bin2Hex, num2Bin, num2Date, smallNum2Bin } from '../utils/utils';
 
 /**
  * Record class for state blocks, which summarize all of the data (proofs, contents, and unique txs) for a given level in a compact form.
@@ -78,8 +78,8 @@ export class State {
       this._value.levelHash,
       this._value.pieceRoot,
       num2Bin(this._value.timestamp),
-      num2Bin(this._value.difficulty),
-      num2Bin(this._value.version),
+      smallNum2Bin(this._value.difficulty),
+      smallNum2Bin(this._value.version),
     ]);
   }
 

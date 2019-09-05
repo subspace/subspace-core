@@ -2,7 +2,7 @@
 // tslint:disable: variable-name
 import * as crypto from '../crypto/crypto';
 import { ITxData, ITxValue } from '../main/interfaces';
-import { bin2Hex, num2Bin, num2Date } from '../utils/utils';
+import { bin2Hex, num2Bin, num2Date, smallNum2Bin } from '../utils/utils';
 
 /**
  * Record class for credit transactions used to transfer funds between accounts on the ledger.
@@ -89,7 +89,7 @@ export class Tx {
       this._value.sender,
       this._value.receiver,
       num2Bin(this._value.amount),
-      num2Bin(this._value.nonce),
+      smallNum2Bin(this._value.nonce),
       num2Bin(this._value.timestamp),
       signed ? this._value.signature : new Uint8Array(),
     ]));
@@ -143,7 +143,7 @@ export class Tx {
     }
 
     // validate nonce is 4 bytes
-    if (num2Bin(this._value.nonce).length !== 4) {
+    if (smallNum2Bin(this._value.nonce).length !== 2) {
       throw new Error('Invalid tx, incorrect nonce length');
     }
 

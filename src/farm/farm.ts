@@ -6,7 +6,7 @@ import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { IEncoding, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { bin2Num, num2Bin } from "../utils/utils";
+import { num2Bin, smallBin2Num, smallNum2Bin } from "../utils/utils";
 
 // ToDo
   // Plots
@@ -209,7 +209,7 @@ export class Farm {
    */
   private async addPieceData(pieceData: IPieceData): Promise<void> {
     const binaryPieceData = Buffer.concat([
-      num2Bin(pieceData.pieceIndex),
+      smallNum2Bin(pieceData.pieceIndex),
       pieceData.stateHash,
       pieceData.proof,
     ]);
@@ -226,9 +226,9 @@ export class Farm {
     }
     return {
       pieceHash,
-      pieceIndex: bin2Num(binaryPieceData.subarray(0, 4)),
-      stateHash: Uint8Array.from(binaryPieceData.subarray(4, 36)),
-      proof: binaryPieceData.subarray(36),
+      pieceIndex: smallBin2Num(binaryPieceData.subarray(0, 2)),
+      stateHash: Uint8Array.from(binaryPieceData.subarray(2, 34)),
+      proof: binaryPieceData.subarray(34),
     };
   }
 

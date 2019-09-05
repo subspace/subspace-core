@@ -79,11 +79,29 @@ export function num2Bin(num: number): Uint8Array {
 }
 
 /**
+ * Converts a positive integer in range 2^16 to binary format (2 bytes).
+ */
+export function smallNum2Bin(num: number): Uint8Array {
+  const arr = new ArrayBuffer(2); // an Int16 takes 2 bytes
+  const view = new DataView(arr);
+  view.setUint16(0, num, false); // byteOffset = 0; littleEndian = false
+  return new Uint8Array(arr);
+}
+
+/**
  * Converts a binary number (4 bytes) to positive integer in range 2^32.
  */
 export function bin2Num(bin: Uint8Array): number {
   const view = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
   return view.getUint32(0, false); // byteOffset = 0; littleEndian = false
+}
+
+/**
+ * Converts a small binary number (2 bytes) to positive integer in range 2^16.
+ */
+export function smallBin2Num(bin: Uint8Array): number {
+  const view = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
+  return view.getUint16(0, false); // byteOffset = 0; littleEndian = false
 }
 
 /**
