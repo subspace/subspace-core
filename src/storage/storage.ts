@@ -1,3 +1,4 @@
+import * as path from 'path';
 import BrowserAdapter from './BrowserAdapter';
 import IAdapter from './IAdapter';
 import MemoryAdapter from './MemoryAdapter';
@@ -19,16 +20,16 @@ export class Storage {
     public readonly adapterName: string,
     public nameSpace?: string,
   ) {
-    let path: string = `${__dirname}/../../data`;
+    let storagePath: string = `${__dirname}/../../data`;
     if (nameSpace) {
-      path = path.concat(`/${nameSpace}`);
+      storagePath = storagePath.concat(`/${nameSpace}`);
     }
     switch (adapterName) {
       case 'browser':
-        this.adapter = new BrowserAdapter(path);
+        this.adapter = new BrowserAdapter(path.normalize(storagePath));
         break;
       case 'rocks':
-        this.adapter = new RocksAdapter(path);
+        this.adapter = new RocksAdapter(path.normalize(storagePath));
         break;
       case 'memory':
         this.adapter = new MemoryAdapter();

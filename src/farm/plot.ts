@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { PIECE_SIZE } from "../main/constants";
 import { num2Bin } from "../utils/utils";
 import IStore from "./IStore";
@@ -32,7 +33,8 @@ export class Plot {
         this.store = new MemoryStore();
         break;
       case 'disk-db':
-        this.store = new RocksStore(`${__dirname}/../../data/plot-${this.index}`);
+        const storagePath = `${__dirname}/../../data/plot-${this.index}`;
+        this.store = new RocksStore(path.normalize(storagePath));
         break;
       default:
         this.store = new MemoryStore();

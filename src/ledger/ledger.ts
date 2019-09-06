@@ -19,9 +19,15 @@ import { State } from './state';
 import { Tx } from './tx';
 
 // ToDo
+  // fix memory leak
+  // run in farmer mode, pruning chain state after each new level
+  // separate levels from state, such that state is constant sized
+  // normalize level encoding
+  // decode levels
   // handle chain forks
   // handle level forks
-  // decode level data
+  // set minimum work difficulty
+  // work difficulty resets
   // Refactor Level into a separate class
   // handle tx fees
   // handle validation where one farmer computes the next level and adds pieces before another

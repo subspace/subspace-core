@@ -65,11 +65,11 @@ const run = async (
  * Default Args
  *
  * Full Node
- * 1 chain
- * In memory plotting and storage
+ * 128 chains
+ * Disk based plotting
  * 1024 plots
  * 1 GB Plot
- * No validation
+ * Validation
  * 3 rounds of piece encoding
  *
  */
@@ -78,7 +78,7 @@ run(
   'full',
   1,
   'disk',
-  1000,
+  100,
   1000000000,
   false,
   3,

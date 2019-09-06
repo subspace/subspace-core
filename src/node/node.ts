@@ -13,13 +13,11 @@ import { bin2Hex, hex2Bin, measureProximity } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
+  // add time logging
   // detect type of storage for storage adapter
   // define the full API
   // include the RPC interface
   // sync an existing ledger
-
-// Descriptive Console Output
-  //
 
 export class Node {
 

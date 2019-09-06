@@ -11,16 +11,25 @@ import { Plot } from './plot';
 
 // ToDo
   // load saved disk plots after shutdown
-  // support disk based tree
-  // Plots
-    // modes: mem-db, disk-db, raw-disk, on-the-fly
-  // red-black tree
-    // in memory tree
-    // disk based tree
-    // hybrid tree
+  // support disk based tree for larger plots
+  // direct disk plotting with encodings for same piece and metadata directly aligned
+  // redis backed memory farming
+  // resize plots as the piece set grows by replacing pieces and deleting empty plots
 
 /**
  * Manages all plots for this node. Plots store encoded pieces which are used to solve the block challenge.
+ *
+ * Encoded pieces are stored in plots under two possible modes
+ *    Memory Based (JS Map)
+ *    Disk Based (Rocks DB)
+ *
+ * Indexes are maintained in a RB Tree in memory
+ *
+ * Piece metadata (for proofs) is kept in a store to match plotting mode
+ *    Memory Based (JS Map)
+ *    Disk Based (Rocks DB)
+ *
+ * Supports farming in parallel across multiple plots with different addresses
  */
 export class Farm {
   public static readonly MODE_MEM_DB = 'mem-db';
@@ -33,6 +42,15 @@ export class Farm {
   private readonly pieceIndex: Tree<Uint8Array, number>;
   private pieceOffset: number;
 
+  /**
+   * Returns a new farm instance for use by parent node.
+   *
+   * @param mode the type of plotting and storage backend to be used (e.g. memory or disk)
+   * @param numberOfPlots how many plots to encode each new piece under (when the ledger is smaller than average disk)
+   * @param farmSize the maximum allowable size of all disk plots combined
+   * @param encodingRounds the number of rounds of encoding/decoding to apply to each piece
+   * @param addresses the addresses that will be used for plotting (same as number of plots)
+   */
   constructor(
     mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB,
     numberOfPlots: number,
@@ -81,6 +99,27 @@ export class Farm {
   }
 
   /**
+   * Returns the size of the farm in bytes.
+   */
+  public getSize(): number {
+    return this.plots.length * this.pieceOffset * PIECE_SIZE;
+  }
+
+  /**
+   * Returns the number of pieces stored under all plots.
+   */
+  public getPieceCount(): number {
+    return this.plots.length * this.pieceOffset;
+  }
+
+  /**
+   * Returns the address (BLS public key hash) used by this plot for encoding
+   */
+  public getPlotAddress(index: number): Uint8Array {
+    return this.plots[index].address;
+  }
+
+  /**
    * Adds a new encoded piece to plot, index, and metadata store.
    */
   public async addPiece(piece: Uint8Array, pieceData: IPieceData): Promise<void> {
@@ -101,20 +140,6 @@ export class Farm {
     // tslint:disable-next-line: no-console
     // console.log(`Completed plotting pieces for offset ${offset}`);
 
-  }
-
-  /**
-   * Returns the size of the farm in bytes.
-   */
-  public getSize(): number {
-    return this.plots.length * this.pieceOffset * PIECE_SIZE;
-  }
-
-  /**
-   * Returns the number of pieces stored under all plots.
-   */
-  public getPieceCount(): number {
-    return this.plots.length * this.pieceOffset;
   }
 
   /**
@@ -193,7 +218,7 @@ export class Farm {
   }
 
   /**
-   * Deletes all encodings for a piece from the plot, deletes piece from index, and data from metadata store.
+   * Deletes each encoding for a piece from each plot, deletes piece from index, and data from metadata store.
    */
   public async removePieceAndEncodings(pieceId: Uint8Array): Promise<void> {
     const offset = this.pieceIndex.getNodeValue(pieceId);
@@ -204,10 +229,6 @@ export class Farm {
       this.pieceIndex.removeNode(pieceId);
       await this.removePieceData(pieceId);
     }
-  }
-
-  public getPlotAddress(index: number): Uint8Array {
-    return this.plots[index].address;
   }
 
   /**
