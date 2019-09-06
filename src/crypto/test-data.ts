@@ -18,3 +18,11 @@ for (const proof of proofs) {
 console.log(crypto.jumpHash(crypto.hash(Buffer.from('hello subspace')), 1024));
 
 console.log(crypto.generateBLSKeys());
+
+const leaves: Uint8Array[] = [];
+for (let i = 0; i < 256; ++i) {
+  leaves.push(crypto.randomBytes(32));
+}
+
+const tree = crypto.buildMerkleTree(leaves);
+console.log('Merkle proofs are: ', tree.proofs[10].length);

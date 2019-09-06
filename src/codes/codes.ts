@@ -1,6 +1,6 @@
 import { ReedSolomonErasure } from "@subspace/reed-solomon-erasure.wasm";
 import * as crypto from '../crypto/crypto';
-import { BLOCKS_PER_PIECE, HASH_LENGTH, PIECE_SIZE, ROUNDS} from '../main/constants';
+import { BLOCKS_PER_PIECE, HASH_LENGTH, PIECE_SIZE, ROUNDS } from '../main/constants';
 import { xorUint8Array } from '../utils/utils';
 
 // ToDo

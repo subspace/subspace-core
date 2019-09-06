@@ -11,7 +11,7 @@ export interface IStateValue {
   pieceRoot: Uint8Array; // merkle root of the piece set for the last full level (32 bytes)
   timestamp: number; // UNIX time (4 bytes) of last block added to level
   difficulty: number; // piece audit scope or range (4 bytes) based on last level
-  version: number; // protocol version of last level (1 bytes)
+  version: number; // protocol version of last level (2 bytes)
   indexPiece: Uint8Array;
 }
 
@@ -92,15 +92,15 @@ export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 
 /**
  * The value of a simple credit Tx.
- * Coinbase tx is 152 bytes.
- * Credit tx is 200 bytes.
+ * Coinbase tx is 150 bytes.
+ * Credit tx is 198 bytes.
  * Data tx (toDo) is max 4096 bytes
  */
 export interface ITxValue {
   sender: Uint8Array; // 48 byte public key of sender (optional)
   receiver: Uint8Array; // 48 byte address of receiver
   amount: number; // 4 byte number of credits being sent
-  nonce: number; // 4 byte auto incrementing tx nonce for the sender
+  nonce: number; // 2 byte auto incrementing tx nonce for the sender
   timestamp: number; // 4 byte a unix timestamp
   signature: Uint8Array; // 96 byte detached signature with sender's private key (credit tx) or receivers private key (coinbase tx)
 }
@@ -133,6 +133,14 @@ export interface IPiece {
  */
 export interface IEncoding {
   encoding: Uint8Array;
+  data: IPieceData;
+}
+
+/**
+ * Wrapper for Encoding and all metadata.
+ */
+export interface IEncodingSet {
+  encodings: Uint8Array[];
   data: IPieceData;
 }
 

@@ -13,7 +13,7 @@ if (!globalThis.indexedDB) {
 }
 
 import * as crypto from '../crypto/crypto';
-import { Wallet } from '../wallet/wallet';
+import { IWalletAccount, Wallet } from '../wallet/wallet';
 // import { Account } from './accounts';
 import { Block } from './block';
 // import { Chain } from './chain';
@@ -23,34 +23,34 @@ import { Proof } from './proof';
 // import { State } from './state';
 // import { Tx } from './tx';
 
-let wallet: Wallet;
+let ledgerWallet: Wallet;
+let senderAccount: IWalletAccount;
+let receiverAccount: IWalletAccount;
 
 beforeAll(async () => {
-  wallet = await Wallet.init('rocks');
-  const seed = crypto.randomBytes(32);
-  await wallet.createKeyPair(seed);
-  await wallet.setMasterKeyPair();
+  ledgerWallet = await Wallet.open('rocks', 'ledger-test');
+  const senderSeed = crypto.randomBytes(32);
+  senderAccount = await ledgerWallet.createAccount('ledger-test-sender', 'a sender account for ledger tests', senderSeed);
+  receiverAccount = await ledgerWallet.createAccount('ledger-test-receiver', 'a receiver account for ledger tests');
 });
 
 test('create-coinbase-tx', async () => {
   const reward = 1;
-  const coinbaseTx = await wallet.createCoinBaseTx(reward);
+  const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, senderAccount.publicKey);
   expect(coinbaseTx.isValid()).toBe(true);
   return;
 });
 
 test('create-credit-tx', async () => {
-  const receiver = crypto.randomBytes(48);
-  const amount = 100;
-  const creditTx = await wallet.createCreditTx(amount, receiver);
+  const amount = 1;
+  const creditTx = await ledgerWallet.createCreditTx(amount, receiverAccount.publicKey, senderAccount.publicKey);
   expect(creditTx.isValid()).toBe(true);
 });
 
 test('create-genesis-proof', () => {
   const previousProofHash = crypto.randomBytes(32);
-  const unsignedGenesisProof = Proof.createGenesisProof(previousProofHash);
-  const signedGenesisProof = wallet.signProof(unsignedGenesisProof);
-  expect(signedGenesisProof.isValid()).toBe(true);
+  const genesisProof = Proof.createGenesisProof(previousProofHash);
+  expect(genesisProof.isValid()).toBe(true);
 });
 
 test('create-proof', () => {
@@ -68,10 +68,10 @@ test('create-proof', () => {
     pieceHash,
     pieceStateHash,
     pieceProof,
-    wallet.publicKey,
+    receiverAccount.publicKey,
   );
 
-  const signedProof = wallet.signProof(unsignedProof);
+  const signedProof = ledgerWallet.signProof(unsignedProof);
   expect(signedProof.isValid()).toBe(true);
 });
 
@@ -119,10 +119,10 @@ test('create-block', async () => {
     pieceHash,
     pieceStateHash,
     pieceProof,
-    wallet.publicKey,
+    receiverAccount.publicKey,
   );
 
-  const signedProof = wallet.signProof(unsignedProof);
+  const signedProof = ledgerWallet.signProof(unsignedProof);
 
   // create parent content
   const parentContentHash = crypto.randomBytes(32);
@@ -136,7 +136,7 @@ test('create-block', async () => {
 
   // create coinbase tx and add to tx set
   const reward = 1;
-  const coinbaseTx = await wallet.createCoinBaseTx(reward);
+  const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, receiverAccount.publicKey);
   txIds.unshift(coinbaseTx.key);
 
   const block = Block.create(signedProof, parentContentHash, txIds, coinbaseTx);
@@ -144,5 +144,5 @@ test('create-block', async () => {
 });
 
 afterAll(async () => {
-  await wallet.close();
+  await ledgerWallet.close();
 });

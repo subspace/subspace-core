@@ -2,14 +2,14 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
 
-import {ArrayMap, ArraySet} from "array-map-set";
+import { ArrayMap, ArraySet } from "array-map-set";
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import {CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION} from '../main/constants';
-import {ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData} from '../main/interfaces';
+import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
+import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { bin2Hex, num2Bin } from '../utils/utils';
+import { bin2Hex, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
@@ -19,9 +19,15 @@ import { State } from './state';
 import { Tx } from './tx';
 
 // ToDo
+  // fix memory leak
+  // run in farmer mode, pruning chain state after each new level
+  // separate levels from state, such that state is constant sized
+  // normalize level encoding
+  // decode levels
   // handle chain forks
   // handle level forks
-  // decode level data
+  // set minimum work difficulty
+  // work difficulty resets
   // Refactor Level into a separate class
   // handle tx fees
   // handle validation where one farmer computes the next level and adds pieces before another
@@ -48,11 +54,21 @@ import { Tx } from './tx';
 
 export class Ledger extends EventEmitter {
 
-  public static async init(storageAdapter: string, validateRecords: boolean): Promise<Ledger> {
-    const ledger = new Ledger(storageAdapter, 'ledger', validateRecords);
+  public static async init(
+    storageAdapter: string,
+    validateRecords: boolean,
+    encodingRounds: number,
+  ): Promise<Ledger> {
+    const ledger = new Ledger(
+      storageAdapter,
+      'ledger',
+      validateRecords,
+      encodingRounds,
+    );
     return ledger;
   }
 
+  public readonly encodingRounds: number;
   public isFarming = true;
   public isServing = true;
   public isValidating: boolean;
@@ -79,11 +95,17 @@ export class Ledger extends EventEmitter {
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
 
-  constructor(storageAdapter: string, path: string, validateRecords: boolean) {
+  constructor(
+    storageAdapter: string,
+    path: string,
+    validateRecords: boolean,
+    encodingRounds: number,
+  ) {
     super();
     this.storage = new Storage(storageAdapter, path);
     this.accounts = new Account();
     this.isValidating = validateRecords;
+    this.encodingRounds = encodingRounds;
   }
 
   /**
@@ -144,7 +166,7 @@ export class Ledger extends EventEmitter {
    * Creates a subsequent level once a new level is confirmed (at least one new block for each chain).
    * Returns a canonical erasure coded piece set with metadata that will be the same across all nodes.
    */
-  public createLevel(): [Uint8Array[], Uint8Array] {
+  public createLevel(): [Uint8Array[], Uint8Array, Tx[]] {
     const levelRecords: Uint8Array[] = [];
     const levelProofHashes: Uint8Array[] = [];
     const uniqueTxSet: Set<Uint8Array> = new Set();
@@ -178,18 +200,21 @@ export class Ledger extends EventEmitter {
       chain.clear();
     }
 
+    const confirmedTxs: Tx[] = [];
+
     for (const txId of uniqueTxSet) {
       const txData = this.txMap.get(txId);
       if (!txData) {
         throw new Error('Cannot create new level, cannot fetch requisite transaction data');
       }
       const tx = Tx.load(txData);
+      confirmedTxs.push(tx);
       levelRecords.push(tx.toBytes());
     }
 
     const levelProofHashesData = Buffer.concat(levelProofHashes);
     const levelHash = crypto.hash(levelProofHashesData);
-    return [levelRecords, levelHash];
+    return [levelRecords, levelHash, confirmedTxs];
   }
 
   /**
@@ -203,7 +228,7 @@ export class Ledger extends EventEmitter {
     const levelElements: Uint8Array[] = [];
 
     for (const record of levelRecords) {
-      levelElements.push(num2Bin(record.length));
+      levelElements.push(smallNum2Bin(record.length));
       levelElements.push(record);
     }
 
@@ -447,7 +472,7 @@ export class Ledger extends EventEmitter {
 
     // encoding decodes pack to piece
     const proverAddress = crypto.hash(block.value.proof.value.publicKey);
-    const piece = codes.decodePiece(encoding, proverAddress);
+    const piece = codes.decodePiece(encoding, proverAddress, this.encodingRounds);
     // console.log(`Encoding in  Block.isValidBlock() decodes to: ${piece}`);
     const pieceHash = crypto.hash(piece);
     if (pieceHash.toString() !== block.value.proof.value.pieceHash.toString()) {
@@ -536,14 +561,13 @@ export class Ledger extends EventEmitter {
         this.unconfirmedTxs.delete(txId);
       }
 
-      // tslint:disable-next-line: no-console
       console.log('Checking if pending level has confirmed during applyBlock()');
 
       // update level confirmation cache and check if level is confirmed
       this.unconfirmedChains.delete(chainIndex);
       if (!this.unconfirmedChains.size) {
-        const [levelRecords, levelHash] = this.createLevel();
-        this.emit('confirmed-level', levelRecords, levelHash);
+        const [levelRecords, levelHash, confirmedTxs] = this.createLevel();
+        this.emit('confirmed-level', levelRecords, levelHash, confirmedTxs);
         console.log('New level has been confirmed.');
         console.log('Chain lengths:');
         console.log('--------------');
@@ -557,7 +581,6 @@ export class Ledger extends EventEmitter {
 
         if (this.isFarming) {
           this.once('completed-plotting', () => {
-            // tslint:disable-next-line: no-console
             console.log('Completed plotting piece set for last confirmed level');
             resolve();
           });

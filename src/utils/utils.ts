@@ -79,6 +79,16 @@ export function num2Bin(num: number): Uint8Array {
 }
 
 /**
+ * Converts a positive integer in range 2^16 to binary format (2 bytes).
+ */
+export function smallNum2Bin(num: number): Uint8Array {
+  const arr = new ArrayBuffer(2); // an Int16 takes 2 bytes
+  const view = new DataView(arr);
+  view.setUint16(0, num, false); // byteOffset = 0; littleEndian = false
+  return new Uint8Array(arr);
+}
+
+/**
  * Converts a binary number (4 bytes) to positive integer in range 2^32.
  */
 export function bin2Num(bin: Uint8Array): number {
@@ -87,10 +97,25 @@ export function bin2Num(bin: Uint8Array): number {
 }
 
 /**
+ * Converts a small binary number (2 bytes) to positive integer in range 2^16.
+ */
+export function smallBin2Num(bin: Uint8Array): number {
+  const view = new DataView(bin.buffer, bin.byteOffset, bin.byteLength);
+  return view.getUint16(0, false); // byteOffset = 0; littleEndian = false
+}
+
+/**
  * Converts binary data to a hexadecimal string representation.
  */
 export function bin2Hex(bin: Uint8Array): string {
   return Buffer.from(bin).toString('hex');
+}
+
+/**
+ * Converts a hexadecimal string to binary representation.
+ */
+export function hex2Bin(hex: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(hex, 'hex'));
 }
 
 /**
@@ -103,7 +128,7 @@ export function JSON2Bin(data: object): Uint8Array {
 /**
  * Converts binary data back to a JSON object.
  */
-export function bin2JSON(data: Uint8Array): object {
+export function bin2JSON(data: Uint8Array): any {
   return JSON.parse(Buffer.from(data).toString());
 }
 

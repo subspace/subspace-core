@@ -1,4 +1,5 @@
 import leveljs = require('level-js');
+// tslint:disable: no-console
 // tslint:disable-next-line: no-implicit-dependencies
 import levelup from 'levelup';
 import IAdapter from "./IAdapter";
@@ -11,11 +12,13 @@ export default class BrowserAdapter implements IAdapter {
   }
 
   public async put(key: Uint8Array, value: Uint8Array): Promise<void> {
+    console.log('Putting key: ', key);
     await this.db.put(key, value);
   }
 
   public async get(key: Uint8Array): Promise<Uint8Array | null> {
     try {
+      console.log('Deleting key: ', key);
       return await this.db.get(key);
     } catch (error) {
       if (error.notFound) {
@@ -33,6 +36,7 @@ export default class BrowserAdapter implements IAdapter {
       if (error.notFound) {
         return;
       }
+
       throw error;
     }
   }

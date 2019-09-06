@@ -4,7 +4,10 @@ A monorepo that includes everything needed to run a full node for the Subspace L
 
 ## Usage
 
+> Note: requires Node JS v12 or higher to be installed
+
 ### Install and run from GitHub
+
 ```
 git clone https://wwww.github.com/subspace/subspace-core
 cd subspace-core
@@ -15,11 +18,30 @@ ts-node src/main/index.ts
 
 Default params may be changed in `src/main/index.ts`
 
+### Install and run with Docker
+
+CLI interface using Docker is also available. You can run it like this for x86_64 and ARM architectures:
+
+```bash
+docker run --rm -it subspacelabs/subspace-core
+docker run --rm -it subspacelabs/subspace-core:arm64v8
+docker run --rm -it subspacelabs/subspace-core:arm32v7
+```
+
+If you prefer to build it yourself, here is how:
+
+```bash
+docker build -t subspacelabs/subspace-core .
+docker build -t subspacelabs/subspace-core:arm64v8 -f Dockerfile-arm64v8 .
+docker build -t subspacelabs/subspace-core:arm32v7 -f Dockerfile-arm32v7 .
+```
+
 ### Install and run from NPM (pending)
 
-
-### Install and run with docker (pending)
-
+```
+npm install -g @subspace/subspace-core
+subspace run
+```
 
 ## Design
 
@@ -44,21 +66,6 @@ Subspace Network Daemon (SND), a CLI built using [Commander](https://github.com/
 Run with `bin/subspace.js` from the root of the repository or just using `subspace` when installed globally using `npm install -g @subspace/subspace-core`.
 
 A simple GUI can be viewed from [/app/web/index.html](/app/web/index.html) built with vanilla [Vue](https://vuejs.org/) and [Bulma](https://bulma.io/). This will run the browserified version of the protocol as a standalone network node with its own copy of the ledger from genesis -- primarily for testing purposes right now.
-
-#### Docker
-CLI interface using Docker is also available. You can run it like this for x86_64 and ARM architectures:
-```bash
-docker run --rm -it subspacelabs/subspace-core
-docker run --rm -it subspacelabs/subspace-core:arm64v8
-docker run --rm -it subspacelabs/subspace-core:arm32v7
-```
-
-If you prefer to build it yourself, here is how:
-```bash
-docker build -t subspacelabs/subspace-core .
-docker build -t subspacelabs/subspace-core:arm64v8 -f Dockerfile-arm64v8 .
-docker build -t subspacelabs/subspace-core:arm32v7 -f Dockerfile-arm32v7 .
-```
 
 ## Modules
 

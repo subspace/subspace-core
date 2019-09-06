@@ -79,6 +79,8 @@ export function generateBLSKeys(seed?: Uint8Array): IKeyPair {
   const publicKey = privateKey.getPublicKey();
   const binaryPrivateKey = privateKey.serialize();
   const binaryPublicKey = publicKey.serialize();
+  privateKey.delete();
+  publicKey.delete();
   return { binaryPrivateKey, binaryPublicKey };
 }
 
