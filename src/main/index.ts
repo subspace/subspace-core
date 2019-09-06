@@ -24,7 +24,8 @@ import { Node } from '../node/node';
  * @param chainCount Number of chains for the ledger (1 -- 1024)
  * @param encodingRounds How many rounds of encoding are applied when plotting (1 to 512)
  * @param plotMode How encoded pieces are persisted (js-memory, rocks db, raw disk)
- * @param plotSize How much space will be allocated to the plot (1 GB to 16 TB)
+ * @param numberOfPlots How many plots to create for // farming
+ * @param plotSize How much space will be allocated to the plot in bytes (1 GB to 16 TB)
  * @param plotLocation The path on disk for where to place the plots
  * @param validateRecords If new records are validated (set to false for testing)
  */
@@ -32,6 +33,7 @@ const run = async (
   nodeType: 'full' | 'farmer' | 'validator' | 'light',
   chainCount: number,
   plotMode: 'memory' | 'disk',
+  numberOfPlots: number,
   farmSize: number,
   validateRecords: boolean,
   encodingRounds: number,
@@ -54,7 +56,7 @@ const run = async (
         break;
     }
 
-    const node = await Node.init(nodeType, storageAdapter, plotAdapter, farmSize, validateRecords, encodingRounds);
+    const node = await Node.init(nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds);
     await node.getOrCreateAccount();
     await node.createLedgerAndFarm(chainCount);
 };
@@ -65,6 +67,7 @@ const run = async (
  * Full Node
  * 1 chain
  * In memory plotting and storage
+ * 1024 plots
  * 1 GB Plot
  * No validation
  * 3 rounds of piece encoding
@@ -75,7 +78,8 @@ run(
   'full',
   1,
   'disk',
-  1000000,
+  1000,
+  1000000000,
   false,
   3,
 );

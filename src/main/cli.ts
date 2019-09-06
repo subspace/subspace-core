@@ -11,12 +11,7 @@ const program = new commander.Command();
 program
   .command('run')
   .action(async () => {
-    const node = await Node.init('rocks', 'mem-db', true, 3);
-    await node.getOrCreateAccount();
-    if (node.farm.address) {
-      const address = Buffer.from(node.farm.address).toString('hex');
-      console.log(`Created new node with address: ${address.substring(0, 8)}`);
-    }
+    await Node.init('full', 'rocks', 'mem-db', 1, 1000000000, true, 3);
   });
 
 program

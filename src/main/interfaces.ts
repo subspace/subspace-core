@@ -137,6 +137,14 @@ export interface IEncoding {
 }
 
 /**
+ * Wrapper for Encoding and all metadata.
+ */
+export interface IEncodingSet {
+  encodings: Uint8Array[];
+  data: IPieceData;
+}
+
+/**
  * Metadata associated with Piece required for Proofs and reconstructing Levels.
  */
 export interface IPieceData {

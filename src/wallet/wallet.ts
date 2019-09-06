@@ -141,6 +141,17 @@ export class Wallet {
   }
 
   /**
+   * Return the total pending balance of all accounts being tracked.
+   *
+   * @return The total balance in credits
+   */
+  public getPendingBalanceOfAllAccounts(): number {
+    return this.getAccounts().reduce((balance, account) => {
+      return balance + account.pendingBalance;
+    }, 0);
+  }
+
+  /**
    * Updates an account in both the in-memory map and persistent store
    *
    * @param account the account value being updated

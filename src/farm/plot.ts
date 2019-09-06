@@ -1,4 +1,5 @@
 import { PIECE_SIZE } from "../main/constants";
+import { num2Bin } from "../utils/utils";
 import IStore from "./IStore";
 import MemoryStore from './MemoryStore';
 import RocksStore from './RocksStore';
@@ -8,8 +9,8 @@ export class Plot {
   /**
    * Opens a new plot. Will open an existing plot if rocks or disk storage with same path as previous plot.
    */
-  public static async open(type: string, index: number, size: number): Promise<Plot> {
-    const plot = new Plot(type, index, size);
+  public static open(type: string, index: number, size: number, address: Uint8Array): Plot {
+    const plot = new Plot(type, index, size, address);
     return plot;
   }
 
@@ -17,19 +18,21 @@ export class Plot {
   public readonly index: number;
   public readonly size: number;
   public readonly maxOffset: number;
+  public readonly address: Uint8Array;
   private store: IStore;
 
-  constructor(type: string, index: number, size: number) {
+  constructor(type: string, index: number, size: number, address: Uint8Array) {
     this.type = type;
     this.index = index;
     this.size = size;
     this.maxOffset = Math.floor(this.size / PIECE_SIZE);
+    this.address = address;
     switch (type) {
       case 'mem-db':
         this.store = new MemoryStore();
         break;
       case 'disk-db':
-        this.store = new RocksStore(`plot-${this.index}`);
+        this.store = new RocksStore(`${__dirname}/../../data/plot-${this.index}`);
         break;
       default:
         this.store = new MemoryStore();
@@ -44,7 +47,7 @@ export class Plot {
    * @param offset    index at which to add encoding to the plot
    */
   public async addEncoding(encoding: Uint8Array, offset: number): Promise<void> {
-    return this.store.add(encoding, offset);
+    return this.store.add(encoding, num2Bin(offset));
   }
 
   /**
@@ -53,7 +56,7 @@ export class Plot {
    * @param offset the index of the encoded piece within the plot
    */
   public async getEncoding(offset: number): Promise<Uint8Array> {
-    const encoding =  await this.store.get(offset);
+    const encoding =  await this.store.get(num2Bin(offset));
     if (!encoding) {
       throw new Error('Cannot get encoding, is not in plot');
     }
@@ -67,7 +70,7 @@ export class Plot {
    *
    */
   public async deleteEncoding(offset: number): Promise<void> {
-    return this.store.del(offset);
+    return this.store.del(num2Bin(offset));
   }
 
   /**

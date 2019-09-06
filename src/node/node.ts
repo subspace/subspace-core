@@ -9,7 +9,7 @@ import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { IBlockData, ITxData } from '../main/interfaces';
-import { bin2Hex, measureProximity } from '../utils/utils';
+import { bin2Hex, hex2Bin, measureProximity } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -30,13 +30,22 @@ export class Node {
     nodeType: string,
     storageAdapter = 'rocks',
     plotMode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db',
+    numberOfPlots: number,
     farmSize: number,
     validateRecords: boolean,
     encodingRounds: number,
   ): Promise<Node> {
     const wallet = await Wallet.open(storageAdapter);
-    const farm = await Farm.init(storageAdapter, plotMode, farmSize, encodingRounds);
+
+    for (let i = 0; i < numberOfPlots; ++i) {
+      await wallet.createAccount(`Plot-${i}`);
+    }
+
+    const addresses = [...wallet.addresses].map((address) => hex2Bin(address));
+
     const ledger = await Ledger.init(storageAdapter, validateRecords, encodingRounds);
+    const farm = await new Farm(plotMode, numberOfPlots, farmSize, encodingRounds, addresses);
+
     return new Node(nodeType, wallet, farm, ledger);
   }
 
@@ -46,9 +55,9 @@ export class Node {
   public isServing = true;
 
   public wallet: Wallet;
-  public farm: Farm;
-  public ledger: Ledger;
   public rpc: any; // just a placeholder for now
+  public ledger: Ledger;
+  public farm: Farm;
 
   constructor(nodeType: string, wallet: Wallet, farm: Farm, ledger: Ledger) {
     this.wallet = wallet;
@@ -160,7 +169,6 @@ export class Node {
     const accounts = this.wallet.getAccounts();
     let account: IWalletAccount;
     accounts.length ? account = accounts[0] : account = await this.wallet.createAccount('test', 'A test account');
-    this.farm.address = account.address;
     return account;
   }
 
@@ -207,56 +215,60 @@ export class Node {
     console.log('------------------------------');
     console.log(`State: ${this.ledger.stateMap.size} levels`);
     console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
-    const piecesInPlot = await this.farm.getSize();
-    const plotSize = (piecesInPlot * PIECE_SIZE) / 1000000;
-    console.log(`Plot: ${piecesInPlot} pieces comprising ${plotSize} MB`);
-    console.log(`Balance: ${this.ledger.accounts.get(this.farm.address)} credits`);
+    const pieceCount = this.farm.getPieceCount();
+    const plotSize = this.farm.getSize() / 1000000;
+    console.log(`Farm: ${pieceCount} pieces comprising ${plotSize} MB across ${this.farm.plots.length} plots`);
+    console.log(`Balance: ${this.wallet.getPendingBalanceOfAllAccounts()} credits`);
     console.log('------------------------------\n');
 
     const previousLevelHash = this.ledger.previousLevelHash;
     const parentProofHash = this.ledger.parentProofHash;
     const seed = Buffer.concat([previousLevelHash, parentProofHash]);
     const pieceTarget = crypto.hash(seed);
-    const closestEncoding = await this.farm.getClosestEncoding(pieceTarget);
-    if (!closestEncoding) {
+    const closestEncodings = await this.farm.getClosestEncodings(pieceTarget);
+    if (!closestEncodings) {
       throw new Error('Cannot find a piece within plot for target');
     }
-    const encoding = closestEncoding.encoding;
-    console.log(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncoding.data.pieceHash).substring(0, 16)}`);
+    console.log(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncodings.data.pieceHash).substring(0, 16)}`);
+
+    let encodingIndex = 0;
     let bestChunkQuality = 0;
     let bestChunk = new Uint8Array();
     const chunkTarget = crypto.hash(pieceTarget).subarray(0, 8);
 
-    // find best chunk for challenge
-    for (let i = 0; i < PIECE_SIZE / CHUNK_LENGTH; ++i) {
-      const chunk = encoding.subarray(i * CHUNK_LENGTH, (i + 1) * CHUNK_LENGTH);
-      const quality = measureProximity(chunk, chunkTarget);
-      if (quality > bestChunkQuality) {
-        bestChunkQuality = quality;
-        bestChunk = chunk;
+    // tslint:disable-next-line: prefer-for-of
+    for (let p = 0; p < closestEncodings.encodings.length; ++p) {
+      // find best chunk for challenge
+      for (let i = 0; i < PIECE_SIZE / CHUNK_LENGTH; ++i) {
+        const chunk = closestEncodings.encodings[p].subarray(i * CHUNK_LENGTH, (i + 1) * CHUNK_LENGTH);
+        const quality = measureProximity(chunk, chunkTarget);
+        if (quality > bestChunkQuality) {
+          bestChunkQuality = quality;
+          bestChunk = chunk;
+          encodingIndex = p;
+        }
       }
     }
 
-    console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)}`);
+    console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)} from plot ${encodingIndex}`);
 
-    const account = this.wallet.getAccount(this.farm.address);
+    const encoding = closestEncodings.encodings[encodingIndex];
+    const account = this.wallet.getAccount(this.farm.getPlotAddress(encodingIndex));
 
     // create proof of storage
     const unsignedProof = await Proof.create(
       previousLevelHash,
       parentProofHash,
       bestChunk,
-      closestEncoding.data.pieceHash,
-      closestEncoding.data.stateHash,
-      closestEncoding.data.proof,
+      closestEncodings.data.pieceHash,
+      closestEncodings.data.stateHash,
+      closestEncodings.data.proof,
       account.publicKey,
     );
     const signedProof = this.wallet.signProof(unsignedProof);
 
     // create coinbase tx
     const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD, account.publicKey);
-
-    // const block =
     await this.ledger.createBlock(signedProof, coinbaseTx, encoding);
   }
 
