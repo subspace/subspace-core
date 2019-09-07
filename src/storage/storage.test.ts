@@ -3,6 +3,9 @@ if (!globalThis.indexedDB) {
   // tslint:disable-next-line:no-var-requires no-submodule-imports
   require('fake-indexeddb/auto');
 }
+
+import * as fs from 'fs';
+import * as os from 'os';
 import * as crypto from '../crypto/crypto';
 import { Storage } from './storage';
 
@@ -82,6 +85,12 @@ const storageTest = (storage: Storage) => {
   });
 };
 
-storageTest(new Storage('rocks', 'storage'));
-storageTest(new Storage('memory', 'storage'));
+const storageDir = `${os.homedir()}/subspace/tests`;
+
+if (!fs.existsSync(storageDir)) {
+  fs.mkdirSync(storageDir, { recursive: true });
+}
+
+storageTest(new Storage('rocks', storageDir, 'rocks-test'));
+storageTest(new Storage('memory', storageDir, 'memory-test'));
 // storageTest(new Storage('browser', 'storage'));

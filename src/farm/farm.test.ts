@@ -5,10 +5,18 @@ if (!globalThis.indexedDB) {
 }
 // tslint:disable: object-literal-sort-keys
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { IPiece } from '../main/interfaces';
 import { Farm } from './farm';
+
+const storageDir = `${os.homedir()}/subspace/tests`;
+
+if (!fs.existsSync(storageDir)) {
+  fs.mkdirSync(storageDir, { recursive: true });
+}
 
 test('mem-plot', async () => {
   const plotMode = 'mem-db';
@@ -19,7 +27,7 @@ test('mem-plot', async () => {
   for (let i = 0; i < numberOfPlots; ++i) {
     addresses.push(crypto.randomBytes(32));
   }
-  const farm = new Farm(plotMode, numberOfPlots, farmSize, encodingRounds, addresses);
+  const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
   const data = crypto.randomBytes(40960);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
@@ -88,8 +96,8 @@ test('disk-plot', async () => {
   for (let i = 0; i < numberOfPlots; ++i) {
     addresses.push(crypto.randomBytes(32));
   }
-  const farm = new Farm(plotMode, numberOfPlots, farmSize, encodingRounds, addresses);
-  const data = crypto.randomBytes(520191);
+  const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const data = crypto.randomBytes(120191);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);

@@ -45,8 +45,8 @@ export class Wallet {
    *
    * @return A wallet instance with all accounts loaded.
    */
-  public static async open(storageAdapter: string, namespace = 'wallet'): Promise<Wallet> {
-    const storage = new Storage(storageAdapter, namespace);
+  public static async open(storageAdapter: string, storageDir: string, namespace = 'wallet'): Promise<Wallet> {
+    const storage = new Storage(storageAdapter, storageDir, namespace);
     const wallet = new Wallet(storage);
     await wallet.loadAccounts();
     return wallet;

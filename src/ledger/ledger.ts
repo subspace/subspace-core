@@ -56,12 +56,13 @@ export class Ledger extends EventEmitter {
 
   public static async init(
     storageAdapter: string,
+    storageDir: string,
     validateRecords: boolean,
     encodingRounds: number,
   ): Promise<Ledger> {
     const ledger = new Ledger(
       storageAdapter,
-      'ledger',
+      storageDir,
       validateRecords,
       encodingRounds,
     );
@@ -97,12 +98,12 @@ export class Ledger extends EventEmitter {
 
   constructor(
     storageAdapter: string,
-    path: string,
+    storageDir: string,
     validateRecords: boolean,
     encodingRounds: number,
   ) {
     super();
-    this.storage = new Storage(storageAdapter, path);
+    this.storage = new Storage(storageAdapter, storageDir, 'farm');
     this.accounts = new Account();
     this.isValidating = validateRecords;
     this.encodingRounds = encodingRounds;

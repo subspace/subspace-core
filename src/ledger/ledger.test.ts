@@ -12,6 +12,8 @@ if (!globalThis.indexedDB) {
   require('fake-indexeddb/auto');
 }
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as crypto from '../crypto/crypto';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 // import { Account } from './accounts';
@@ -27,8 +29,14 @@ let ledgerWallet: Wallet;
 let senderAccount: IWalletAccount;
 let receiverAccount: IWalletAccount;
 
+const storageDir = `${os.homedir()}/subspace/tests`;
+
+if (!fs.existsSync(storageDir)) {
+  fs.mkdirSync(storageDir, { recursive: true });
+}
+
 beforeAll(async () => {
-  ledgerWallet = await Wallet.open('rocks', 'ledger-test');
+  ledgerWallet = await Wallet.open('rocks', storageDir, 'ledger-test');
   const senderSeed = crypto.randomBytes(32);
   senderAccount = await ledgerWallet.createAccount('ledger-test-sender', 'a sender account for ledger tests', senderSeed);
   receiverAccount = await ledgerWallet.createAccount('ledger-test-receiver', 'a receiver account for ledger tests');

@@ -18,18 +18,17 @@ export class Storage {
 
   constructor(
     public readonly adapterName: string,
-    public nameSpace?: string,
+    public storageDir: string,
+    public nameSpace: string,
   ) {
-    let storagePath: string = `${__dirname}/../../data`;
-    if (nameSpace) {
-      storagePath = storagePath.concat(`/${nameSpace}`);
-    }
+    const storagePath: string = path.normalize(path.join(storageDir, nameSpace));
+
     switch (adapterName) {
       case 'browser':
-        this.adapter = new BrowserAdapter(path.normalize(storagePath));
+        this.adapter = new BrowserAdapter(storagePath);
         break;
       case 'rocks':
-        this.adapter = new RocksAdapter(path.normalize(storagePath));
+        this.adapter = new RocksAdapter(storagePath);
         break;
       case 'memory':
         this.adapter = new MemoryAdapter();

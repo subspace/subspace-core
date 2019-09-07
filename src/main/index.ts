@@ -37,6 +37,7 @@ const run = async (
   farmSize: number,
   validateRecords: boolean,
   encodingRounds: number,
+  storageDir?: string,
   ) => {
 
     let storageAdapter: 'memory' | 'browser' | 'rocks';
@@ -56,7 +57,7 @@ const run = async (
         break;
     }
 
-    const node = await Node.init(nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds);
+    const node = await Node.init(nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds, storageDir);
     await node.getOrCreateAccount();
     await node.createLedgerAndFarm(chainCount);
 };
@@ -69,9 +70,10 @@ const run = async (
  * Disk based plotting
  * 1024 plots
  * 1 GB Plot
+ * os.homedir()
  * Validation
  * 3 rounds of piece encoding
- *
+ * Storage Path (optional)
  */
 
 run(
