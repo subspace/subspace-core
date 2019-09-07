@@ -10,9 +10,14 @@ import * as os from 'os';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { IPiece } from '../main/interfaces';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { Farm } from './farm';
 
-const storageDir = `${os.homedir()}/subspace/tests`;
+const storageDir = `${os.homedir()}/subspace/tests/farm`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
 
 if (!fs.existsSync(storageDir)) {
   fs.mkdirSync(storageDir, { recursive: true });

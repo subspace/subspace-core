@@ -7,6 +7,7 @@ if (!globalThis.indexedDB) {
 import * as fs from 'fs';
 import * as os from 'os';
 import * as crypto from '../crypto/crypto';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { Storage } from './storage';
 
 const v0 = Buffer.from('hello subspace');
@@ -85,7 +86,11 @@ const storageTest = (storage: Storage) => {
   });
 };
 
-const storageDir = `${os.homedir()}/subspace/tests`;
+const storageDir = `${os.homedir()}/subspace/tests/storage`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
 
 if (!fs.existsSync(storageDir)) {
   fs.mkdirSync(storageDir, { recursive: true });

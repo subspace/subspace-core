@@ -29,7 +29,7 @@ import { Node } from '../node/node';
  * @param plotLocation The path on disk for where to place the plots
  * @param validateRecords If new records are validated (set to false for testing)
  */
-const run = async (
+export const run = async (
   nodeType: 'full' | 'farmer' | 'validator' | 'light',
   chainCount: number,
   plotMode: 'memory' | 'disk',
@@ -38,6 +38,7 @@ const run = async (
   validateRecords: boolean,
   encodingRounds: number,
   storageDir?: string,
+  reset = true,
   ) => {
 
     let storageAdapter: 'memory' | 'browser' | 'rocks';
@@ -57,7 +58,7 @@ const run = async (
         break;
     }
 
-    const node = await Node.init(nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds, storageDir);
+    const node = await Node.init(nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds, storageDir, reset);
     await node.getOrCreateAccount();
     await node.createLedgerAndFarm(chainCount);
 };
@@ -70,7 +71,6 @@ const run = async (
  * Disk based plotting
  * 1024 plots
  * 1 GB Plot
- * os.homedir()
  * Validation
  * 3 rounds of piece encoding
  * Storage Path (optional)

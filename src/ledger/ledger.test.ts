@@ -15,6 +15,7 @@ if (!globalThis.indexedDB) {
 import * as fs from 'fs';
 import * as os from 'os';
 import * as crypto from '../crypto/crypto';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 // import { Account } from './accounts';
 import { Block } from './block';
@@ -29,7 +30,11 @@ let ledgerWallet: Wallet;
 let senderAccount: IWalletAccount;
 let receiverAccount: IWalletAccount;
 
-const storageDir = `${os.homedir()}/subspace/tests`;
+const storageDir = `${os.homedir()}/subspace/tests/ledger`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
 
 if (!fs.existsSync(storageDir)) {
   fs.mkdirSync(storageDir, { recursive: true });

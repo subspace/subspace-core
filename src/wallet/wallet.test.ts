@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as crypto from '../crypto/crypto';
 import { Tx } from '../ledger/tx';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from './wallet';
 
 let wallet: Wallet;
@@ -23,7 +24,11 @@ const seed = crypto.randomBytes(32);
 let coinbaseTx: Tx;
 let creditTx: Tx;
 
-const storageDir = `${os.homedir()}/subspace/tests`;
+const storageDir = `${os.homedir()}/subspace/tests/wallet`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
 
 if (!fs.existsSync(storageDir)) {
   fs.mkdirSync(storageDir, { recursive: true });

@@ -12,7 +12,7 @@ import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { IBlockData, ITxData } from '../main/interfaces';
-import { bin2Hex, hex2Bin, measureProximity } from '../utils/utils';
+import { bin2Hex, hex2Bin, measureProximity, rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -37,10 +37,16 @@ export class Node {
     validateRecords: boolean,
     encodingRounds: number,
     storageDir?: string,
+    reset = true,
   ): Promise<Node> {
 
     // initialize storage directory
     storageDir ? storageDir = path.normalize(storageDir) : storageDir = `${os.homedir()}/subspace/data/`;
+
+    if (reset && fs.existsSync(storageDir)) {
+     rmDirRecursiveSync(storageDir);
+    }
+
     if (!fs.existsSync(storageDir)) {
       fs.mkdirSync(storageDir, { recursive: true });
     }
