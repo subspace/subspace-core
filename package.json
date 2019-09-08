@@ -21,7 +21,7 @@
     "compile": "tsc -b",
     "lint": "tslint --project .",
     "start": "ts-node src/main/index.ts",
-    "test": "npm run lint && npm run compile && npm run clear-data && jest --verbose",
+    "test": "npm run lint && npm run compile && jest --verbose",
     "test-new": "npm run lint && npm run compile && npm run clear-data && jest -o --verbose",
     "build-and-publish": "npm run build && npm publish"
   },
