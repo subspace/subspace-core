@@ -30,9 +30,7 @@ if (fs.existsSync(storageDir)) {
   rmDirRecursiveSync(storageDir);
  }
 
-if (!fs.existsSync(storageDir)) {
-  fs.mkdirSync(storageDir, { recursive: true });
-}
+fs.mkdirSync(storageDir, { recursive: true });
 
 beforeAll(async () => {
   wallet = await Wallet.open('rocks', storageDir, 'wallet-test');

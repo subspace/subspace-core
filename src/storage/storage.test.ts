@@ -92,9 +92,7 @@ if (fs.existsSync(storageDir)) {
   rmDirRecursiveSync(storageDir);
  }
 
-if (!fs.existsSync(storageDir)) {
-  fs.mkdirSync(storageDir, { recursive: true });
-}
+fs.mkdirSync(storageDir, { recursive: true });
 
 storageTest(new Storage('rocks', storageDir, 'rocks-test'));
 storageTest(new Storage('memory', storageDir, 'memory-test'));
