@@ -1,6 +1,9 @@
 // tslint:disable: no-console
 
 // import * as codes from '../codes/codes';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
@@ -9,11 +12,12 @@ import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { IBlockData, ITxData } from '../main/interfaces';
-import { bin2Hex, hex2Bin, measureProximity } from '../utils/utils';
+import { bin2Hex, hex2Bin, measureProximity, rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
   // add time logging
+  // pass in and create storage path at startup with sensible default
   // detect type of storage for storage adapter
   // define the full API
   // include the RPC interface
@@ -32,8 +36,22 @@ export class Node {
     farmSize: number,
     validateRecords: boolean,
     encodingRounds: number,
+    storageDir?: string,
+    reset = true,
   ): Promise<Node> {
-    const wallet = await Wallet.open(storageAdapter);
+
+    // initialize storage directory
+    storageDir ? storageDir = path.normalize(storageDir) : storageDir = `${os.homedir()}/subspace/data/`;
+
+    if (reset && fs.existsSync(storageDir)) {
+     rmDirRecursiveSync(storageDir);
+    }
+
+    if (!fs.existsSync(storageDir)) {
+      fs.mkdirSync(storageDir, { recursive: true });
+    }
+
+    const wallet = await Wallet.open(storageAdapter, storageDir);
 
     for (let i = 0; i < numberOfPlots; ++i) {
       await wallet.createAccount(`Plot-${i}`);
@@ -41,8 +59,8 @@ export class Node {
 
     const addresses = [...wallet.addresses].map((address) => hex2Bin(address));
 
-    const ledger = await Ledger.init(storageAdapter, validateRecords, encodingRounds);
-    const farm = await new Farm(plotMode, numberOfPlots, farmSize, encodingRounds, addresses);
+    const ledger = await Ledger.init(storageAdapter, storageDir, validateRecords, encodingRounds);
+    const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
 
     return new Node(nodeType, wallet, farm, ledger);
   }

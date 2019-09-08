@@ -12,7 +12,11 @@ if (!globalThis.indexedDB) {
   require('fake-indexeddb/auto');
 }
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as crypto from '../crypto/crypto';
+import { CHUNK_LENGTH, HASH_LENGTH } from '../main/constants';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 // import { Account } from './accounts';
 import { Block } from './block';
@@ -27,8 +31,16 @@ let ledgerWallet: Wallet;
 let senderAccount: IWalletAccount;
 let receiverAccount: IWalletAccount;
 
+const storageDir = `${os.homedir()}/subspace/tests/ledger`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
+
+fs.mkdirSync(storageDir, { recursive: true });
+
 beforeAll(async () => {
-  ledgerWallet = await Wallet.open('rocks', 'ledger-test');
+  ledgerWallet = await Wallet.open('rocks', storageDir, 'ledger-test');
   const senderSeed = crypto.randomBytes(32);
   senderAccount = await ledgerWallet.createAccount('ledger-test-sender', 'a sender account for ledger tests', senderSeed);
   receiverAccount = await ledgerWallet.createAccount('ledger-test-receiver', 'a receiver account for ledger tests');
@@ -48,17 +60,17 @@ test('create-credit-tx', async () => {
 });
 
 test('create-genesis-proof', () => {
-  const previousProofHash = crypto.randomBytes(32);
+  const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const genesisProof = Proof.createGenesisProof(previousProofHash);
   expect(genesisProof.isValid()).toBe(true);
 });
 
 test('create-proof', () => {
-  const previousLevelHash = crypto.randomBytes(32);
-  const previousProofHash = crypto.randomBytes(32);
+  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
+  const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(8);
-  const pieceHash = crypto.randomBytes(32);
-  const pieceStateHash = crypto.randomBytes(32);
+  const pieceHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceStateHash = crypto.randomBytes(HASH_LENGTH);
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
@@ -83,12 +95,12 @@ test('create-genesis-content', () => {
 });
 
 test('create-content', () => {
-  const parentContentHash = crypto.randomBytes(32);
-  const proofHash = crypto.randomBytes(32);
+  const parentContentHash = crypto.randomBytes(HASH_LENGTH);
+  const proofHash = crypto.randomBytes(HASH_LENGTH);
   const payload: Uint8Array[] = [
-    crypto.randomBytes(32),
-    crypto.randomBytes(32),
-    crypto.randomBytes(32),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
   ];
   const content = Content.create(parentContentHash, proofHash, payload);
   expect(content.isValid()).toBe(true);
@@ -96,8 +108,8 @@ test('create-content', () => {
 });
 
 test('create-genesis-block', () => {
-  const previousProofHash =  crypto.randomBytes(32);
-  const parentContentHash = crypto.randomBytes(32);
+  const previousProofHash =  crypto.randomBytes(HASH_LENGTH);
+  const parentContentHash = crypto.randomBytes(HASH_LENGTH);
   const genesisBlock = Block.createGenesisBlock(previousProofHash, parentContentHash);
   expect(genesisBlock.isValid()).toBe(true);
 });
@@ -105,11 +117,11 @@ test('create-genesis-block', () => {
 test('create-block', async () => {
 
   // create the proof
-  const previousLevelHash = crypto.randomBytes(32);
-  const previousProofHash = crypto.randomBytes(32);
-  const solution = crypto.randomBytes(8);
-  const pieceHash = crypto.randomBytes(32);
-  const pieceStateHash = crypto.randomBytes(32);
+  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
+  const previousProofHash = crypto.randomBytes(HASH_LENGTH);
+  const solution = crypto.randomBytes(CHUNK_LENGTH);
+  const pieceHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceStateHash = crypto.randomBytes(HASH_LENGTH);
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
@@ -125,13 +137,13 @@ test('create-block', async () => {
   const signedProof = ledgerWallet.signProof(unsignedProof);
 
   // create parent content
-  const parentContentHash = crypto.randomBytes(32);
+  const parentContentHash = crypto.randomBytes(HASH_LENGTH);
 
   // create tx set
   const txIds: Uint8Array[] = [
-    crypto.randomBytes(32),
-    crypto.randomBytes(32),
-    crypto.randomBytes(32),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
   ];
 
   // create coinbase tx and add to tx set

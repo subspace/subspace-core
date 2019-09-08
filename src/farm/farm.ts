@@ -53,6 +53,7 @@ export class Farm {
    */
   constructor(
     mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB,
+    storageDir: string,
     numberOfPlots: number,
     farmSize: number,
     encodingRounds: number,
@@ -85,11 +86,11 @@ export class Farm {
         break;
     }
 
-    this.metadataStore = new Storage(storageAdapter, `farm-${mode}`);
+    this.metadataStore = new Storage(storageAdapter, storageDir, `farm-${mode}`);
     const plotSize = Math.floor(farmSize / numberOfPlots);
 
     for (let i = 0; i < numberOfPlots; ++i) {
-      const plot = Plot.open(plotAdapter, i, plotSize, addresses[i]);
+      const plot = Plot.open(plotAdapter, storageDir, i, plotSize, addresses[i]);
       this.plots.push(plot);
     }
 

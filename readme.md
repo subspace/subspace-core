@@ -23,9 +23,10 @@ Default params may be changed in `src/main/index.ts`
 CLI interface using Docker is also available. You can run it like this for x86_64 and ARM architectures:
 
 ```bash
-docker run --rm -it subspacelabs/subspace-core
-docker run --rm -it subspacelabs/subspace-core:arm64v8
-docker run --rm -it subspacelabs/subspace-core:arm32v7
+docker run --rm -it --entrypoint=/usr/bin/node subspacelabs/subspace-core /code/dist/main/index.js
+docker run --rm -it --entrypoint=/usr/bin/node subspacelabs/subspace-core:arm64v8 /code/dist/main/index.js
+docker run --rm -it --entrypoint=/usr/bin/node subspacelabs/subspace-core:arm32v7 /code/dist/main/index.js
+
 ```
 
 If you prefer to build it yourself, here is how:

@@ -5,27 +5,40 @@ if (!globalThis.indexedDB) {
 }
 // tslint:disable: object-literal-sort-keys
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
+import { HASH_LENGTH } from '../main/constants';
 import { IPiece } from '../main/interfaces';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { Farm } from './farm';
+
+const storageDir = `${os.homedir()}/subspace/tests/farm`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
+
+fs.mkdirSync(storageDir, { recursive: true });
 
 test('mem-plot', async () => {
   const plotMode = 'mem-db';
   const farmSize = 409600;
+  const paddedDataSize = 120191;
   const numberOfPlots = 32;
   const encodingRounds = 3;
   const addresses: Uint8Array[] = [];
   for (let i = 0; i < numberOfPlots; ++i) {
-    addresses.push(crypto.randomBytes(32));
+    addresses.push(crypto.randomBytes(HASH_LENGTH));
   }
-  const farm = new Farm(plotMode, numberOfPlots, farmSize, encodingRounds, addresses);
-  const data = crypto.randomBytes(40960);
+  const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const data = crypto.randomBytes(paddedDataSize);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
-  const stateHash = crypto.randomBytes(32);
+  const stateHash = crypto.randomBytes(HASH_LENGTH);
   const { proofs } = crypto.buildMerkleTree(pieceHashes);
   const pieces: IPiece[] = [];
   for (let i = 0; i < pieceSet.length; ++i) {
@@ -44,7 +57,7 @@ test('mem-plot', async () => {
   await farm.seedPlot(pieces);
 
   // get closest
-  const target = crypto.randomBytes(32);
+  const target = crypto.randomBytes(HASH_LENGTH);
   const closestPiece = await farm.getClosestPiece(target);
   const closestEncodings = await farm.getClosestEncodings(target);
   if (closestPiece && closestEncodings) {
@@ -82,19 +95,20 @@ test('mem-plot', async () => {
 test('disk-plot', async () => {
   const plotMode = 'disk-db';
   const farmSize = 409600;
+  const paddedDataSize = 120191;
   const numberOfPlots = 32;
   const encodingRounds = 3;
   const addresses: Uint8Array[] = [];
   for (let i = 0; i < numberOfPlots; ++i) {
-    addresses.push(crypto.randomBytes(32));
+    addresses.push(crypto.randomBytes(HASH_LENGTH));
   }
-  const farm = new Farm(plotMode, numberOfPlots, farmSize, encodingRounds, addresses);
-  const data = crypto.randomBytes(520191);
+  const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const data = crypto.randomBytes(paddedDataSize);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
   const pieceSet = codes.sliceLevel(encodedData);
   const pieceHashes = pieceSet.map((piece) => crypto.hash(piece));
-  const stateHash = crypto.randomBytes(32);
+  const stateHash = crypto.randomBytes(HASH_LENGTH);
   const { proofs } = crypto.buildMerkleTree(pieceHashes);
   const pieces: IPiece[] = [];
   for (let i = 0; i < pieceSet.length; ++i) {
@@ -113,7 +127,7 @@ test('disk-plot', async () => {
   await farm.seedPlot(pieces);
 
   // get closest
-  const target = crypto.randomBytes(32);
+  const target = crypto.randomBytes(HASH_LENGTH);
   const closestPiece = await farm.getClosestPiece(target);
   const closestEncodings = await farm.getClosestEncodings(target);
   if (closestPiece && closestEncodings) {

@@ -2,6 +2,8 @@
   // port to Rust/WASM?
   // write tests
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { inspect } from 'util';
 
 /**
@@ -145,4 +147,19 @@ export function str2Bin(data: string): Uint8Array {
 export function print(data: object): void {
   // tslint:disable-next-line: no-console
   console.log(inspect(data, false, null, true));
+}
+
+export function rmDirRecursiveSync(dirPath: string): void {
+  dirPath = path.normalize(dirPath);
+  if (fs.existsSync(dirPath)) {
+    fs.readdirSync(dirPath).forEach((file) => {
+      const curPath = path.join(dirPath, file);
+      if (fs.lstatSync(curPath).isDirectory()) {
+        rmDirRecursiveSync(curPath);
+      } else {
+        fs.unlinkSync(curPath);
+      }
+    });
+    fs.rmdirSync(dirPath);
+  }
 }

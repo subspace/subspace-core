@@ -1,17 +1,36 @@
 // tslint:disable: no-console
 import * as commander from "commander";
 import * as fs from "fs";
-import { Node } from '../node/node';
+import { run } from './run';
+// import { Node } from '../node/node';
 
 const version = JSON.parse(fs.readFileSync(__dirname + '/../../package.json', 'utf8')).version;
-// const title = `Subspace Network Daemon version ${version}`;
+// const title = `Subspace Network Daemon (SND) CLI version ${version}`
 
 const program = new commander.Command();
 
 program
   .command('run')
-  .action(async () => {
-    await Node.init('full', 'rocks', 'mem-db', 1, 1000000000, true, 3);
+  .description('Start a new node for the Subspace Protocol')
+  .option('-m, --mode <mode>', 'mode to operate node (full, farmer, validator, client', 'full')
+  .option('-c, --chains <chains>', 'number of chains in the ledger', 1)
+  .option('-f, --farm <farm>', 'mode to operate farm (memory, disk)', 'disk')
+  .option('-p, --plots <plots>', 'number of plots in the farm', 100)
+  .option('-s, --size <size>', 'size of farm in bytes', 10000000000)
+  .option('-v, --validate <validate>', 'if to validate records (t/f)', false)
+  .option('-e, --encoding <encoding>', 'number of rounds for piece encoding/decoding', 3)
+  .option('-d, --directory <directory>', 'directory for persistent storage and plotting', null)
+  .action((args) => {
+    run(
+      args.mode,
+      args.chains,
+      args.farm,
+      args.plots,
+      args.size,
+      args.validate,
+      args.encoding,
+      args.directory,
+    );
   });
 
 program

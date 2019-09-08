@@ -7,8 +7,11 @@ if (!globalThis.indexedDB) {
   require('fake-indexeddb/auto');
 }
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as crypto from '../crypto/crypto';
 import { Tx } from '../ledger/tx';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from './wallet';
 
 let wallet: Wallet;
@@ -21,8 +24,16 @@ const seed = crypto.randomBytes(32);
 let coinbaseTx: Tx;
 let creditTx: Tx;
 
+const storageDir = `${os.homedir()}/subspace/tests/wallet`;
+
+if (fs.existsSync(storageDir)) {
+  rmDirRecursiveSync(storageDir);
+ }
+
+fs.mkdirSync(storageDir, { recursive: true });
+
 beforeAll(async () => {
-  wallet = await Wallet.open('rocks', 'wallet-test');
+  wallet = await Wallet.open('rocks', storageDir, 'wallet-test');
   account1 = await wallet.createAccount(name, description, seed);
   account2 = await wallet.createAccount();
   account3 = await wallet.createAccount();
@@ -154,7 +165,7 @@ test('confirm-credit-tx', async () => {
 test('close-load-clear', async () => {
   await wallet.close();
 
-  const reopenedWallet = await Wallet.open('rocks', 'wallet-test');
+  const reopenedWallet = await Wallet.open('rocks', storageDir, 'wallet-test');
   expect(reopenedWallet.getAccounts().length).toBe(2);
   expect(wallet.addresses.size).toBe(2);
 

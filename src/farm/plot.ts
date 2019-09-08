@@ -10,8 +10,8 @@ export class Plot {
   /**
    * Opens a new plot. Will open an existing plot if rocks or disk storage with same path as previous plot.
    */
-  public static open(type: string, index: number, size: number, address: Uint8Array): Plot {
-    const plot = new Plot(type, index, size, address);
+  public static open(type: string, storageDir: string, index: number, size: number, address: Uint8Array): Plot {
+    const plot = new Plot(type, storageDir, index, size, address);
     return plot;
   }
 
@@ -22,7 +22,7 @@ export class Plot {
   public readonly address: Uint8Array;
   private store: IStore;
 
-  constructor(type: string, index: number, size: number, address: Uint8Array) {
+  constructor(type: string, storageDir: string, index: number, size: number, address: Uint8Array) {
     this.type = type;
     this.index = index;
     this.size = size;
@@ -33,7 +33,8 @@ export class Plot {
         this.store = new MemoryStore();
         break;
       case 'disk-db':
-        const storagePath = `${__dirname}/../../data/plot-${this.index}`;
+        const plotPath = `plot-${this.index}`;
+        const storagePath = path.join(storageDir, plotPath);
         this.store = new RocksStore(path.normalize(storagePath));
         break;
       default:
