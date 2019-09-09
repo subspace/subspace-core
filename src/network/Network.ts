@@ -208,9 +208,7 @@ export class Network extends EventEmitter implements INetwork {
     }
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
-      this.requestCallbacks.set(requestId, async () => {
-        resolve();
-      });
+      this.requestCallbacks.set(requestId, resolve);
       setTimeout(
         () => {
           this.requestCallbacks.delete(requestId);
