@@ -66,6 +66,9 @@ function parseUdpMessage(message: Uint8Array): [ICommandsKeys, number, Uint8Arra
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
+  // In seconds
+  private readonly DEFAULT_TIMEOUT = 10;
+
   // Will 2**32 be enough?
   private requestId: number = 0;
   // Will 2**32 be enough?
@@ -122,12 +125,13 @@ export class Network extends EventEmitter implements INetwork {
           const requestCallback = this.requestCallbacks.get(requestId);
           if (requestCallback) {
             requestCallback(payload);
+            // TODO: Should this really be done in case we receive response from random sender?
+            this.requestCallbacks.delete(requestId);
           }
         } else {
           if (requestId) {
             ++this.responseId;
             const responseId = this.responseId;
-            // TODO: Clean up after timeout
             this.responseCallbacks.set(
               responseId,
               (payload) => {
@@ -136,6 +140,12 @@ export class Network extends EventEmitter implements INetwork {
                 udp4Socket.send(message, remote.port, remote.address);
               },
             );
+            setTimeout(
+              () => {
+                this.responseCallbacks.delete(responseId);
+              },
+              this.DEFAULT_TIMEOUT * 1000,
+            ).unref();
             this.emit(
               command,
               payload,
@@ -194,8 +204,14 @@ export class Network extends EventEmitter implements INetwork {
     const message = composeUdpMessage(command, requestId, payload);
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
-      // TODO: Reject and clean up after timeout
       this.requestCallbacks.set(requestId, resolve);
+      setTimeout(
+        () => {
+          this.requestCallbacks.delete(requestId);
+          reject(new Error(`Request ${requestId} timeout out`));
+        },
+        this.DEFAULT_TIMEOUT * 1000,
+      ).unref();
       this.udp4Socket.send(message, port, address, (error) => {
         if (error) {
           reject(error);
