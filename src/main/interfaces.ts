@@ -93,7 +93,7 @@ export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 /**
  * The value of a simple credit Tx.
  * Coinbase tx is 150 bytes.
- * Credit tx is 198 bytes.
+ * Credit tx is 202 bytes.
  * Data tx (toDo) is max 4096 bytes
  */
 export interface ITxValue {

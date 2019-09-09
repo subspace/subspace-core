@@ -25,7 +25,7 @@ import { Content } from './content';
 // import { Ledger } from './ledger';
 import { Proof } from './proof';
 // import { State } from './state';
-// import { Tx } from './tx';
+import { Tx } from './tx';
 
 let ledgerWallet: Wallet;
 let senderAccount: IWalletAccount;
@@ -50,6 +50,10 @@ test('create-coinbase-tx', async () => {
   const reward = 1;
   const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, senderAccount.publicKey);
   expect(coinbaseTx.isValid()).toBe(true);
+
+  const data = coinbaseTx.toBytes();
+  const fromBytes = Tx.fromBytes(data);
+  expect(fromBytes.key.toString()).toBe(coinbaseTx.key.toString());
   return;
 });
 

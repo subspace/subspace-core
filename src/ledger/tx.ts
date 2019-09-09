@@ -2,7 +2,9 @@
 // tslint:disable: variable-name
 import * as crypto from '../crypto/crypto';
 import { ITxData, ITxValue } from '../main/interfaces';
-import { bin2Hex, num2Bin, num2Date, smallNum2Bin } from '../utils/utils';
+import { bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
+
+const NULL_48_BYTE_ARRAY = (new Uint8Array(48)).toString();
 
 /**
  * Record class for credit transactions used to transfer funds between accounts on the ledger.
@@ -31,7 +33,7 @@ export class Tx {
    * Creates a coinbase tx to reward the farmer who creates a new block.
    */
   public static createCoinbase(creatorPublicKey: Uint8Array, amount: number, nonce: number, creatorPrivateKey: Uint8Array): Tx {
-    return Tx.create(new Uint8Array(), creatorPublicKey, amount, nonce, creatorPrivateKey);
+    return Tx.create(new Uint8Array(48), creatorPublicKey, amount, nonce, creatorPrivateKey);
   }
 
   /**
@@ -46,6 +48,26 @@ export class Tx {
       timestamp: txData[4],
       signature: txData[5],
     };
+    const tx = new Tx(txValue);
+    tx.setKey();
+    return tx;
+  }
+
+  public static fromBytes(data: Uint8Array): Tx {
+
+    if (data.length !== 202) {
+      throw new Error('Cannot load tx from bytes, data is not 198 bytes long');
+    }
+
+    const txValue: ITxValue = {
+      sender: data.subarray(0, 48),
+      receiver: data.subarray(48, 96),
+      amount: bin2Num(data.subarray(96, 100)),
+      nonce: smallBin2Num(data.subarray(100, 102)),
+      timestamp: bin2Num(data.subarray(102, 106)),
+      signature: data.subarray(106, 202),
+    };
+
     const tx = new Tx(txValue);
     tx.setKey();
     return tx;
@@ -137,9 +159,14 @@ export class Tx {
       throw new Error('Invalid tx, invalid signature length');
     }
 
-    // validate receiver is 48 bytes (BLS public key)
+    // validate sender is 48 bytes (BLS public key or null array)
     if (this._value.receiver.length !== 48) {
       throw new Error('Invalid tx, invalid receiver key length');
+    }
+
+    // validate receiver is 48 bytes (BLS public key)
+    if (this._value.sender.length !== 48) {
+      throw new Error('Invalid tx, invalid sender key length');
     }
 
     // validate nonce is 4 bytes
@@ -162,14 +189,13 @@ export class Tx {
       throw new Error('Invalid tx, date is out of range');
     }
 
-    // is signature valid for message and public key
     let sender: Uint8Array;
-    this._value.sender.length > 0 ? sender = this._value.sender : sender = this._value.receiver;
+    this._value.sender.toString() === NULL_48_BYTE_ARRAY ? sender = this._value.receiver : sender = this._value.sender;
     if (!crypto.verifySignature(this.toBytes(false), this._value.signature, sender)) {
       throw new Error('Invalid tx, invalid signature for message and public key');
     }
 
-    if (this._value.sender.length === 0 && this._value.amount !== 1) {
+    if ((this._value.sender.toString() === NULL_48_BYTE_ARRAY) && this._value.amount !== 1) {
       throw new Error('Invalid coinbase tx, invalid amount');
     }
 
