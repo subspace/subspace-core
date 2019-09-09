@@ -7,7 +7,3 @@ export const DIFFICULTY = 64;
 export const VERSION = 1;
 export const CHUNK_LENGTH = 8;
 export const ERASURE_CODING_SHARDS_LIMIT = 254;
-export const NULL_96_BYTE_ARRAY = (new Uint8Array(96)).toString();
-export const NULL_48_BYTE_ARRAY = (new Uint8Array(48)).toString();
-export const NULL_32_BYTE_ARRAY = (new Uint8Array(32)).toString();
-export const NULL_8_BYTE_ARRAY = (new Uint8Array(8)).toString();

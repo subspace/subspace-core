@@ -2,9 +2,9 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { HASH_LENGTH, NULL_32_BYTE_ARRAY } from '../main/constants';
+import { HASH_LENGTH } from '../main/constants';
 import { IContentData, IContentValue } from '../main/interfaces';
-import { bin2Hex } from '../utils/utils';
+import { areArraysEqual, bin2Hex } from '../utils/utils';
 
 /**
  * Record class for malleable block contents for the ledger.
@@ -32,7 +32,7 @@ export class Content {
   /**
    * Creates an empty content record for a new chain as part of the genesis level.
    */
-  public static createGenesisContent(parentContentHash = new Uint8Array(32), proofHash = new Uint8Array(32)): Content {
+  public static createGenesisContent(parentContentHash: Uint8Array, proofHash: Uint8Array): Content {
     return Content.create(parentContentHash, proofHash, []);
   }
 
@@ -50,12 +50,20 @@ export class Content {
     return content;
   }
 
+  /**
+   * Loads a content instance from binary data received over the network.
+   *
+   * @param data A Uint8Array of multiple of 32 bytes
+   *
+   */
   public static fromBytes(data: Uint8Array): Content {
 
+    // minimum length is two hashes
     if (data.length < 64) {
       throw new Error('Cannot load content from bytes, data is less than 64 bytes long');
     }
 
+    // contents may only be hashes, so multiple of 32
     if (data.length % 32) {
       throw new Error('Cannot load content from bytes, content is not a multiple of 32 bytes');
     }
@@ -66,6 +74,7 @@ export class Content {
       payload: [],
     };
 
+    // parse out the tx ids
     const rounds = (data.length / HASH_LENGTH) - 2;
     for (let i = 0; i < rounds; ++i) {
       const txId = data.subarray(64 + (HASH_LENGTH * i), 64 + (HASH_LENGTH * (i + 1)));
@@ -136,8 +145,8 @@ export class Content {
   public isValid(): boolean {
 
     // genesis content
-    if (this._value.parentContentHash.toString() === NULL_32_BYTE_ARRAY) {
-      if (this._value.proofHash.toString() === NULL_32_BYTE_ARRAY || this._value.payload.length > 0) {
+    if (areArraysEqual(this._value.parentContentHash, new Uint8Array(32))) {
+      if (areArraysEqual(this._value.proofHash, new Uint8Array(32)) || this._value.payload.length > 0) {
         throw new Error('Invalid genesis content, should have proof hash and content should be empty');
       }
       return true;

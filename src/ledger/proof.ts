@@ -2,9 +2,8 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { NULL_32_BYTE_ARRAY, NULL_48_BYTE_ARRAY, NULL_8_BYTE_ARRAY, NULL_96_BYTE_ARRAY } from '../main/constants';
 import { IProofData, IProofValue } from '../main/interfaces';
-import { bin2Hex } from '../utils/utils';
+import { areArraysEqual, bin2Hex } from '../utils/utils';
 
 // ToDo
   // Make merkle proofs constant sized
@@ -73,8 +72,15 @@ export class Proof {
     return proof;
   }
 
+  /**
+   * Loads a new proof from binary data received over the network
+   *
+   * @param data a 280+ byte Uint8Array
+   *
+   */
   public static fromBytes(data: Uint8Array): Proof {
 
+    // all proofs are at least 280 bytes
     if (data.length < 280) {
       throw new Error('Cannot load proof from bytes, data is less than 280 bytes long');
     }
@@ -170,17 +176,16 @@ export class Proof {
   public isValid(): boolean {
 
     // validate genesis proof
-    if (this._value.previousLevelHash.toString() === NULL_32_BYTE_ARRAY) {
-
+    if (areArraysEqual(this._value.previousLevelHash, new Uint8Array(32))) {
       // ensure fields are null
-      if (this._value.solution.toString() !== NULL_8_BYTE_ARRAY ||
-        this._value.pieceHash.toString() !== NULL_32_BYTE_ARRAY ||
-        this._value.pieceStateHash.toString() !== NULL_32_BYTE_ARRAY ||
-        this._value.pieceProof.toString() !== NULL_32_BYTE_ARRAY ||
-        this._value.publicKey.toString() !== NULL_48_BYTE_ARRAY ||
-        this._value.signature.toString() !== NULL_96_BYTE_ARRAY) {
-          throw new Error('Invalid genesis proof, includes values for null properties');
-        }
+      if (!areArraysEqual(this._value.solution, new Uint8Array(8)) ||
+          !areArraysEqual(this._value.pieceHash, new Uint8Array(832) ||
+          !areArraysEqual(this._value.pieceStateHash, new Uint8Array(32)) ||
+          // !areArraysEqual(this._value.pieceProof, new Uint8Array(32)) ||
+          !areArraysEqual(this._value.publicKey, new Uint8Array(48)) ||
+          !areArraysEqual(this._value.signature, new Uint8Array(96)))) {
+        throw new Error('Invalid genesis proof, includes values for null properties');
+      }
 
       return true;
     }
@@ -228,7 +233,7 @@ export class Proof {
     }
 
     // is signature valid for message and public key
-    if (this._value.signature.toString() !== NULL_96_BYTE_ARRAY) {
+    if (!areArraysEqual(this._value.signature, new Uint8Array(96))) {
       if (!crypto.verifySignature(this.toBytes(false), this._value.signature, this._value.publicKey)) {
         throw new Error('Invalid proof, invalid signature for message and public key');
       }

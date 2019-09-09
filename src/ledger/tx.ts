@@ -1,9 +1,8 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
 import * as crypto from '../crypto/crypto';
-import { NULL_48_BYTE_ARRAY } from '../main/constants';
 import { ITxData, ITxValue } from '../main/interfaces';
-import { bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
 
 // ToDo
   // fix dates to use greater than 4 byte integers
@@ -55,6 +54,11 @@ export class Tx {
     return tx;
   }
 
+  /**
+   * Loads a new tx from binary data received over the network
+   *
+   * @param data exactly 202 bytes of binary data
+   */
   public static fromBytes(data: Uint8Array): Tx {
 
     if (data.length !== 202) {
@@ -192,12 +196,13 @@ export class Tx {
     }
 
     let sender: Uint8Array;
-    this._value.sender.toString() === NULL_48_BYTE_ARRAY ? sender = this._value.receiver : sender = this._value.sender;
+    areArraysEqual(this._value.sender, new Uint8Array(48)) ? sender = this._value.receiver : sender = this._value.sender;
+
     if (!crypto.verifySignature(this.toBytes(false), this._value.signature, sender)) {
       throw new Error('Invalid tx, invalid signature for message and public key');
     }
 
-    if ((this._value.sender.toString() === NULL_48_BYTE_ARRAY) && this._value.amount !== 1) {
+    if ((areArraysEqual(this._value.sender, new Uint8Array(48))) && this._value.amount !== 1) {
       throw new Error('Invalid coinbase tx, invalid amount');
     }
 
