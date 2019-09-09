@@ -120,56 +120,7 @@ export class Network extends EventEmitter implements INetwork {
       );
     }
 
-    const udp4Socket = dgram.createSocket('udp4');
-    udp4Socket.on('message', (message: Buffer, remote: dgram.RemoteInfo) => {
-      try {
-        const [command, requestId, payload] = parseUdpMessage(message);
-        if (command === 'response') {
-          // TODO: No validation!
-          const requestCallback = this.requestCallbacks.get(requestId);
-          if (requestCallback) {
-            requestCallback(payload);
-            // TODO: Should this really be done in case we receive response from random sender?
-            this.requestCallbacks.delete(requestId);
-          }
-        } else {
-          if (requestId) {
-            ++this.responseId;
-            const responseId = this.responseId;
-            this.responseCallbacks.set(
-              responseId,
-              (payload) => {
-                this.responseCallbacks.delete(responseId);
-                const message = composeUdpMessage('response', requestId, payload);
-                udp4Socket.send(message, remote.port, remote.address);
-              },
-            );
-            setTimeout(
-              () => {
-                this.responseCallbacks.delete(responseId);
-              },
-              this.DEFAULT_TIMEOUT * 1000,
-            ).unref();
-            this.emit(
-              command,
-              payload,
-              (responsePayload: Uint8Array) => {
-                const responseCallback = this.responseCallbacks.get(responseId);
-                if (responseCallback) {
-                  responseCallback(responsePayload);
-                }
-              },
-            );
-          } else {
-            this.emit(command, payload);
-          }
-        }
-      } catch (error) {
-        // TODO: Log error in debug mode
-      }
-    });
-    udp4Socket.bind(ownUdpAddress.port, ownUdpAddress.address);
-    this.udp4Socket = udp4Socket;
+    this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
   }
 
   // public sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<void> {
@@ -281,6 +232,60 @@ export class Network extends EventEmitter implements INetwork {
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
   ): boolean {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
+  }
+
+  private createUdp4Socket(ownUdpAddress: IAddress): dgram.Socket {
+    const udp4Socket = dgram.createSocket('udp4');
+    udp4Socket.on('message', (message: Buffer, remote: dgram.RemoteInfo) => {
+      try {
+        const [command, requestId, payload] = parseUdpMessage(message);
+        if (command === 'response') {
+          // TODO: No validation!
+          const requestCallback = this.requestCallbacks.get(requestId);
+          if (requestCallback) {
+            requestCallback(payload);
+            // TODO: Should this really be done in case we receive response from random sender?
+            this.requestCallbacks.delete(requestId);
+          }
+        } else {
+          if (requestId) {
+            ++this.responseId;
+            const responseId = this.responseId;
+            this.responseCallbacks.set(
+              responseId,
+              (payload) => {
+                this.responseCallbacks.delete(responseId);
+                const message = composeUdpMessage('response', requestId, payload);
+                udp4Socket.send(message, remote.port, remote.address);
+              },
+            );
+            setTimeout(
+              () => {
+                this.responseCallbacks.delete(responseId);
+              },
+              this.DEFAULT_TIMEOUT * 1000,
+            ).unref();
+            this.emit(
+              command,
+              payload,
+              (responsePayload: Uint8Array) => {
+                const responseCallback = this.responseCallbacks.get(responseId);
+                if (responseCallback) {
+                  responseCallback(responsePayload);
+                }
+              },
+            );
+          } else {
+            this.emit(command, payload);
+          }
+        }
+      } catch (error) {
+        // TODO: Log error in debug mode
+      }
+    });
+    udp4Socket.bind(ownUdpAddress.port, ownUdpAddress.address);
+
+    return udp4Socket;
   }
 
   private async nodeIdToUdpAddress(nodeId: Uint8Array): Promise<IAddress> {
