@@ -9,7 +9,7 @@ import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
 import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { bin2Hex, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
@@ -74,8 +74,8 @@ export class Ledger extends EventEmitter {
   public isServing = true;
   public isValidating: boolean;
 
-  public previousLevelHash = new Uint8Array();
-  public parentProofHash = new Uint8Array();
+  public previousLevelHash = new Uint8Array(32);
+  public parentProofHash = new Uint8Array(32);
 
   // persistent state
   public chainCount = 0;
@@ -119,8 +119,8 @@ export class Ledger extends EventEmitter {
     this.chainCount = chainCount;
 
     // init level data
-    let previousProofHash = new Uint8Array();
-    const parentContentHash = new Uint8Array();
+    let previousProofHash = new Uint8Array(32);
+    const parentContentHash = new Uint8Array(32);
     const levelRecords: Uint8Array[] = [];
     const levelProofHashes: Uint8Array[] = [];
 
@@ -403,10 +403,10 @@ export class Ledger extends EventEmitter {
     block.isValid();
 
     // handle genesis blocks ...
-    if (block.value.proof.value.previousLevelHash.length === 0) {
+    if (areArraysEqual(block.value.proof.value.previousLevelHash, new Uint8Array(32))) {
 
       // previous proof hash should be null or in proof map
-      if (block.value.proof.value.previousProofHash.length === 0) {
+      if (areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
         const genesisProof = this.proofMap.get(block.value.proof.key);
         if (!genesisProof && this.proofMap.size) {
           throw new Error('Invalid genesis block, already have a first genesis proof');
@@ -430,7 +430,7 @@ export class Ledger extends EventEmitter {
     // verify the proof ...
 
     // previous level hash is last seen level
-    if (block.value.proof.value.previousLevelHash.toString() !== this.previousLevelHash.toString()) {
+    if (!areArraysEqual(block.value.proof.value.previousLevelHash, this.previousLevelHash)) {
       throw new Error('Invalid block proof, points to incorrect previous level');
     }
 
@@ -443,7 +443,7 @@ export class Ledger extends EventEmitter {
     let hasSolution = false;
     for (let i = 0; i < PIECE_SIZE / CHUNK_LENGTH; ++i) {
       const chunk = encoding.subarray((i * CHUNK_LENGTH), (i + 1) * CHUNK_LENGTH);
-      if (chunk.toString() === block.value.proof.value.solution.toString()) {
+      if (areArraysEqual(chunk, block.value.proof.value.solution)) {
         hasSolution = true;
         break;
       }
@@ -454,12 +454,12 @@ export class Ledger extends EventEmitter {
     }
 
     // piece level is seen in state
-    if (!this.stateMap.has(block.value.proof.value.pieceStateHash) && block.value.proof.value.pieceStateHash.length > 0) {
+    if (!this.stateMap.has(block.value.proof.value.pieceStateHash) && areArraysEqual(block.value.proof.value.pieceStateHash, new Uint8Array(32))) {
       throw new Error('Invalid block proof, referenced piece level is unknown');
     }
 
     // piece proof is valid for a given state level, assuming their is more than one piece in the level
-    if (block.value.proof.value.previousLevelHash.toString() !== block.value.proof.value.previousProofHash.toString()) {
+    if (!areArraysEqual(block.value.proof.value.previousLevelHash, block.value.proof.value.previousProofHash)) {
       const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
       if (!pieceStateData) {
         throw new Error('Invalid block proof, referenced state data is not in state map');
@@ -474,14 +474,8 @@ export class Ledger extends EventEmitter {
     // encoding decodes pack to piece
     const proverAddress = crypto.hash(block.value.proof.value.publicKey);
     const piece = codes.decodePiece(encoding, proverAddress, this.encodingRounds);
-    // console.log(`Encoding in  Block.isValidBlock() decodes to: ${piece}`);
     const pieceHash = crypto.hash(piece);
-    if (pieceHash.toString() !== block.value.proof.value.pieceHash.toString()) {
-      // console.log(`Address for decoding is ${proverAddress}`);
-      // console.log(`Encoded piece hash is ${crypto.hash(encoding)}`);
-      // console.log(`Decoded piece hash is ${pieceHash.toString()}`);
-      // console.log(`Piece hash referenced in block is:  ${block.value.proof.value.pieceHash.toString()}`);
-      // print(block.print());
+    if (!areArraysEqual(pieceHash, block.value.proof.value.pieceHash)) {
       throw new Error('Invalid block proof, encoding does not decode back to parent piece');
     }
 
@@ -493,7 +487,7 @@ export class Ledger extends EventEmitter {
       throw new Error('Invalid block content, cannot retrieve parent content block');
     }
     const parentContent = Content.load(parentContentData);
-    if (parentContent.value.parentContentHash.length > 0) {
+    if (areArraysEqual(parentContent.value.parentContentHash, new Uint8Array(32))) {
       const parentChainIndex = crypto.jumpHash(parentContent.value.proofHash, this.chainCount);
       if (parentChainIndex !== correctChainIndex) {
         throw new Error('Invalid block content, does not hash to the same chain as parent');
@@ -604,7 +598,7 @@ export class Ledger extends EventEmitter {
     // tx.isValid();
 
     // does sender have funds to cover tx (if not coinbase)
-    if (tx.value.sender.length > 0) {
+    if (!areArraysEqual(tx.value.sender, new Uint8Array(48))) {
       const senderBalance = this.accounts.get(tx.senderAddress);
       if (!senderBalance) {
         throw new Error('Invalid tx, sender has no account on the ledger!');
@@ -619,7 +613,7 @@ export class Ledger extends EventEmitter {
         // create secondary index in rocks for address and compile...
         // track the nonce in each address field in accounts
 
-    console.log(`Validated new ${tx.value.sender.length > 0 ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)}`);
+    console.log(`Validated new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)}`);
 
     return true;
   }
@@ -631,14 +625,14 @@ export class Ledger extends EventEmitter {
    */
   public applyTx(tx: Tx): void {
       // debit the sender, if not coinbase tx
-      if (tx.value.sender.length > 0) {
+      if (!areArraysEqual(tx.value.sender, new Uint8Array(48))) {
         this.accounts.update(tx.senderAddress, -tx.value.amount);
       }
 
       // always credit the receiver
       this.accounts.update(tx.receiverAddress, tx.value.amount);
 
-      console.log(`Applied new ${tx.value.sender.length > 0 ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)} to ledger.`);
+      console.log(`Applied new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)} to ledger.`);
 
       // apply the fee to the farmer?
       // note when tx is referenced (added to a block)

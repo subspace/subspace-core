@@ -64,9 +64,9 @@ export interface IProofValue {
   solution: Uint8Array; // 8 byte encoded chunk closest to encoding target
   pieceHash: Uint8Array; // 32 byte original piece id of encoding that includes the solution
   pieceStateHash: Uint8Array; // 32 byte state hash from which to obtain the merkle root for the piece used in this proof
-  pieceProof: Uint8Array; // unknown length merkle proof that piece is in that past level
   publicKey: Uint8Array; // 48 byte public key of node creating proof
   signature: Uint8Array; // 96 byte detached signature of this proof with node's private key
+  pieceProof: Uint8Array; // unknown length merkle proof that piece is in that past level
 }
 
 /**
@@ -93,7 +93,7 @@ export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 /**
  * The value of a simple credit Tx.
  * Coinbase tx is 150 bytes.
- * Credit tx is 198 bytes.
+ * Credit tx is 202 bytes.
  * Data tx (toDo) is max 4096 bytes
  */
 export interface ITxValue {

@@ -6,7 +6,7 @@ import * as crypto from '../crypto/crypto';
 import { PIECE_SIZE } from "../main/constants";
 import { IEncodingSet, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { smallBin2Num, smallNum2Bin } from "../utils/utils";
+import { areArraysEqual, smallBin2Num, smallNum2Bin } from "../utils/utils";
 import { Plot } from './plot';
 
 // ToDo
@@ -171,7 +171,7 @@ export class Farm {
       if (encoding) {
         const piece = codes.decodePiece(encoding, plot.address, this.encodingRounds);
         const pieceHash = crypto.hash(piece);
-        if (pieceHash.toString() === pieceId.toString()) {
+        if (areArraysEqual(pieceHash, pieceId)) {
           const data = await this.getPieceData(pieceId);
           return { piece, data };
         }

@@ -25,7 +25,7 @@ import { Content } from './content';
 // import { Ledger } from './ledger';
 import { Proof } from './proof';
 // import { State } from './state';
-// import { Tx } from './tx';
+import { Tx } from './tx';
 
 let ledgerWallet: Wallet;
 let senderAccount: IWalletAccount;
@@ -50,19 +50,34 @@ test('create-coinbase-tx', async () => {
   const reward = 1;
   const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, senderAccount.publicKey);
   expect(coinbaseTx.isValid()).toBe(true);
-  return;
+
+  const data = coinbaseTx.toBytes();
+  const fromBytes = Tx.fromBytes(data);
+  fromBytes.isValid();
+  expect(fromBytes.key.toString()).toBe(coinbaseTx.key.toString());
 });
 
 test('create-credit-tx', async () => {
   const amount = 1;
   const creditTx = await ledgerWallet.createCreditTx(amount, receiverAccount.publicKey, senderAccount.publicKey);
   expect(creditTx.isValid()).toBe(true);
+
+  const data = creditTx.toBytes();
+  const fromBytes = Tx.fromBytes(data);
+  fromBytes.isValid();
+  expect(fromBytes.key.toString()).toBe(creditTx.key.toString());
 });
 
 test('create-genesis-proof', () => {
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const genesisProof = Proof.createGenesisProof(previousProofHash);
   expect(genesisProof.isValid()).toBe(true);
+
+  const data = genesisProof.toBytes();
+  const fromBytes = Proof.fromBytes(data);
+  fromBytes.isValid();
+  expect(fromBytes.key.toString()).toBe(genesisProof.key.toString());
+
 });
 
 test('create-proof', () => {
@@ -85,13 +100,23 @@ test('create-proof', () => {
 
   const signedProof = ledgerWallet.signProof(unsignedProof);
   expect(signedProof.isValid()).toBe(true);
+
+  const data = signedProof.toBytes();
+  const fromBytes = Proof.fromBytes(data);
+  fromBytes.isValid();
+  expect(fromBytes.key.toString()).toBe(signedProof.key.toString());
 });
 
 test('create-genesis-content', () => {
-  const parentContentHash = new Uint8Array();
+  const parentContentHash = new Uint8Array(32);
   const proofHash = crypto.randomBytes(32);
   const genesisContent = Content.createGenesisContent(parentContentHash, proofHash);
   expect(genesisContent.isValid()).toBe(true);
+
+  const data = genesisContent.toBytes();
+  const fromBytes = Content.fromBytes(data);
+  fromBytes.isValid();
+  expect(fromBytes.key.toString()).toBe(genesisContent.key.toString());
 });
 
 test('create-content', () => {
@@ -104,7 +129,11 @@ test('create-content', () => {
   ];
   const content = Content.create(parentContentHash, proofHash, payload);
   expect(content.isValid()).toBe(true);
-  return;
+
+  const data = content.toBytes();
+  const fromBytes = Content.fromBytes(data);
+  fromBytes.isValid();
+  expect(fromBytes.key.toString()).toBe(content.key.toString());
 });
 
 test('create-genesis-block', () => {
@@ -112,6 +141,16 @@ test('create-genesis-block', () => {
   const parentContentHash = crypto.randomBytes(HASH_LENGTH);
   const genesisBlock = Block.createGenesisBlock(previousProofHash, parentContentHash);
   expect(genesisBlock.isValid()).toBe(true);
+
+  const data = genesisBlock.toFullBytes();
+  const block = Block.fromFullBytes(data);
+  block.isValid();
+  expect(block.key.toString()).toBe(genesisBlock.key.toString());
+
+  const compactBlockData = block.toCompactBytes();
+  const compactBlock = Block.fromCompactBytes(compactBlockData);
+  expect(compactBlock.proofHash.toString()).toBe(block.value.proof.key.toString());
+  expect(compactBlock.contentHash.toString()).toBe(block.value.content.key.toString());
 });
 
 test('create-block', async () => {
@@ -153,6 +192,16 @@ test('create-block', async () => {
 
   const block = Block.create(signedProof, parentContentHash, txIds, coinbaseTx);
   expect(block.isValid()).toBe(true);
+
+  const data = block.toFullBytes();
+  const fromBinaryBlock = Block.fromFullBytes(data);
+  block.isValid();
+  expect(fromBinaryBlock.key.toString()).toBe(block.key.toString());
+
+  const compactBlockData = block.toCompactBytes();
+  const compactBlock = Block.fromCompactBytes(compactBlockData);
+  expect(compactBlock.proofHash.toString()).toBe(block.value.proof.key.toString());
+  expect(compactBlock.contentHash.toString()).toBe(block.value.content.key.toString());
 });
 
 afterAll(async () => {

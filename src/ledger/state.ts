@@ -3,7 +3,7 @@
 
 import * as crypto from '../crypto/crypto';
 import { IStateData, IStateValue } from '../main/interfaces';
-import { bin2Hex, num2Bin, num2Date, smallNum2Bin } from '../utils/utils';
+import { bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
 
 /**
  * Record class for state blocks, which summarize all of the data (proofs, contents, and unique txs) for a given level in a compact form.
@@ -25,7 +25,7 @@ export class State {
       previousStateHash,
       levelHash,
       pieceRoot,
-      timestamp: Date.now(),
+      timestamp: (Date.now() / 1000) * 1000,
       difficulty,
       version,
       indexPiece,
@@ -48,6 +48,22 @@ export class State {
       version: stateData[5],
       indexPiece: stateData[6],
     };
+    const state = new State(stateValue);
+    state.setKey();
+    return state;
+  }
+
+  public static fromBytes(data: Uint8Array): State {
+    const stateValue: IStateValue = {
+      previousStateHash: data.subarray(0, 32),
+      levelHash: data.subarray(32, 64),
+      pieceRoot: data.subarray(64, 96),
+      timestamp: bin2Num(data.subarray(96, 100)) * 1000,
+      difficulty: smallBin2Num(data.subarray(100, 102)),
+      version: smallBin2Num(data.subarray(102, 104)),
+      indexPiece: data.subarray(104, 136),
+    };
+
     const state = new State(stateValue);
     state.setKey();
     return state;
@@ -77,7 +93,7 @@ export class State {
       this._value.previousStateHash,
       this._value.levelHash,
       this._value.pieceRoot,
-      num2Bin(this._value.timestamp),
+      num2Bin(this._value.timestamp / 1000),
       smallNum2Bin(this._value.difficulty),
       smallNum2Bin(this._value.version),
     ]);

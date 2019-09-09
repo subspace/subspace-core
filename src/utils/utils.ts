@@ -16,6 +16,16 @@ export function xorUint8Array(a: Uint8Array, b: Uint8Array): Uint8Array {
   });
 }
 
+export function areArraysEqual(array1: Uint8Array, array2: Uint8Array): boolean {
+  const length = array1.length;
+  for (let i = 0; i < length; ++i) {
+    if (array1[i] !== array2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Returns the hamming distance (number of continuous similar bits) between two byte arrays of equal length.
  */
