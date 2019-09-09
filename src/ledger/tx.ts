@@ -1,10 +1,12 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
 import * as crypto from '../crypto/crypto';
+import { NULL_48_BYTE_ARRAY } from '../main/constants';
 import { ITxData, ITxValue } from '../main/interfaces';
 import { bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
 
-const NULL_48_BYTE_ARRAY = (new Uint8Array(48)).toString();
+// ToDo
+  // fix dates to use greater than 4 byte integers
 
 /**
  * Record class for credit transactions used to transfer funds between accounts on the ledger.
@@ -20,7 +22,7 @@ export class Tx {
       receiver: receiverPublicKey,
       amount,
       nonce,
-      timestamp: Date.now(),
+      timestamp: (Date.now() / 1000) * 1000,
       signature: new Uint8Array(),
     };
     const tx = new Tx(txValue);
@@ -56,7 +58,7 @@ export class Tx {
   public static fromBytes(data: Uint8Array): Tx {
 
     if (data.length !== 202) {
-      throw new Error('Cannot load tx from bytes, data is not 198 bytes long');
+      throw new Error('Cannot load tx from bytes, data is not 202 bytes long');
     }
 
     const txValue: ITxValue = {
@@ -64,7 +66,7 @@ export class Tx {
       receiver: data.subarray(48, 96),
       amount: bin2Num(data.subarray(96, 100)),
       nonce: smallBin2Num(data.subarray(100, 102)),
-      timestamp: bin2Num(data.subarray(102, 106)),
+      timestamp: bin2Num(data.subarray(102, 106)) * 1000,
       signature: data.subarray(106, 202),
     };
 
@@ -112,7 +114,7 @@ export class Tx {
       this._value.receiver,
       num2Bin(this._value.amount),
       smallNum2Bin(this._value.nonce),
-      num2Bin(this._value.timestamp),
+      num2Bin(this._value.timestamp / 1000),
       signed ? this._value.signature : new Uint8Array(),
     ]));
   }

@@ -2,8 +2,12 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
+import { NULL_32_BYTE_ARRAY, NULL_48_BYTE_ARRAY, NULL_8_BYTE_ARRAY, NULL_96_BYTE_ARRAY } from '../main/constants';
 import { IProofData, IProofValue } from '../main/interfaces';
 import { bin2Hex } from '../utils/utils';
+
+// ToDo
+  // Make merkle proofs constant sized
 
 /**
  * Record class for canonical proofs of storage used to create new blocks for the ledger.
@@ -29,9 +33,9 @@ export class Proof {
       solution,
       pieceHash,
       pieceStateHash,
-      pieceProof,
       publicKey,
-      signature: new Uint8Array(),
+      signature: new Uint8Array(96),
+      pieceProof,
     };
     const proof = new Proof(proofValue);
     return proof;
@@ -41,9 +45,11 @@ export class Proof {
    * Creates an empty proof for a new chain as part of the genesis level.
    * Does not need to be signed.
    */
-  public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array()): Proof {
-    const nullArray = new Uint8Array();
-    const proof = Proof.create(nullArray, previousProofHash, nullArray, nullArray, nullArray, nullArray, nullArray);
+  public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array(32)): Proof {
+    const nullArray48 = new Uint8Array(48);
+    const nullArray32 = new Uint8Array(32);
+    const nullArray8 = new Uint8Array(8);
+    const proof = Proof.create(nullArray32, previousProofHash, nullArray8, nullArray32, nullArray32, nullArray32, nullArray48);
     proof.setKey();
     return proof;
   }
@@ -58,10 +64,32 @@ export class Proof {
       solution: proofData[2],
       pieceHash: proofData[3],
       pieceStateHash: proofData[4],
-      pieceProof: proofData[5],
-      publicKey: proofData[6],
-      signature: proofData[7],
+      publicKey: proofData[5],
+      signature: proofData[6],
+      pieceProof: proofData[7],
     };
+    const proof = new Proof(proofValue);
+    proof.setKey();
+    return proof;
+  }
+
+  public static fromBytes(data: Uint8Array): Proof {
+
+    if (data.length < 280) {
+      throw new Error('Cannot load proof from bytes, data is less than 280 bytes long');
+    }
+
+    const proofValue: IProofValue = {
+      previousLevelHash: data.subarray(0, 32),
+      previousProofHash: data.subarray(32, 64),
+      solution: data.subarray(64, 72),
+      pieceHash: data.subarray(72, 104),
+      pieceStateHash: data.subarray(104, 136),
+      publicKey: data.subarray(136, 184),
+      signature: data.subarray(184, 280),
+      pieceProof: data.subarray(280),
+    };
+
     const proof = new Proof(proofValue);
     proof.setKey();
     return proof;
@@ -93,9 +121,9 @@ export class Proof {
       this._value.solution,
       this._value.pieceHash,
       this._value.pieceStateHash,
-      this._value.pieceProof,
       this._value.publicKey,
       signed ? this._value.signature : new Uint8Array(),
+      this._value.pieceProof,
     ]));
     return asBytes;
   }
@@ -110,9 +138,9 @@ export class Proof {
       this._value.solution,
       this._value.pieceHash,
       this._value.pieceStateHash,
-      this._value.pieceProof,
       this._value.publicKey,
       this._value.signature,
+      this._value.pieceProof,
     ];
   }
 
@@ -142,22 +170,18 @@ export class Proof {
   public isValid(): boolean {
 
     // validate genesis proof
-    if (this._value.previousLevelHash.length === 0) {
+    if (this._value.previousLevelHash.toString() === NULL_32_BYTE_ARRAY) {
 
       // ensure fields are null
-      if (this._value.solution.length > 0 ||
-        this._value.pieceHash.length > 0 ||
-        this._value.pieceStateHash.length > 0 ||
-        this._value.pieceProof.length > 0 ||
-        this._value.publicKey.length > 0 ||
-        this._value.signature.length > 0) {
-          throw new Error('Invalid genesis proof, includes values for empty properties');
+      if (this._value.solution.toString() !== NULL_8_BYTE_ARRAY ||
+        this._value.pieceHash.toString() !== NULL_32_BYTE_ARRAY ||
+        this._value.pieceStateHash.toString() !== NULL_32_BYTE_ARRAY ||
+        this._value.pieceProof.toString() !== NULL_32_BYTE_ARRAY ||
+        this._value.publicKey.toString() !== NULL_48_BYTE_ARRAY ||
+        this._value.signature.toString() !== NULL_96_BYTE_ARRAY) {
+          throw new Error('Invalid genesis proof, includes values for null properties');
         }
 
-      // previous proof must be null or 32 byte hash
-      if (this._value.previousProofHash.length !== 0 && this._value.previousProofHash.length !== 32) {
-        throw new Error('Invalid genesis proof, must reference null or past proof');
-      }
       return true;
     }
 
@@ -204,7 +228,7 @@ export class Proof {
     }
 
     // is signature valid for message and public key
-    if (this._value.signature.length > 0) {
+    if (this._value.signature.toString() !== NULL_96_BYTE_ARRAY) {
       if (!crypto.verifySignature(this.toBytes(false), this._value.signature, this._value.publicKey)) {
         throw new Error('Invalid proof, invalid signature for message and public key');
       }

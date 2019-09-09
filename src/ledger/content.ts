@@ -2,6 +2,7 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
+import { HASH_LENGTH, NULL_32_BYTE_ARRAY } from '../main/constants';
 import { IContentData, IContentValue } from '../main/interfaces';
 import { bin2Hex } from '../utils/utils';
 
@@ -31,7 +32,7 @@ export class Content {
   /**
    * Creates an empty content record for a new chain as part of the genesis level.
    */
-  public static createGenesisContent(parentContentHash: Uint8Array, proofHash: Uint8Array): Content {
+  public static createGenesisContent(parentContentHash = new Uint8Array(32), proofHash = new Uint8Array(32)): Content {
     return Content.create(parentContentHash, proofHash, []);
   }
 
@@ -44,6 +45,33 @@ export class Content {
       proofHash: contentData[1],
       payload: contentData[2],
     };
+    const content = new Content(contentValue);
+    content.setKey();
+    return content;
+  }
+
+  public static fromBytes(data: Uint8Array): Content {
+
+    if (data.length < 64) {
+      throw new Error('Cannot load content from bytes, data is less than 64 bytes long');
+    }
+
+    if (data.length % 32) {
+      throw new Error('Cannot load content from bytes, content is not a multiple of 32 bytes');
+    }
+
+    const contentValue: IContentValue = {
+      parentContentHash: data.subarray(0, 32),
+      proofHash: data.subarray(32, 64),
+      payload: [],
+    };
+
+    const rounds = (data.length / HASH_LENGTH) - 2;
+    for (let i = 0; i < rounds; ++i) {
+      const txId = data.subarray(64 + (HASH_LENGTH * i), 64 + (HASH_LENGTH * (i + 1)));
+      contentValue.payload.push(txId);
+    }
+
     const content = new Content(contentValue);
     content.setKey();
     return content;
@@ -108,8 +136,8 @@ export class Content {
   public isValid(): boolean {
 
     // genesis content
-    if (this._value.parentContentHash.length === 0) {
-      if (this._value.proofHash.length !== 32 || this._value.payload.length > 0) {
+    if (this._value.parentContentHash.toString() === NULL_32_BYTE_ARRAY) {
+      if (this._value.proofHash.toString() === NULL_32_BYTE_ARRAY || this._value.payload.length > 0) {
         throw new Error('Invalid genesis content, should have proof hash and content should be empty');
       }
       return true;

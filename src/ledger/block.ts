@@ -2,8 +2,9 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { IBlockData, ICompactBlockData, IFullBlockValue } from '../main/interfaces';
-import { bin2Hex } from '../utils/utils';
+import { NULL_32_BYTE_ARRAY } from '../main/constants';
+import { IBlockData, ICompactBlockData, ICompactBlockValue, IFullBlockValue } from '../main/interfaces';
+import { bin2Hex, smallBin2Num, smallNum2Bin } from '../utils/utils';
 import { Content } from './content';
 import { Proof } from './proof';
 import { Tx } from './tx';
@@ -54,6 +55,35 @@ export class Block {
     return new Block(fullBlockValue);
   }
 
+  public static fromFullBytes(data: Uint8Array): Block {
+
+    const proofLength = smallBin2Num(data.subarray(0, 2));
+    const proof = Proof.fromBytes(data.subarray(2, proofLength + 2));
+    const contentLength = smallBin2Num(data.subarray(2 + proofLength, 2 + proofLength + 2));
+    const content = Content.fromBytes(data.subarray(2 + proofLength + 2, 2 + proofLength + 2 + contentLength));
+
+    if (data.length > 2 + proofLength + 2 + contentLength) {
+      const coinbase = Tx.fromBytes(data.subarray(2 + proofLength + 2 + contentLength, 2 + proofLength + 2 + contentLength + 204));
+      const fullBlockValue: IFullBlockValue = { proof, content, coinbase };
+      const block = new Block(fullBlockValue);
+      block.setKey();
+      return block;
+    }
+
+    const fullBlockValue: IFullBlockValue = { proof, content };
+    const block = new Block(fullBlockValue);
+    block.setKey();
+    return block;
+  }
+
+  public static fromCompactBytes(data: Uint8Array): ICompactBlockValue {
+    const compactBlockValue: ICompactBlockValue = {
+      proofHash: data.subarray(0, 32),
+      contentHash: data.subarray(32, 64),
+    };
+    return compactBlockValue;
+  }
+
   private _key: Uint8Array;
   private _value: IFullBlockValue;
 
@@ -77,6 +107,29 @@ export class Block {
     return Uint8Array.from(Buffer.concat([
       this._value.proof.toBytes(),
       this._value.content.toBytes(),
+    ]));
+  }
+
+  public toFullBytes(): Uint8Array {
+    const proofData = this._value.proof.toBytes();
+    const proofLength = smallNum2Bin(proofData.length);
+    const contentData = this._value.content.toBytes();
+    const contentLength = smallNum2Bin(contentData.length);
+    const coinbaseData = this._value.coinbase ? this._value.coinbase.toBytes() : new Uint8Array();
+    return Uint8Array.from(Buffer.concat([
+      proofLength,
+      proofData,
+      contentLength,
+      contentData,
+      coinbaseData,
+    ]));
+  }
+
+  public toCompactBytes(): Uint8Array {
+    return Uint8Array.from(Buffer.concat([
+      this._value.proof.key,
+      this._value.content.key,
+      this._value.coinbase ? this._value.coinbase.key : new Uint8Array(),
     ]));
   }
 
@@ -121,7 +174,7 @@ export class Block {
    */
   public isValid(): boolean {
 
-    if (this._value.proof.key !== this._value.content.value.proofHash) {
+    if (this._value.proof.key.toString() !== this._value.content.value.proofHash.toString()) {
       throw new Error('Invalid block, content does not point to proof');
     }
 
@@ -132,7 +185,7 @@ export class Block {
     this._value.content.isValid();
 
     // if genesis block
-    if (this._value.proof.value.previousLevelHash.length === 0) {
+    if (this._value.proof.value.previousLevelHash.toString() === NULL_32_BYTE_ARRAY) {
 
       // content record must be genesis type
       if (this._value.content.value.proofHash.length === 0) {
