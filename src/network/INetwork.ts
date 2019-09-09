@@ -9,7 +9,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  // sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<void>;
+  sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<void>;
 
   /**
    * One-way sending (unreliable with UDP)

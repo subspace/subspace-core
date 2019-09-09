@@ -1,8 +1,9 @@
 // tslint:disable:object-literal-sort-keys
 export const COMMANDS = {
   response: 0,
-  ping: 1,
-  pong: 2,
+  identification: 1,
+  ping: 2,
+  pong: 3,
 };
 // tslint:enable:object-literal-sort-keys
 

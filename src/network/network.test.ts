@@ -29,6 +29,7 @@ beforeEach(() => {
         port: tcpPortClient2,
       },
     ],
+    nodeIdClient1,
     {
       address: 'localhost',
       port: udpPortClient1,
@@ -53,6 +54,7 @@ beforeEach(() => {
         port: tcpPortClient1,
       },
     ],
+    nodeIdClient2,
     {
       address: 'localhost',
       port: udpPortClient2,
