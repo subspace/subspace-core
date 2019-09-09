@@ -1,5 +1,4 @@
 import {randomBytes} from "crypto";
-import {INetwork} from "./INetwork";
 import {Network} from "./Network";
 
 const nodeIdClient1 = new Uint8Array(32);
@@ -11,10 +10,10 @@ const udpPortClient2 = 11888;
 const tcpPortClient1 = 10889;
 const tcpPortClient2 = 11889;
 
-let networkClient1: INetwork;
-let networkClient2: INetwork;
+let networkClient1: Network;
+let networkClient2: Network;
 
-beforeAll(async () => {
+beforeEach(() => {
   networkClient1 = new Network(
     {
       address: 'localhost',
@@ -60,7 +59,22 @@ test('UDP: Send one-way unreliable', async () => {
   });
 });
 
-afterAll(async () => {
+test('UDP: Send unreliable', async () => {
+  const randomPayload = randomBytes(32);
+  const [, payload] = await Promise.all([
+    new Promise((resolve) => {
+      networkClient2.on('ping', async (payload, responseCallback) => {
+        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        responseCallback(randomPayload);
+        resolve();
+      });
+    }),
+    networkClient1.sendRequestUnreliable(nodeIdClient2, 'ping', randomPayload),
+  ]);
+  expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+});
+
+afterEach(async () => {
   await networkClient1.destroy();
   await networkClient2.destroy();
 });

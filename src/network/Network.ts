@@ -19,6 +19,10 @@ interface INodeAddress {
   protocolVersion?: '4';
 }
 
+function noopResponseCallback(): void {
+  // Do nothing
+}
+
 /**
  * @param command
  * @param requestResponseId `0` if no response is expected for request
@@ -114,7 +118,11 @@ export class Network extends EventEmitter implements INetwork {
       try {
         const [command, requestId, payload] = parseUdpMessage(message);
         if (command === 'response') {
-          // TODO:
+          // TODO: No validation!
+          const requestCallback = this.requestCallbacks.get(requestId);
+          if (requestCallback) {
+            requestCallback(payload);
+          }
         } else {
           if (requestId) {
             ++this.responseId;
@@ -154,7 +162,11 @@ export class Network extends EventEmitter implements INetwork {
   //   throw new Error("Method not implemented.");
   // }
 
-  public async sendOneWayRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<void> {
+  public async sendOneWayRequestUnreliable(
+    nodeId: Uint8Array,
+    command: ICommandsKeys,
+    payload: Uint8Array = emptyPayload,
+  ): Promise<void> {
     const message = composeUdpMessage(command, 0, payload);
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
@@ -209,22 +221,35 @@ export class Network extends EventEmitter implements INetwork {
   // Below methods are mostly to make nice TypeScript interface
   // TODO: Achieve the same without re-implementing methods
 
-  public on(event: ICommandsKeys, listener: (payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void) => void): this {
+  public on(
+    event: ICommandsKeys,
+    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+  ): this {
     EventEmitter.prototype.on.call(this, event, listener);
     return this;
   }
 
-  public once(event: ICommandsKeys, listener: (payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void) => void): this {
+  public once(
+    event: ICommandsKeys,
+    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+  ): this {
     EventEmitter.prototype.once.call(this, event, listener);
     return this;
   }
 
-  public off(event: ICommandsKeys, listener: (payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void) => void): this {
+  public off(
+    event: ICommandsKeys,
+    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+  ): this {
     EventEmitter.prototype.off.call(this, event, listener);
     return this;
   }
 
-  public emit(event: ICommandsKeys, payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void): boolean {
+  public emit(
+    event: ICommandsKeys,
+    payload: Uint8Array,
+    responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
+  ): boolean {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
   }
 

@@ -64,8 +64,23 @@ export interface INetwork extends EventEmitter {
 
   destroy(): Promise<void>;
 
-  on(event: ICommandsKeys, listener: (payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void) => void): this;
-  once(event: ICommandsKeys, listener: (payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void) => void): this;
-  off(event: ICommandsKeys, listener: (payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void) => void): this;
-  emit(event: ICommandsKeys, payload: Uint8Array, responseCallback?: (responsePayload: Uint8Array) => void): boolean;
+  on(
+    event: ICommandsKeys,
+    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+  ): this;
+
+  once(
+    event: ICommandsKeys,
+    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+  ): this;
+
+  off(
+    event: ICommandsKeys,
+    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+  ): this;
+
+  emit(
+    event: ICommandsKeys,
+    payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void,
+  ): boolean;
 }
