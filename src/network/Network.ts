@@ -88,9 +88,9 @@ export class Network extends EventEmitter implements INetwork {
   private nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
 
   constructor(
-    bootstrapUdpNode: INodeAddress,
-    bootstrapTcpNode: INodeAddress,
-    // bootstrapWsNode: INodeAddress,
+    bootstrapUdpNodes: INodeAddress[],
+    bootstrapTcpNodes: INodeAddress[],
+    // bootstrapWsNodes: INodeAddress[],
     ownUdpAddress: IAddress,
     // ownTcpAddress: IAddress,
     // ownWsAddress: IAddress,
@@ -98,23 +98,27 @@ export class Network extends EventEmitter implements INetwork {
     super();
     this.setMaxListeners(Infinity);
 
-    this.nodeIdToUdpAddressMap.set(
-      bootstrapUdpNode.nodeId,
-      {
-        address: bootstrapUdpNode.address,
-        port: bootstrapUdpNode.port,
-        protocolVersion: bootstrapUdpNode.protocolVersion,
-      },
-    );
+    for (const bootstrapUdpNode of bootstrapUdpNodes) {
+      this.nodeIdToUdpAddressMap.set(
+        bootstrapUdpNode.nodeId,
+        {
+          address: bootstrapUdpNode.address,
+          port: bootstrapUdpNode.port,
+          protocolVersion: bootstrapUdpNode.protocolVersion,
+        },
+      );
+    }
 
-    this.nodeIdToTcpAddressMap.set(
-      bootstrapTcpNode.nodeId,
-      {
-        address: bootstrapTcpNode.address,
-        port: bootstrapTcpNode.port,
-        protocolVersion: bootstrapTcpNode.protocolVersion,
-      },
-    );
+    for (const bootstrapTcpNode of bootstrapTcpNodes) {
+      this.nodeIdToTcpAddressMap.set(
+        bootstrapTcpNode.nodeId,
+        {
+          address: bootstrapTcpNode.address,
+          port: bootstrapTcpNode.port,
+          protocolVersion: bootstrapTcpNode.protocolVersion,
+        },
+      );
+    }
 
     const udp4Socket = dgram.createSocket('udp4');
     udp4Socket.on('message', (message: Buffer, remote: dgram.RemoteInfo) => {

@@ -15,32 +15,40 @@ let networkClient2: Network;
 
 beforeEach(() => {
   networkClient1 = new Network(
-    {
-      address: 'localhost',
-      nodeId: nodeIdClient2,
-      port: udpPortClient2,
-    },
-    {
-      address: 'localhost',
-      nodeId: nodeIdClient2,
-      port: tcpPortClient2,
-    },
+    [
+      {
+        address: 'localhost',
+        nodeId: nodeIdClient2,
+        port: udpPortClient2,
+      },
+    ],
+    [
+      {
+        address: 'localhost',
+        nodeId: nodeIdClient2,
+        port: tcpPortClient2,
+      },
+    ],
     {
       address: 'localhost',
       port: udpPortClient1,
     },
   );
   networkClient2 = new Network(
-    {
-      address: 'localhost',
-      nodeId: nodeIdClient1,
-      port: udpPortClient1,
-    },
-    {
-      address: 'localhost',
-      nodeId: nodeIdClient1,
-      port: tcpPortClient1,
-    },
+    [
+      {
+        address: 'localhost',
+        nodeId: nodeIdClient1,
+        port: udpPortClient1,
+      },
+    ],
+    [
+      {
+        address: 'localhost',
+        nodeId: nodeIdClient1,
+        port: tcpPortClient1,
+      },
+    ],
     {
       address: 'localhost',
       port: udpPortClient2,
