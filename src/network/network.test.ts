@@ -33,6 +33,10 @@ beforeEach(() => {
       address: 'localhost',
       port: udpPortClient1,
     },
+    {
+      address: 'localhost',
+      port: tcpPortClient1,
+    },
   );
   networkClient2 = new Network(
     [
@@ -52,6 +56,10 @@ beforeEach(() => {
     {
       address: 'localhost',
       port: udpPortClient2,
+    },
+    {
+      address: 'localhost',
+      port: tcpPortClient2,
     },
   );
 });

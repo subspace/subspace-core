@@ -1,6 +1,7 @@
 import {ArrayMap} from "array-map-set";
 import * as dgram from "dgram";
 import {EventEmitter} from "events";
+import * as net from "net";
 import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
 
@@ -28,7 +29,7 @@ function noopResponseCallback(): void {
  * @param requestResponseId `0` if no response is expected for request
  * @param payload
  */
-function composeUdpMessage(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
+function composeMessage(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
   const message = new Uint8Array(payload.length + 5);
   const view = new DataView(message.buffer);
   message.set([COMMANDS[command]]);
@@ -44,7 +45,7 @@ function composeUdpMessage(command: ICommandsKeys, requestResponseId: number, pa
  *
  * @return [command, requestId, payload]
  */
-function parseUdpMessage(message: Uint8Array): [ICommandsKeys, number, Uint8Array] {
+function parseMessage(message: Uint8Array): [ICommandsKeys, number, Uint8Array] {
   if (message.length < 5) {
     throw new Error(`Incorrect message length ${message.length} bytes, at least 5 bytes expected`);
   }
@@ -63,11 +64,18 @@ function parseUdpMessage(message: Uint8Array): [ICommandsKeys, number, Uint8Arra
   return [command, requestId, payload];
 }
 
+// 4 bytes for message length, 1 byte for command, 4 bytes for request ID
+const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
+
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
   // In seconds
   private readonly DEFAULT_TIMEOUT = 10;
+  // In bytes
+  private readonly UDP_MESSAGE_SIZE_LIMIT = 508;
+  // In bytes, excluding 4-bytes header with message length
+  private readonly TCP_MESSAGE_SIZE_LIMIT = 2 * 1024 * 1024; // 2 MiB
 
   // Will 2**32 be enough?
   private requestId: number = 0;
@@ -76,13 +84,14 @@ export class Network extends EventEmitter implements INetwork {
   /**
    * Mapping from requestId to callback
    */
-  private readonly requestCallbacks = new Map<number, (payload: Uint8Array) => void>();
+  private readonly requestCallbacks = new Map<number, (payload: Uint8Array) => Promise<void>>();
   /**
    * Mapping from responseId to callback
    */
-  private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => void>();
+  private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => Promise<void>>();
 
   private readonly udp4Socket: dgram.Socket;
+  private readonly tcp4Server: net.Server;
 
   private nodeIdToUdpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
@@ -92,7 +101,7 @@ export class Network extends EventEmitter implements INetwork {
     bootstrapTcpNodes: INodeAddress[],
     // bootstrapWsNodes: INodeAddress[],
     ownUdpAddress: IAddress,
-    // ownTcpAddress: IAddress,
+    ownTcpAddress: IAddress,
     // ownWsAddress: IAddress,
   ) {
     super();
@@ -121,6 +130,7 @@ export class Network extends EventEmitter implements INetwork {
     }
 
     this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
+    this.tcp4Server = this.createTcp4Server(ownTcpAddress);
   }
 
   // public sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<void> {
@@ -132,7 +142,7 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
-    const message = composeUdpMessage(command, 0, payload);
+    const message = composeMessage(command, 0, payload);
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(
@@ -161,10 +171,18 @@ export class Network extends EventEmitter implements INetwork {
   ): Promise<Uint8Array> {
     ++this.requestId;
     const requestId = this.requestId;
-    const message = composeUdpMessage(command, requestId, payload);
+    const message = composeMessage(command, requestId, payload);
+    const UDP_MESSAGE_SIZE_LIMIT = this.UDP_MESSAGE_SIZE_LIMIT;
+    if (message.length > UDP_MESSAGE_SIZE_LIMIT) {
+      throw new Error(
+        `UDP message too big, ${message.length} bytes specified, but only ${UDP_MESSAGE_SIZE_LIMIT} bytes allowed}`,
+      );
+    }
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
-      this.requestCallbacks.set(requestId, resolve);
+      this.requestCallbacks.set(requestId, async () => {
+        resolve();
+      });
       setTimeout(
         () => {
           this.requestCallbacks.delete(requestId);
@@ -193,10 +211,15 @@ export class Network extends EventEmitter implements INetwork {
   //   throw new Error("Method not implemented.");
   // }
 
-  public destroy(): Promise<void> {
-    return new Promise((resolve) => {
-      this.udp4Socket.close(resolve);
-    });
+  public async destroy(): Promise<void> {
+    await Promise.all([
+      new Promise((resolve) => {
+        this.udp4Socket.close(resolve);
+      }),
+      new Promise((resolve) => {
+        this.tcp4Server.close(resolve);
+      }),
+    ]);
   }
 
   // Below methods are mostly to make nice TypeScript interface
@@ -236,26 +259,33 @@ export class Network extends EventEmitter implements INetwork {
 
   private createUdp4Socket(ownUdpAddress: IAddress): dgram.Socket {
     const udp4Socket = dgram.createSocket('udp4');
-    udp4Socket.on('message', (message: Buffer, remote: dgram.RemoteInfo) => {
-      try {
-        const [command, requestId, payload] = parseUdpMessage(message);
-        if (command === 'response') {
-          // TODO: No validation!
-          const requestCallback = this.requestCallbacks.get(requestId);
-          if (requestCallback) {
-            requestCallback(payload);
-            // TODO: Should this really be done in case we receive response from random sender?
-            this.requestCallbacks.delete(requestId);
+    udp4Socket.on(
+      'message',
+      (message: Buffer, remote: dgram.RemoteInfo) => {
+        if (message.length > this.UDP_MESSAGE_SIZE_LIMIT) {
+          // TODO: Log too big message in debug mode
+          return;
+        }
+        try {
+          const [command, requestId, payload] = parseMessage(message);
+          if (command === 'response') {
+            // TODO: No validation!
+            const requestCallback = this.requestCallbacks.get(requestId);
+            if (requestCallback) {
+              requestCallback(payload);
+              // TODO: Should this really be done in case we receive response from random sender?
+              this.requestCallbacks.delete(requestId);
+            }
+            return;
           }
-        } else {
           if (requestId) {
             ++this.responseId;
             const responseId = this.responseId;
             this.responseCallbacks.set(
               responseId,
-              (payload) => {
+              async (payload) => {
                 this.responseCallbacks.delete(responseId);
-                const message = composeUdpMessage('response', requestId, payload);
+                const message = composeMessage('response', requestId, payload);
                 udp4Socket.send(message, remote.port, remote.address);
               },
             );
@@ -278,14 +308,124 @@ export class Network extends EventEmitter implements INetwork {
           } else {
             this.emit(command, payload);
           }
+        } catch (error) {
+          // TODO: Log error in debug mode
         }
-      } catch (error) {
-        // TODO: Log error in debug mode
-      }
+      },
+    );
+    udp4Socket.on('error', () => {
+      // TODO: Handle errors
     });
     udp4Socket.bind(ownUdpAddress.port, ownUdpAddress.address);
 
     return udp4Socket;
+  }
+
+  private createTcp4Server(ownTcpAddress: IAddress): net.Server {
+    const tcp4Server = net.createServer();
+    tcp4Server.on('connection', (socket: net.Socket) => {
+      let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
+      socket
+        .on('data', (buffer: Buffer) => {
+          receivedBuffer = Buffer.concat([receivedBuffer, buffer]);
+
+          while (receivedBuffer.length >= MIN_TCP_MESSAGE_SIZE) {
+            const messageLength = receivedBuffer.readUInt32BE(0);
+            if (receivedBuffer.length < (4 + messageLength)) {
+              break;
+            }
+            const message = receivedBuffer.slice(4, 4 + messageLength);
+            this.handleTcpMessage(socket, message);
+            receivedBuffer = receivedBuffer.slice(4 + messageLength);
+          }
+        });
+    });
+    tcp4Server.on('error', () => {
+      // TODO: Handle errors
+    });
+    tcp4Server.listen(ownTcpAddress.port, ownTcpAddress.address);
+
+    return tcp4Server;
+  }
+
+  private handleTcpMessage(socket: net.Socket, message: Buffer): void {
+    if (message.length > this.TCP_MESSAGE_SIZE_LIMIT) {
+      // TODO: Log too big message in debug mode
+      return;
+    }
+    try {
+      const [command, requestId, payload] = parseMessage(message);
+      if (command === 'response') {
+        // TODO: No validation!
+        const requestCallback = this.requestCallbacks.get(requestId);
+        if (requestCallback) {
+          requestCallback(payload);
+          // TODO: Should this really be done in case we receive response from random sender?
+          this.requestCallbacks.delete(requestId);
+        }
+        return;
+      }
+      if (requestId) {
+        ++this.responseId;
+        const responseId = this.responseId;
+        this.responseCallbacks.set(
+          responseId,
+          (payload) => {
+            this.responseCallbacks.delete(responseId);
+            const message = composeMessage('response', requestId, payload);
+            return this.sendTcpMessage(socket, message);
+          },
+        );
+        setTimeout(
+          () => {
+            this.responseCallbacks.delete(responseId);
+          },
+          this.DEFAULT_TIMEOUT * 1000,
+        ).unref();
+        this.emit(
+          command,
+          payload,
+          (responsePayload: Uint8Array) => {
+            const responseCallback = this.responseCallbacks.get(responseId);
+            if (responseCallback) {
+              responseCallback(responsePayload);
+            }
+          },
+        );
+      } else {
+        this.emit(command, payload);
+      }
+    } catch (error) {
+      // TODO: Log error in debug mode
+    }
+  }
+
+  private async sendTcpMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
+    const header = new Uint8Array(4);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, message.length, false);
+    if (!socket.destroyed) {
+      await Promise.all([
+        new Promise((resolve, reject) => {
+          socket.write(header, (error) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve();
+            }
+          });
+        }),
+        new Promise((resolve, reject) => {
+          socket.write(message, (error) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve();
+            }
+          });
+        }),
+      ]);
+    }
   }
 
   private async nodeIdToUdpAddress(nodeId: Uint8Array): Promise<IAddress> {
