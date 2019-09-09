@@ -36,7 +36,7 @@ function composeMessage(command: ICommandsKeys, requestResponseId: number, paylo
   const view = new DataView(message.buffer);
   message.set([COMMANDS[command]]);
   view.setUint32(1, requestResponseId, false);
-  message.set(payload, 5);
+  message.set(payload, 1 + 4);
   return message;
 }
 
@@ -52,7 +52,7 @@ function composeMessageWithTcpHeader(command: ICommandsKeys, requestResponseId: 
   view.setUint32(0, 1 + 4 + payload.length, false);
   message.set([COMMANDS[command]], 4);
   view.setUint32(4 + 1, requestResponseId, false);
-  message.set(payload, 5);
+  message.set(payload, 4 + 1 + 4);
   return message;
 }
 
@@ -243,6 +243,9 @@ export class Network extends EventEmitter implements INetwork {
         this.udp4Socket.close(resolve);
       }),
       new Promise((resolve) => {
+        for (const socket of this.nodeIdToTcpSocketMap.values()) {
+          socket.destroy();
+        }
         this.tcp4Server.close(resolve);
       }),
     ]);
@@ -527,7 +530,7 @@ export class Network extends EventEmitter implements INetwork {
             if (timedOut) {
               socket.destroy();
             } else {
-              const identificationMessage = composeMessage(
+              const identificationMessage = composeMessageWithTcpHeader(
                 'identification',
                 0,
                 this.ownNodeId,

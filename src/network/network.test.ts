@@ -92,6 +92,17 @@ test('UDP: Send unreliable', async () => {
   expect(payload.join(', ')).toEqual(randomPayload.join(', '));
 });
 
+test('TCP: Send one-way reliable', async () => {
+  const randomPayload = randomBytes(32);
+  return new Promise((resolve) => {
+    networkClient2.on('ping', (payload) => {
+      expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+      resolve();
+    });
+    networkClient1.sendOneWayRequest(nodeIdClient2, 'ping', randomPayload);
+  });
+});
+
 afterEach(async () => {
   await networkClient1.destroy();
   await networkClient2.destroy();
