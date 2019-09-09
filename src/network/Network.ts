@@ -180,13 +180,18 @@ export class Network extends EventEmitter implements INetwork {
     const message = composeUdpMessage(command, 0, payload);
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
-      this.udp4Socket.send(message, port, address, (error) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve();
-        }
-      });
+      this.udp4Socket.send(
+        message,
+        port,
+        address,
+        (error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        },
+      );
     });
   }
 
@@ -212,11 +217,16 @@ export class Network extends EventEmitter implements INetwork {
         },
         this.DEFAULT_TIMEOUT * 1000,
       ).unref();
-      this.udp4Socket.send(message, port, address, (error) => {
-        if (error) {
-          reject(error);
-        }
-      });
+      this.udp4Socket.send(
+        message,
+        port,
+        address,
+        (error) => {
+          if (error) {
+            reject(error);
+          }
+        },
+      );
     });
   }
 
