@@ -188,9 +188,28 @@ export class Network extends EventEmitter implements INetwork {
     });
   }
 
-  // public sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<Uint8Array> {
-  //   throw new Error("Method not implemented.");
-  // }
+  public async sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<Uint8Array> {
+    ++this.requestId;
+    const requestId = this.requestId;
+    const socket = await this.nodeIdToTcpSocket(nodeId);
+    return new Promise((resolve, reject) => {
+      this.requestCallbacks.set(requestId, resolve);
+      const timeout = setTimeout(
+        () => {
+          this.requestCallbacks.delete(requestId);
+          reject(new Error(`Request ${requestId} timeout out`));
+        },
+        this.DEFAULT_TIMEOUT * 1000,
+      );
+      timeout.unref();
+      this.sendTcpMessage(socket, command, requestId, payload)
+        .catch((error) => {
+          this.requestCallbacks.delete(requestId);
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
+  }
 
   public async sendRequestUnreliable(
     nodeId: Uint8Array,
@@ -209,19 +228,22 @@ export class Network extends EventEmitter implements INetwork {
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     return new Promise((resolve, reject) => {
       this.requestCallbacks.set(requestId, resolve);
-      setTimeout(
+      const timeout = setTimeout(
         () => {
           this.requestCallbacks.delete(requestId);
           reject(new Error(`Request ${requestId} timeout out`));
         },
         this.DEFAULT_TIMEOUT * 1000,
-      ).unref();
+      );
+      timeout.unref();
       this.udp4Socket.send(
         message,
         port,
         address,
         (error) => {
           if (error) {
+            this.requestCallbacks.delete(requestId);
+            clearTimeout(timeout);
             reject(error);
           }
         },

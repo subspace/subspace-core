@@ -105,6 +105,21 @@ describe('TCP', () => {
       networkClient1.sendOneWayRequest(nodeIdClient2, 'ping', randomPayload);
     });
   });
+
+  test('Send reliable', async () => {
+    const randomPayload = randomBytes(32);
+    const [, payload] = await Promise.all([
+      new Promise((resolve) => {
+        networkClient2.on('ping', async (payload, responseCallback) => {
+          expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+          responseCallback(randomPayload);
+          resolve();
+        });
+      }),
+      networkClient1.sendRequest(nodeIdClient2, 'ping', randomPayload),
+    ]);
+    expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+  });
 });
 
 afterEach(async () => {

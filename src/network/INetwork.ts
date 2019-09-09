@@ -27,7 +27,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  // sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<Uint8Array>;
+  sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<Uint8Array>;
 
   /**
    * Make request that implies response (unreliable with UDP)
@@ -37,14 +37,6 @@ export interface INetwork extends EventEmitter {
    * @param payload
    */
   sendRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<Uint8Array>;
-
-  /**
-   * Send response to previously received request
-   *
-   * @param requestId
-   * @param payload
-   */
-  // sendResponse(requestId: number, payload: Uint8Array): Promise<void>;
 
   /**
    * Start gossiping command across the network
