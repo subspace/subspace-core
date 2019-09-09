@@ -31,10 +31,27 @@ function noopResponseCallback(): void {
  * @param payload
  */
 function composeMessage(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
-  const message = new Uint8Array(payload.length + 5);
+  // 1 byte for command, 4 bytes for requestResponseId
+  const message = new Uint8Array(1 + 4 + payload.length);
   const view = new DataView(message.buffer);
   message.set([COMMANDS[command]]);
   view.setUint32(1, requestResponseId, false);
+  message.set(payload, 5);
+  return message;
+}
+
+/**
+ * @param command
+ * @param requestResponseId `0` if no response is expected for request
+ * @param payload
+ */
+function composeMessageWithTcpHeader(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
+  // 4 bytes for message length, 1 byte for command, 4 bytes for requestResponseId
+  const message = new Uint8Array(4 + 1 + 4 + payload.length);
+  const view = new DataView(message.buffer);
+  view.setUint32(0, 1 + 4 + payload.length, false);
+  message.set([COMMANDS[command]], 4);
+  view.setUint32(4 + 1, requestResponseId, false);
   message.set(payload, 5);
   return message;
 }
@@ -144,9 +161,8 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
-    const message = composeMessage(command, 0, payload);
     const socket = await this.nodeIdToTcpSocket(nodeId);
-    return this.sendTcpMessage(socket, message);
+    return this.sendTcpMessage(socket, command, 0, payload);
   }
 
   public async sendOneWayRequestUnreliable(
@@ -426,8 +442,7 @@ export class Network extends EventEmitter implements INetwork {
               responseId,
               (payload) => {
                 this.responseCallbacks.delete(responseId);
-                const message = composeMessage('response', requestId, payload);
-                return this.sendTcpMessage(socket, message);
+                return this.sendTcpMessage(socket, 'response', requestId, payload);
               },
             );
             setTimeout(
@@ -456,21 +471,15 @@ export class Network extends EventEmitter implements INetwork {
     }
   }
 
-  private async sendTcpMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
-    const header = new Uint8Array(4);
-    const view = new DataView(header.buffer);
-    view.setUint32(0, message.length, false);
+  /**
+   * @param socket
+   * @param command
+   * @param requestResponseId `0` if no response is expected for request
+   * @param payload
+   */
+  private async sendTcpMessage(socket: net.Socket, command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Promise<void> {
+    const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
     if (!socket.destroyed) {
-      // 2 `.write` calls to avoid `Buffer.concat()` with unnecessary memory copying
-      await new Promise((resolve, reject) => {
-        socket.write(header, (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
       await new Promise((resolve, reject) => {
         socket.write(message, (error) => {
           if (error) {
