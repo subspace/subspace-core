@@ -66,40 +66,44 @@ beforeEach(() => {
   );
 });
 
-test('UDP: Send one-way unreliable', async () => {
-  const randomPayload = randomBytes(32);
-  return new Promise((resolve) => {
-    networkClient2.on('ping', (payload) => {
-      expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-      resolve();
+describe('UDP', () => {
+  test('Send one-way unreliable', async () => {
+    const randomPayload = randomBytes(32);
+    return new Promise((resolve) => {
+      networkClient2.on('ping', (payload) => {
+        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        resolve();
+      });
+      networkClient1.sendOneWayRequestUnreliable(nodeIdClient2, 'ping', randomPayload);
     });
-    networkClient1.sendOneWayRequestUnreliable(nodeIdClient2, 'ping', randomPayload);
+  });
+
+  test('Send unreliable', async () => {
+    const randomPayload = randomBytes(32);
+    const [, payload] = await Promise.all([
+      new Promise((resolve) => {
+        networkClient2.on('ping', async (payload, responseCallback) => {
+          expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+          responseCallback(randomPayload);
+          resolve();
+        });
+      }),
+      networkClient1.sendRequestUnreliable(nodeIdClient2, 'ping', randomPayload),
+    ]);
+    expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
 });
 
-test('UDP: Send unreliable', async () => {
-  const randomPayload = randomBytes(32);
-  const [, payload] = await Promise.all([
-    new Promise((resolve) => {
-      networkClient2.on('ping', async (payload, responseCallback) => {
+describe('TCP', () => {
+  test('Send one-way reliable', async () => {
+    const randomPayload = randomBytes(32);
+    return new Promise((resolve) => {
+      networkClient2.on('ping', (payload) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-        responseCallback(randomPayload);
         resolve();
       });
-    }),
-    networkClient1.sendRequestUnreliable(nodeIdClient2, 'ping', randomPayload),
-  ]);
-  expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-});
-
-test('TCP: Send one-way reliable', async () => {
-  const randomPayload = randomBytes(32);
-  return new Promise((resolve) => {
-    networkClient2.on('ping', (payload) => {
-      expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-      resolve();
+      networkClient1.sendOneWayRequest(nodeIdClient2, 'ping', randomPayload);
     });
-    networkClient1.sendOneWayRequest(nodeIdClient2, 'ping', randomPayload);
   });
 });
 
