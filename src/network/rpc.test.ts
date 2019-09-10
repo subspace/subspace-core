@@ -8,7 +8,7 @@ import * as crypto from '../crypto/crypto';
 import { Block } from '../ledger/block';
 import { Tx } from '../ledger/tx';
 import { IPeerContactInfo } from '../main/interfaces';
-import { areArraysEqual, parseContactInfo } from '../utils/utils';
+import { parseContactInfo } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { Network } from './Network';
 import { RPC } from './rpc';
@@ -58,12 +58,13 @@ test('ping-pong', async () => {
   const sentPayload = crypto.randomBytes(32);
   rpc2.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
   const receivedPayload = await rpc1.ping(peer2.nodeId, sentPayload);
-  expect(areArraysEqual(sentPayload, receivedPayload)).toBe(true);
+  expect(sentPayload.join(', ')).toEqual(receivedPayload.join(', '));
+
 });
 
 test('gossip-tx', async () => {
   rpc2.on('tx-gossip', (payload: Uint8Array) => {
-    expect(areArraysEqual(payload, tx.toBytes())).toBe(true);
+    expect(payload.join(',')).toEqual(tx.toBytes().join(','));
   });
 
   rpc1.gossipTx(tx);
@@ -71,7 +72,7 @@ test('gossip-tx', async () => {
 
 test('gossip-block', async () => {
   rpc2.on('block-gossip', (payload: Uint8Array) => {
-    expect(areArraysEqual(payload, block.toFullBytes())).toBe(true);
+    expect(payload.join(',')).toEqual(block.toBytes().join(','));
   });
 
   rpc1.gossipBlock(block);
@@ -79,20 +80,21 @@ test('gossip-block', async () => {
 
 test('request-tx', async () => {
   rpc2.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
-    expect(areArraysEqual(txId, tx.key)).toBe(true);
+    expect(txId.join(',')).toEqual(tx.key.join(','));
     responseCallback(tx.toBytes());
   });
   const payload = await rpc1.requestTx(peer2.nodeId, tx.key);
-  expect(areArraysEqual(payload.toBytes(), tx.toBytes())).toBe(true);
+  expect(payload.toBytes().join(',')).toEqual(tx.toBytes().join(','));
+
 });
 
 test('request-block', async () => {
   rpc2.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
-    expect(areArraysEqual(blockId, block.key)).toBe(true);
+    expect(blockId.join(',')).toEqual(block.key.join(','));
     responseCallback(block.toFullBytes());
   });
   const payload = await rpc1.requestBlock(peer2.nodeId, block.key);
-  expect(areArraysEqual(payload.toBytes(), block.toBytes())).toBe(true);
+  expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
 });
 
 afterAll(async () => {
