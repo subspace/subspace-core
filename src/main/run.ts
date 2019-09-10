@@ -5,9 +5,17 @@ if (!globalThis.indexedDB) {
 }
 // tslint:disable: object-literal-sort-keys
 
-import { randomBytes } from '../crypto/crypto';
 import { Node } from '../node/node';
 import { IPeerContactInfo } from './interfaces';
+
+const selfContactInfo: IPeerContactInfo = {
+  nodeId: new Uint8Array(),
+  address: 'localhost',
+  udpPort: 10888,
+  tcpPort: 10889,
+  wsPort: 10890,
+  protocolVersion: '4',
+};
 
 /**
  * Init Params
@@ -40,6 +48,8 @@ export const run = async (
   encodingRounds: number,
   storageDir?: string,
   reset = true,
+  contactInfo: IPeerContactInfo = selfContactInfo,
+  bootstrapPeers: IPeerContactInfo[] = [],
 ) => {
 
   let storageAdapter: 'memory' | 'browser' | 'rocks';
@@ -59,25 +69,7 @@ export const run = async (
       break;
   }
 
-  const selfContactInfo: IPeerContactInfo = {
-    nodeId: new Uint8Array(),
-    address: 'localhost',
-    udpPort: 8001,
-    tcpPort: 8002,
-    wsPort: 8003,
-    protocolVersion: '4',
-  };
-
-  const peerContactInfo: IPeerContactInfo[] = [{
-    nodeId: randomBytes(32),
-    address: 'localhost',
-    udpPort: 8004,
-    tcpPort: 8005,
-    wsPort: 8006,
-    protocolVersion: '4',
-  }];
-
-  const node = await Node.init(selfContactInfo, peerContactInfo, nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds, storageDir, reset);
+  const node = await Node.init(contactInfo, bootstrapPeers, nodeType, storageAdapter, plotAdapter, numberOfPlots, farmSize, validateRecords, encodingRounds, storageDir, reset);
   await node.getOrCreateAccount();
   await node.createLedgerAndFarm(chainCount);
 };

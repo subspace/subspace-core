@@ -2,7 +2,6 @@
 import * as commander from "commander";
 import * as fs from "fs";
 import { run } from './run';
-// import { Node } from '../node/node';
 
 const version = JSON.parse(fs.readFileSync(__dirname + '/../../package.json', 'utf8')).version;
 // const title = `Subspace Network Daemon (SND) CLI version ${version}`

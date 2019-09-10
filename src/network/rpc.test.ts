@@ -44,11 +44,12 @@ const rpc1 = new RPC(network1);
 const rpc2 = new RPC(network2);
 
 let tx: Tx;
+let wallet: Wallet;
 
 const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomBytes(32));
 
 beforeAll(async () => {
-  const wallet = await Wallet.open('memory', 'rpc-test');
+  wallet = await Wallet.open('memory', 'rpc-test');
   wallet.createAccount();
   const publicKey = wallet.getAccounts()[0].publicKey;
   tx = await wallet.createCoinBaseTx(1, publicKey);
@@ -100,4 +101,5 @@ test('request-block', async () => {
 afterAll(async () => {
   await rpc1.destroy();
   await rpc2.destroy();
+  await wallet.close();
 });
