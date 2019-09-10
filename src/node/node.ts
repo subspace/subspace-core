@@ -6,6 +6,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
@@ -57,7 +58,8 @@ export class Node extends EventEmitter {
       fs.mkdirSync(storageDir, { recursive: true });
     }
 
-    const wallet = await Wallet.open(storageAdapter, storageDir);
+    const blsSignatures = await BlsSignatures.init();
+    const wallet = await Wallet.open(blsSignatures, storageAdapter, storageDir);
 
     for (let i = 0; i < numberOfPlots; ++i) {
       await wallet.createAccount(`Plot-${i}`);
@@ -65,7 +67,7 @@ export class Node extends EventEmitter {
 
     const addresses = [...wallet.addresses].map((address) => hex2Bin(address));
 
-    const ledger = await Ledger.init(storageAdapter, storageDir, validateRecords, encodingRounds);
+    const ledger = await Ledger.init(blsSignatures, storageAdapter, storageDir, validateRecords, encodingRounds);
     const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
 
     selfContactInfo.nodeId = addresses[0];

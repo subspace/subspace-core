@@ -9,6 +9,7 @@ if (!globalThis.indexedDB) {
 
 import * as fs from 'fs';
 import * as os from 'os';
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Tx } from '../ledger/tx';
 import { rmDirRecursiveSync } from '../utils/utils';
@@ -32,8 +33,11 @@ if (fs.existsSync(storageDir)) {
 
 fs.mkdirSync(storageDir, { recursive: true });
 
+let blsSignatures: BlsSignatures;
+
 beforeAll(async () => {
-  wallet = await Wallet.open('rocks', storageDir, 'wallet-test');
+  blsSignatures = await BlsSignatures.init();
+  wallet = await Wallet.open(blsSignatures, 'rocks', storageDir, 'wallet-test');
   account1 = await wallet.createAccount(name, description, seed);
   account2 = await wallet.createAccount();
   account3 = await wallet.createAccount();
@@ -109,7 +113,7 @@ test('delete-account', async () => {
 
 test('create-coinbase-tx', async () => {
   coinbaseTx = await wallet.createCoinBaseTx(1, account2.publicKey);
-  expect(coinbaseTx.isValid()).toBe(true);
+  expect(coinbaseTx.isValid(blsSignatures)).toBe(true);
   const account2FromMap = wallet.getAccount(account2.address);
   const account2FromStorage = await wallet.getAccountFromStorage(account2.address);
   expect(account2FromMap).toMatchObject(account2FromStorage);
@@ -127,7 +131,7 @@ test('confirm-coinbase-tx', async () => {
 
 test('create-credit-tx', async () => {
   creditTx = await wallet.createCreditTx(1, account2.publicKey, account3.publicKey);
-  expect(creditTx.isValid()).toBe(true);
+  expect(creditTx.isValid(blsSignatures)).toBe(true);
   await wallet.onTxReceived(creditTx);
 
   const account2FromMap = wallet.getAccount(account2.address);
@@ -165,7 +169,7 @@ test('confirm-credit-tx', async () => {
 test('close-load-clear', async () => {
   await wallet.close();
 
-  const reopenedWallet = await Wallet.open('rocks', storageDir, 'wallet-test');
+  const reopenedWallet = await Wallet.open(blsSignatures, 'rocks', storageDir, 'wallet-test');
   expect(reopenedWallet.getAccounts().length).toBe(2);
   expect(wallet.addresses.size).toBe(2);
 

@@ -14,6 +14,7 @@ if (!globalThis.indexedDB) {
 
 import * as fs from 'fs';
 import * as os from 'os';
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, HASH_LENGTH } from '../main/constants';
 import { rmDirRecursiveSync } from '../utils/utils';
@@ -39,8 +40,11 @@ if (fs.existsSync(storageDir)) {
 
 fs.mkdirSync(storageDir, { recursive: true });
 
+let blsSignatures: BlsSignatures;
+
 beforeAll(async () => {
-  ledgerWallet = await Wallet.open('rocks', storageDir, 'ledger-test');
+  blsSignatures = await BlsSignatures.init();
+  ledgerWallet = await Wallet.open(blsSignatures, 'rocks', storageDir, 'ledger-test');
   const senderSeed = crypto.randomBytes(32);
   senderAccount = await ledgerWallet.createAccount('ledger-test-sender', 'a sender account for ledger tests', senderSeed);
   receiverAccount = await ledgerWallet.createAccount('ledger-test-receiver', 'a receiver account for ledger tests');
@@ -49,33 +53,33 @@ beforeAll(async () => {
 test('create-coinbase-tx', async () => {
   const reward = 1;
   const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, senderAccount.publicKey);
-  expect(coinbaseTx.isValid()).toBe(true);
+  expect(coinbaseTx.isValid(blsSignatures)).toBe(true);
 
   const data = coinbaseTx.toBytes();
   const fromBytes = Tx.fromBytes(data);
-  fromBytes.isValid();
+  fromBytes.isValid(blsSignatures);
   expect(fromBytes.key.toString()).toBe(coinbaseTx.key.toString());
 });
 
 test('create-credit-tx', async () => {
   const amount = 1;
   const creditTx = await ledgerWallet.createCreditTx(amount, receiverAccount.publicKey, senderAccount.publicKey);
-  expect(creditTx.isValid()).toBe(true);
+  expect(creditTx.isValid(blsSignatures)).toBe(true);
 
   const data = creditTx.toBytes();
   const fromBytes = Tx.fromBytes(data);
-  fromBytes.isValid();
+  fromBytes.isValid(blsSignatures);
   expect(fromBytes.key.toString()).toBe(creditTx.key.toString());
 });
 
 test('create-genesis-proof', () => {
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const genesisProof = Proof.createGenesisProof(previousProofHash);
-  expect(genesisProof.isValid()).toBe(true);
+  expect(genesisProof.isValid(blsSignatures)).toBe(true);
 
   const data = genesisProof.toBytes();
   const fromBytes = Proof.fromBytes(data);
-  fromBytes.isValid();
+  fromBytes.isValid(blsSignatures);
   expect(fromBytes.key.toString()).toBe(genesisProof.key.toString());
 
 });
@@ -99,11 +103,11 @@ test('create-proof', () => {
   );
 
   const signedProof = ledgerWallet.signProof(unsignedProof);
-  expect(signedProof.isValid()).toBe(true);
+  expect(signedProof.isValid(blsSignatures)).toBe(true);
 
   const data = signedProof.toBytes();
   const fromBytes = Proof.fromBytes(data);
-  fromBytes.isValid();
+  fromBytes.isValid(blsSignatures);
   expect(fromBytes.key.toString()).toBe(signedProof.key.toString());
 });
 
@@ -140,11 +144,11 @@ test('create-genesis-block', () => {
   const previousProofHash =  crypto.randomBytes(HASH_LENGTH);
   const parentContentHash = crypto.randomBytes(HASH_LENGTH);
   const genesisBlock = Block.createGenesisBlock(previousProofHash, parentContentHash);
-  expect(genesisBlock.isValid()).toBe(true);
+  expect(genesisBlock.isValid(blsSignatures)).toBe(true);
 
   const data = genesisBlock.toFullBytes();
   const block = Block.fromFullBytes(data);
-  block.isValid();
+  block.isValid(blsSignatures);
   expect(block.key.toString()).toBe(genesisBlock.key.toString());
 
   const compactBlockData = block.toCompactBytes();
@@ -191,11 +195,11 @@ test('create-block', async () => {
   txIds.unshift(coinbaseTx.key);
 
   const block = Block.create(signedProof, parentContentHash, txIds, coinbaseTx);
-  expect(block.isValid()).toBe(true);
+  expect(block.isValid(blsSignatures)).toBe(true);
 
   const data = block.toFullBytes();
   const fromBinaryBlock = Block.fromFullBytes(data);
-  block.isValid();
+  block.isValid(blsSignatures);
   expect(fromBinaryBlock.key.toString()).toBe(block.key.toString());
 
   const compactBlockData = block.toCompactBytes();

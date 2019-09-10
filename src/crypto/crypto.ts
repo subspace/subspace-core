@@ -1,8 +1,7 @@
 import { jumpConsistentHash } from '@subspace/jump-consistent-hash';
-import { AggregationInfo, PrivateKey, PublicKey, Signature } from 'bls-signatures';
 import * as crypto from 'crypto';
 import { Tree } from 'merkle-tree-binary';
-import { IKeyPair, IMerkleData} from '../main/interfaces';
+import { IMerkleData } from '../main/interfaces';
 
 // ToDo
   // rewrite JCH in Rust (Nazar)
@@ -66,49 +65,4 @@ export function jumpHash(seed: Uint8Array, buckets: number): number {
 export function isDateWithinRange(date: number, range: number): boolean {
   // checks to ensure a supplied unix timestamp is within a supplied range
   return Math.abs(Date.now() - date) <= range;
-}
-
-/**
- * Returns a BLS-381 public/private key pair from a binary seed.
- */
-export function generateBLSKeys(seed?: Uint8Array): IKeyPair {
-  if (!seed) {
-    seed = crypto.randomBytes(32);
-  }
-  const privateKey = PrivateKey.fromSeed(seed);
-  const publicKey = privateKey.getPublicKey();
-  const binaryPrivateKey = privateKey.serialize();
-  const binaryPublicKey = publicKey.serialize();
-  privateKey.delete();
-  publicKey.delete();
-  return { binaryPrivateKey, binaryPublicKey };
-}
-
-/**
- * Signs the hash of a binary message given a BLS private key.
- */
-export function signMessage(binaryMessage: Uint8Array, binaryPrivateKey: Uint8Array): Uint8Array {
-  const messageHash = hash(binaryMessage);
-  const privateKey = PrivateKey.fromBytes(binaryPrivateKey, false);
-  const signature = privateKey.sign(messageHash);
-  const binarySignature = signature.serialize();
-  signature.delete();
-  privateKey.delete();
-  return binarySignature;
-}
-
-/**
- * Verifies a BLS signature given a binary message and BLS public key.
- */
-export function verifySignature(binaryMessage: Uint8Array, binarySignature: Uint8Array, binaryPublicKey: Uint8Array): boolean {
-  const signature = Signature.fromBytes(binarySignature);
-  const publicKey = PublicKey.fromBytes(binaryPublicKey);
-  const messageHash = hash(binaryMessage);
-  const aggregationInfo = AggregationInfo.fromMsg(publicKey, messageHash);
-  signature.setAggregationInfo(aggregationInfo);
-  const isValid = signature.verify();
-  signature.delete();
-  publicKey.delete();
-  aggregationInfo.delete();
-  return isValid;
 }
