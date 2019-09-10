@@ -1,9 +1,10 @@
-import {ArrayMap} from "array-map-set";
+import {ArrayMap, ArraySet} from "array-map-set";
 import * as dgram from "dgram";
 import {EventEmitter} from "events";
 import * as net from "net";
+import {hash} from "../crypto/crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
-import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys} from "./commands";
+import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
 
 interface IAddress {
@@ -82,6 +83,19 @@ function parseMessage(message: Uint8Array): [ICommandsKeys, number, Uint8Array] 
   return [command, requestId, payload];
 }
 
+export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
+  const length = aKey.length;
+  for (let i = 0; i < length; ++i) {
+    const diff = aKey[i] - bKey[i];
+    if (diff < 0) {
+      return -1;
+    } else if (diff > 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 // 4 bytes for message length, 1 byte for command, 4 bytes for request ID
 const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
@@ -92,6 +106,8 @@ export class Network extends EventEmitter implements INetwork {
   private readonly DEFAULT_TIMEOUT = 10;
   // In seconds
   private readonly DEFAULT_CONNECTION_EXPIRATION = 60;
+  // In seconds
+  private readonly GOSSIP_CACHE_TIMEOUT = 60;
   // In bytes
   private readonly UDP_MESSAGE_SIZE_LIMIT = 508;
   // In bytes, excluding 4-bytes header with message length
@@ -117,6 +133,7 @@ export class Network extends EventEmitter implements INetwork {
   private readonly nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToTcpSocketMap = ArrayMap<Uint8Array, net.Socket>();
   private readonly tcpSocketToNodeIdMap = new Map<net.Socket, Uint8Array>();
+  private readonly gossipCache = new Set<string>();
 
   constructor(
     bootstrapUdpNodes: INodeAddress[],
@@ -251,13 +268,15 @@ export class Network extends EventEmitter implements INetwork {
     });
   }
 
-  // public gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
-  //   throw new Error("Method not implemented.");
-  // }
-
-  // public gossipUnreliable(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
-  //   throw new Error("Method not implemented.");
-  // }
+  public async gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
+    if (!GOSSIP_COMMANDS.has(command)) {
+      throw new Error(`Command ${command} is not supported for gossiping`);
+    }
+    const gossipMessage = new Uint8Array(1 + payload.length);
+    gossipMessage.set([COMMANDS[command]]);
+    gossipMessage.set(payload, 1);
+    this.gossipInternal(gossipMessage);
+  }
 
   public async destroy(): Promise<void> {
     await Promise.all([
@@ -319,45 +338,50 @@ export class Network extends EventEmitter implements INetwork {
         }
         try {
           const [command, requestId, payload] = parseMessage(message);
-          if (command === 'response') {
-            // TODO: No validation!
-            const requestCallback = this.requestCallbacks.get(requestId);
-            if (requestCallback) {
-              requestCallback(payload);
-              // TODO: Should this really be done in case we receive response from random sender?
-              this.requestCallbacks.delete(requestId);
-            }
-            return;
-          }
-          if (requestId) {
-            ++this.responseId;
-            const responseId = this.responseId;
-            this.responseCallbacks.set(
-              responseId,
-              async (payload) => {
-                this.responseCallbacks.delete(responseId);
-                const message = composeMessage('response', requestId, payload);
-                udp4Socket.send(message, remote.port, remote.address);
-              },
-            );
-            setTimeout(
-              () => {
-                this.responseCallbacks.delete(responseId);
-              },
-              this.DEFAULT_TIMEOUT * 1000,
-            ).unref();
-            this.emit(
-              command,
-              payload,
-              (responsePayload: Uint8Array) => {
-                const responseCallback = this.responseCallbacks.get(responseId);
-                if (responseCallback) {
-                  responseCallback(responsePayload);
-                }
-              },
-            );
-          } else {
-            this.emit(command, payload);
+          switch (command) {
+            case 'response':
+              // TODO: No validation!
+              const requestCallback = this.requestCallbacks.get(requestId);
+              if (requestCallback) {
+                requestCallback(payload);
+                // TODO: Should this really be done in case we receive response from random sender?
+                this.requestCallbacks.delete(requestId);
+              }
+              break;
+            case 'gossip':
+              this.handleIncomingGossip(payload);
+              break;
+            default:
+              if (requestId) {
+                ++this.responseId;
+                const responseId = this.responseId;
+                this.responseCallbacks.set(
+                  responseId,
+                  async (payload) => {
+                    this.responseCallbacks.delete(responseId);
+                    const message = composeMessage('response', requestId, payload);
+                    udp4Socket.send(message, remote.port, remote.address);
+                  },
+                );
+                setTimeout(
+                  () => {
+                    this.responseCallbacks.delete(responseId);
+                  },
+                  this.DEFAULT_TIMEOUT * 1000,
+                ).unref();
+                this.emit(
+                  command,
+                  payload,
+                  (responsePayload: Uint8Array) => {
+                    const responseCallback = this.responseCallbacks.get(responseId);
+                    if (responseCallback) {
+                      responseCallback(responsePayload);
+                    }
+                  },
+                );
+              } else {
+                this.emit(command, payload);
+              }
           }
         } catch (error) {
           // TODO: Log error in debug mode
@@ -453,6 +477,12 @@ export class Network extends EventEmitter implements INetwork {
             this.requestCallbacks.delete(requestId);
           }
           break;
+        case 'gossip':
+          this.handleIncomingGossip(
+            payload,
+            this.tcpSocketToNodeIdMap.get(socket) as Uint8Array,
+          );
+          break;
         default:
           if (!this.tcpSocketToNodeIdMap.has(socket)) {
             // TODO: Log in debug mode that non-identified node tried to send message
@@ -502,6 +532,10 @@ export class Network extends EventEmitter implements INetwork {
    */
   private async sendTcpMessage(socket: net.Socket, command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Promise<void> {
     const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
+    return this.sendTcpMessageRaw(socket, message);
+  }
+
+  private async sendTcpMessageRaw(socket: net.Socket, message: Uint8Array): Promise<void> {
     if (!socket.destroyed) {
       await new Promise((resolve, reject) => {
         socket.write(message, (error) => {
@@ -567,5 +601,97 @@ export class Network extends EventEmitter implements INetwork {
     }
     // TODO: Implement fetching from DHT
     throw new Error('Sending to arbitrary nodeId is not implemented yet');
+  }
+
+  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
+    const command = COMMANDS_INVERSE[gossipMessage[0]];
+    if (!GOSSIP_COMMANDS.has(command)) {
+      // TODO: Log in debug mode
+      return;
+    }
+    const messageHash = hash(gossipMessage).join(',');
+    if (this.gossipCache.has(messageHash)) {
+      // Prevent infinite recursive gossiping
+      return;
+    }
+
+    const payload = gossipMessage.subarray(1);
+    this.emit(command, payload);
+
+    this.gossipInternal(gossipMessage, sourceNodeId)
+      .catch((_) => {
+        // TODO: Log in debug mode
+      });
+  }
+
+  private async gossipInternal(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): Promise<void> {
+    const message = composeMessage('gossip', 0, gossipMessage);
+    // TODO: Store hash of the message and do not re-gossip it further
+    if (message.length >= this.TCP_MESSAGE_SIZE_LIMIT) {
+      throw new Error(
+        `Too big message of ${message.length} bytes, can't gossip more than ${this.TCP_MESSAGE_SIZE_LIMIT} bytes`,
+      );
+    }
+    const messageHash = hash(message).join(',');
+    this.gossipCache.add(messageHash);
+    const timeout = setTimeout(
+      () => {
+        this.gossipCache.delete(messageHash);
+      },
+      this.GOSSIP_CACHE_TIMEOUT * 1000,
+    );
+    timeout.unref();
+
+    const allNodesSet = ArraySet([
+      ...this.nodeIdToUdpAddressMap.keys(),
+      ...this.nodeIdToTcpAddressMap.keys(),
+      ...this.nodeIdToTcpSocketMap.keys(),
+    ]);
+    if (sourceNodeId) {
+      allNodesSet.delete(sourceNodeId);
+    }
+    const nodesToGossipTo = Array.from(allNodesSet)
+      .sort(compareUint8Array)
+      .slice(
+        0,
+        Math.max(
+          Math.log2(allNodesSet.size),
+          10,
+        ),
+      );
+
+    const fitsInUdp = message.length <= this.UDP_MESSAGE_SIZE_LIMIT;
+
+    for (const nodeId of nodesToGossipTo) {
+      const socket = this.nodeIdToTcpSocketMap.get(nodeId);
+      if (socket) {
+        this.sendTcpMessageRaw(socket, message)
+          .catch((_) => {
+            // TODO: Log in debug mode
+          });
+        continue;
+      }
+      const udpAddress = this.nodeIdToUdpAddressMap.get(nodeId);
+      if (fitsInUdp && udpAddress) {
+        this.udp4Socket.send(
+          message,
+          udpAddress.port,
+          udpAddress.address,
+          (error) => {
+            if (error) {
+              // TODO: Log in debug mode
+            }
+          },
+        );
+        continue;
+      }
+      this.nodeIdToTcpSocket(nodeId)
+        .then((socket) => {
+          return this.sendTcpMessageRaw(socket, message);
+        })
+        .catch((_) => {
+          // TODO: Log in debug mode
+        });
+    }
   }
 }
