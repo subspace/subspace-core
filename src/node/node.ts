@@ -2,6 +2,7 @@
 // tslint:disable: member-ordering
 
 // import * as codes from '../codes/codes';
+import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -12,9 +13,10 @@ import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
+import { IPeerContactInfo, ISelfContactInfo } from '../main/interfaces';
 import { Network } from '../network/Network';
 import { RPC } from '../network/rpc';
-import { bin2Hex, hex2Bin, measureProximity, rmDirRecursiveSync } from '../utils/utils';
+import { bin2Hex, hex2Bin, measureProximity, parseContactInfo, rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -25,12 +27,14 @@ import { IWalletAccount, Wallet } from '../wallet/wallet';
   // include the RPC interface
   // sync an existing ledger
 
-export class Node {
+export class Node extends EventEmitter {
 
   /**
    * Instantiate a new empty node with only environment variables.
    */
   public static async init(
+    selfContactInfo: ISelfContactInfo,
+    peerContactInfo: IPeerContactInfo[],
     nodeType: string,
     storageAdapter = 'rocks',
     plotMode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db',
@@ -63,7 +67,17 @@ export class Node {
 
     const ledger = await Ledger.init(storageAdapter, storageDir, validateRecords, encodingRounds);
     const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
-    const network = new Network();
+
+    const networkOptions = parseContactInfo(addresses[0], selfContactInfo, peerContactInfo);
+
+    const network = new Network(
+      networkOptions.bootstrapTcpNodes,
+      networkOptions.bootstrapUdPNodes,
+      networkOptions.ownNodeId,
+      networkOptions.ownUdpAddress,
+      networkOptions.ownTcpAddress,
+    );
+
     const rpc = new RPC(network);
 
     return new Node(nodeType, wallet, farm, ledger, rpc);
@@ -82,11 +96,12 @@ export class Node {
     public rpc: RPC,
   ) {
 
+    super();
     this.type = nodeType;
-    this.rpc.on('ping', () => this.onPing());
-    this.rpc.on('pong', () => this.onPong());
+    this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
+    this.rpc.on('pong', () => this.emit('pong'));
     this.rpc.on('tx-gossip', (tx: Tx) => this.onTx(tx));
-    this.rpc.on('block-gossip', (block: Block) => this.onBlock(block));
+    this.rpc.on('block-gossip', (block: Block, encoding: Uint8Array) => this.onBlock(block, encoding));
     this.rpc.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onTxRequest(txId, responseCallback));
     this.rpc.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onBlockRequest(blockId, responseCallback));
 
@@ -125,8 +140,8 @@ export class Node {
         await this.ledger.isValidBlock(block, encoding);
         console.log('New block validated by node');
       }
-  
-      this.rpc.gossipBlock(nodeId, block);
+
+      this.rpc.gossipBlock(block);
     });
 
     /**
@@ -134,7 +149,7 @@ export class Node {
      * Encode the tx as binary and gossip over the network.
      */
     this.ledger.on('tx', (tx: Tx) => {
-      this.rpc.gossipTx(nodeId, tx);
+      this.rpc.gossipTx(tx);
     });
   }
 
@@ -276,30 +291,23 @@ export class Node {
     await this.rpc.ping(nodeId);
   }
 
-  public async onPing() {}
-
-  public async onPong() {}
-
   /**
    * A new tx is received over the network from another node.
    * Filter the tx for duplicates or spam. Validate the tx.
    * Apply the tx to the ledger and gossip to all other peers.
    */
   public async onTx(tx: Tx): Promise<void> {
-    // filter
-      // validate
-      // apply
-      // re-gossip
-      // check for account updates for this node
-    const tx = Tx.load(txData);
     if (this.ledger.isValidTx(tx)) {
       const addresses = this.wallet.addresses;
       if (addresses.has(bin2Hex(tx.receiverAddress))) {
         this.wallet.onTxReceived(tx);
       }
       this.ledger.applyTx(tx);
-      this.rpc.gossip(txData);
+      this.rpc.gossipTx(tx);
     }
+
+    // ToDo
+      // filter duplicates and prevent re-gossip to sender
   }
 
   /**
@@ -307,36 +315,63 @@ export class Node {
    * Filter the block for duplicates or spam. Validate the block.
    * Apply the block to the ledger and gossip to all other peers.
    */
-  public async onBlock(block: Block): Promise<void> {
-    // should include the encoding
-      // filter
-      // validate
-      // apply
-      // re-gossip
+  public async onBlock(block: Block, encoding: Uint8Array): Promise<void> {
     if (this.ledger.isValidBlock(block, encoding)) {
       this.ledger.applyBlock(block);
       this.rpc.gossipBlock(block);
     }
-    return;
+
+    // ToDo
+      // filter duplicates and prevent re-gossip to sender
   }
 
+  /**
+   * Request a tx over the network from an existing peer.
+   *
+   * @param txId
+   *
+   * @return tx instance or not found
+   */
   public async requestTx(txId: Uint8Array): Promise<Tx> {
     return this.rpc.requestTx(new Uint8Array(), txId);
-    // apply tx, error specify error callback
+    // TODO
+      // apply tx, error specify error callback
   }
 
-  private onTxRequest(txId: Uint8Array, responseCallback: (response: Uint8Array) => void): void {
-    const txData = this.ledger.getTx(txId);
+  /**
+   * Received a tx request over the network, reply with tx or not found.
+   *
+   * @param txId
+   * @param responseCallback
+   *
+   */
+  private async onTxRequest(txId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const txData = await this.ledger.getTx(txId);
     txData ? responseCallback(txData) : responseCallback(new Uint8Array());
   }
 
+  /**
+   * Request a block over the network from an existing peer.
+   *
+   * @param blockId
+   *
+   * @return block instance or not found
+   */
   public async requestBlock(blockId: Uint8Array): Promise<Block> {
     return this.rpc.requestBlock(new Uint8Array(), blockId);
-    // apply block, error specify error callback
+    // TODO
+      // apply block, error specify error callback
   }
 
-  private onBlockRequest(blockId: Uint8Array, responseCallback: (response: Uint8Array) => void): void {
-    const blockData = this.ledger.getBlock(blockId);
+  /**
+   * Received a block request over the network, reply with block or not found.
+   *
+   * @param blockId
+   * @param responseCallback
+   *
+   */
+  private async onBlockRequest(blockId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const blockData = await this.ledger.getBlock(blockId);
     blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
   }
 }

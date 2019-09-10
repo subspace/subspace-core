@@ -142,3 +142,20 @@ export interface IPlotData {
   offset: number;
   path: string;
 }
+
+export interface IPeerContactInfo {
+  nodeId: Uint8Array;
+  address: string;
+  udpPort: number;
+  tcpPort: number;
+  wsPort: number;
+  protocolVersion?: '4';
+}
+
+export interface ISelfContactInfo {
+  address: string;
+  udpPort: number;
+  tcpPort: number;
+  wsPort: number;
+  protocolVersion?: '4';
+}

@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
-import { ICompactBlockValue, IPiece } from '../main/interfaces';
+import { IPiece } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { areArraysEqual, bin2Hex, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
@@ -635,35 +635,125 @@ export class Ledger extends EventEmitter {
       // note when tx is deep confirmed (N other levels have also been confirmed, 6?)
   }
 
-  public async getTx(txId: Uint8Array): Promise<Tx | null> {
-    let tx: Tx;
-    const tx = this.txMap.get(txId);
-    if (!tx) {
-
+  /**
+   * Searches memory and disk for a tx matching query.
+   *
+   * @param txId hash of tx data
+   *
+   * @return binary tx data or not found
+   */
+  public async getTx(txId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let txData: Uint8Array | undefined | null;
+    txData = this.txMap.get(txId);
+    if (!txData) {
+      txData = await this.storage.get(txId);
     }
-    // check in map
-    // check in storage
-    // return null or true
-    return;
+    return txData;
   }
 
-  public async getBlock(blockId: Uint8Array): Promise<Block | null> {
-    return;
+  /**
+   * Searches memory and disk for block metadata matching query.
+   *
+   * @param blockId hash of block data
+   *
+   * @return binary block metadata or not found
+   */
+  public async getCompactBlock(blockId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let blockData: Uint8Array | undefined | null;
+    blockData = this.compactBlockMap.get(blockId);
+    if (!blockData) {
+      blockData = await this.storage.get(blockId);
+    }
+    return blockData;
   }
 
-  public async getCompactBlock(blockId: Uint8Array): Promise<ICompactBlockValue | null> {
-    return;
+  /**
+   * Searches memory and disk for a proof matching query.
+   *
+   * @param proofId hash of proof data
+   *
+   * @return binary proof data or not found
+   */
+  public async getProof(proofId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let proofData: Uint8Array | undefined | null;
+    proofData = this.proofMap.get(proofId);
+    if (!proofData) {
+      proofData = await this.storage.get(proofId);
+    }
+    return proofData;
   }
 
-  public async getProof(proofId: Uint8Array): Promise<Proof | null> {
-    return;
+  /**
+   * Searches memory and disk for a content matching query.
+   *
+   * @param contentId   hash of content data
+   *
+   * @return binary content data or not found
+   */
+  public async getContent(contentId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let contentData: Uint8Array | undefined | null;
+    contentData = this.contentMap.get(contentId);
+    if (!contentData) {
+      contentData = await this.storage.get(contentId);
+    }
+    return contentData;
   }
 
-  public async getContent(contentId: Uint8Array): Promise<Content | null> {
-    return;
+  /**
+   * Searches memory and disk for a block matching query. Returns full block with proof, content, and all txs.
+   *
+   * @param blockId hash of block data
+   *
+   * @return binary block data or not found
+   */
+  public async getBlock(blockId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let compactBlockData: Uint8Array | undefined | null;
+    compactBlockData = this.compactBlockMap.get(blockId);
+    if (!compactBlockData) {
+      compactBlockData = await this.storage.get(blockId);
+    }
+
+    if (!compactBlockData) {
+      return;
+    }
+
+    const compactBlock = Block.fromCompactBytes(compactBlockData);
+    const proofData = await this.getProof(compactBlock.proofHash);
+    if (!proofData) {
+      return;
+    }
+
+    const contentData = await this.getContent(compactBlock.contentHash);
+    if (!contentData) {
+      return;
+    }
+
+    const content = Content.fromBytes(contentData);
+    const txDataArray: Uint8Array[] = [];
+    for (const txId of content.value.payload) {
+      const txData = await this.getTx(txId);
+      if (!txData) {
+        return;
+      }
+      txDataArray.push(txData);
+    }
+
+    return Buffer.concat([proofData, contentData, ...txDataArray]);
   }
 
-  public async getState(stateId: Uint8Array): Promise<State | null> {
-    return;
+  /**
+   * Searches memory and disk for a state block matching query.
+   *
+   * @param stateId hash of state data
+   *
+   * @return binary state data or not found
+   */
+  public async getState(stateId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let stateData: Uint8Array | undefined | null;
+    stateData = this.stateMap.get(stateId);
+    if (!stateData) {
+      stateData = await this.storage.get(stateId);
+    }
+    return stateData;
   }
 }

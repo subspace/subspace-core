@@ -3,15 +3,22 @@ import {Network} from "./Network";
 
 const nodeIdClient1 = new Uint8Array(32);
 nodeIdClient1.set([1]);
+const udpPortClient1 = 11888;
+const tcpPortClient1 = 11889;
+
 const nodeIdClient2 = new Uint8Array(32);
-nodeIdClient1.set([2]);
-const udpPortClient1 = 10888;
-const udpPortClient2 = 11888;
-const tcpPortClient1 = 10889;
-const tcpPortClient2 = 11889;
+nodeIdClient2.set([2]);
+const udpPortClient2 = 12888;
+const tcpPortClient2 = 12889;
+
+const nodeIdClient3 = new Uint8Array(33);
+nodeIdClient3.set([3]);
+const udpPortClient3 = 13888;
+const tcpPortClient3 = 13889;
 
 let networkClient1: Network;
 let networkClient2: Network;
+let networkClient3: Network;
 
 beforeEach(() => {
   networkClient1 = new Network(
@@ -62,6 +69,31 @@ beforeEach(() => {
     {
       address: 'localhost',
       port: tcpPortClient2,
+    },
+  );
+  networkClient3 = new Network(
+    [
+      {
+        address: 'localhost',
+        nodeId: nodeIdClient1,
+        port: udpPortClient1,
+      },
+    ],
+    [
+      {
+        address: 'localhost',
+        nodeId: nodeIdClient1,
+        port: tcpPortClient1,
+      },
+    ],
+    nodeIdClient3,
+    {
+      address: 'localhost',
+      port: udpPortClient3,
+    },
+    {
+      address: 'localhost',
+      port: tcpPortClient3,
     },
   );
 });
@@ -122,7 +154,32 @@ describe('TCP', () => {
   });
 });
 
+describe('Gossip', () => {
+  test('Send gossip command', async () => {
+    const randomPayload = randomBytes(32);
+    return new Promise((resolve) => {
+      let waitingFor = 2;
+      networkClient2.on('tx-gossip', (payload) => {
+        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        --waitingFor;
+        if (!waitingFor) {
+          resolve();
+        }
+      });
+      networkClient3.on('tx-gossip', (payload) => {
+        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        --waitingFor;
+        if (!waitingFor) {
+          resolve();
+        }
+      });
+      networkClient1.gossip('tx-gossip', randomPayload);
+    });
+  });
+});
+
 afterEach(async () => {
   await networkClient1.destroy();
   await networkClient2.destroy();
+  await networkClient3.destroy();
 });

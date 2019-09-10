@@ -2,9 +2,13 @@
   // port to Rust/WASM?
   // write tests
 
+// tslint:disable: object-literal-sort-keys
+
 import * as fs from 'fs';
 import * as path from 'path';
 import { inspect } from 'util';
+import { IPeerContactInfo, ISelfContactInfo } from '../main/interfaces';
+import { IAddress, INodeAddress } from '../network/Network';
 
 /**
  * Returns the exclusive-or (XOR) of two byte arrays.
@@ -172,4 +176,52 @@ export function rmDirRecursiveSync(dirPath: string): void {
     });
     fs.rmdirSync(dirPath);
   }
+}
+
+export function parseContactInfo(nodeId: Uint8Array, selfContactInfo: ISelfContactInfo, peerContactInfo: IPeerContactInfo[]): {
+  bootstrapTcpNodes: INodeAddress[],
+  bootstrapUdPNodes: INodeAddress[],
+  ownNodeId: Uint8Array,
+  ownUdpAddress: IAddress,
+  ownTcpAddress: IAddress,
+} {
+  const bootstrapUdPNodes: INodeAddress [] = [];
+  const bootstrapTcpNodes: INodeAddress [] = [];
+
+  for (const peer of peerContactInfo) {
+    bootstrapUdPNodes.push({
+      nodeId: peer.nodeId,
+      address: peer.address,
+      port: peer.udpPort,
+      protocolVersion: peer.protocolVersion,
+    });
+
+    bootstrapTcpNodes.push({
+      nodeId: peer.nodeId,
+      address: peer.address,
+      port: peer.udpPort,
+      protocolVersion: peer.protocolVersion,
+    });
+  }
+
+  const ownNodeId = nodeId;
+  const ownUdpAddress: IAddress = {
+    address: selfContactInfo.address,
+    port: selfContactInfo.udpPort,
+    protocolVersion: selfContactInfo.protocolVersion,
+  };
+
+  const ownTcpAddress: IAddress = {
+    address: selfContactInfo.address,
+    port: selfContactInfo.tcpPort,
+    protocolVersion: selfContactInfo.protocolVersion,
+  };
+
+  return {
+    bootstrapUdPNodes,
+    bootstrapTcpNodes,
+    ownNodeId,
+    ownUdpAddress,
+    ownTcpAddress,
+  };
 }
