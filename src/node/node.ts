@@ -21,10 +21,7 @@ import { IWalletAccount, Wallet } from '../wallet/wallet';
 
 // ToDo
   // add time logging
-  // pass in and create storage path at startup with sensible default
   // detect type of storage for storage adapter
-  // define the full API
-  // include the RPC interface
   // sync an existing ledger
 
 export class Node extends EventEmitter {
@@ -35,8 +32,8 @@ export class Node extends EventEmitter {
   public static async init(
     selfContactInfo: IPeerContactInfo,
     peerContactInfo: IPeerContactInfo[],
-    nodeType: string,
-    storageAdapter = 'rocks',
+    nodeType: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
+    storageAdapter: 'rocks' | 'browser' | 'memory' = 'rocks',
     plotMode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db',
     numberOfPlots: number,
     farmSize: number,
@@ -46,8 +43,56 @@ export class Node extends EventEmitter {
     reset = true,
   ): Promise<Node> {
 
+    switch (nodeType) {
+      case 'full': {
+        // does everything, default mode
+        // must have a public/static IP address
+        // receives, validates and routes gossip on the relay network
+        // stores head of the ledger in memory
+        // stores the raw blockchain on disk
+        // stores the archival state as the state chain
+        // stores its segment of the piece set in plot (encoded blockchain)
+        // attempts to solve the block challenge and gossips new blocks it creates
+        // announces itself on the dht and serves requests for pieces from its segment of the ledger
+        // serves rpc requests over the network
+        // serves json-rpc requests over https
+        // serves as a bootstrap server for new nodes joining the network
+        break;
+      } case 'validator': {
+        // receives, validates and routes gossip on the relay network
+        // stores head of the ledger in memory
+        // stores the raw blockchain on disk
+        // stores the archival state as the state chain
+        // serves rpc requests over the network
+        break;
+      } case 'farmer': {
+        // receives, validates and routes gossip on the relay network
+        // stores head of the ledger in memory
+        // stores the archival state as the state chain
+        // stores its segment of the piece set in plot (encoded blockchain)
+        // attempts to solve the block challenge and gossips new blocks it creates
+        // announces itself on the dht and serves requests for pieces from its segment of the ledger
+        break;
+      } case 'gateway': {
+        // must have a public/static IP address
+        // receives, validates and routes gossip on the relay network
+        // stores head of the ledger in memory
+        // stores the raw blockchain on disk
+        // stores the archival state as the state chain
+        // serves rpc requests over the network
+        // serves json-rpc requests over https
+        // serves as a bootstrap server for new nodes joining the network
+        break;
+      } case 'client': {
+        // receives, validates and routes gossip on the relay network
+        // stores head of the ledger in memory
+        // stores the archival state as the state chain
+        break;
+      }
+    }
+
     // initialize storage directory
-    storageDir ? storageDir = path.normalize(storageDir) : storageDir = `${os.homedir()}/subspace/data/`;
+    // storageDir ? storageDir = path.normalize(storageDir) : storageDir = `${os.homedir()}/subspace/data/`;
 
     if (reset && fs.existsSync(storageDir)) {
      rmDirRecursiveSync(storageDir);
@@ -80,14 +125,14 @@ export class Node extends EventEmitter {
   }
 
   public readonly type: string;
-  public isFarming = true;
+  public isFarming: boolean;
   public isRelay = true;
   public isServing = true;
 
   constructor(
     nodeType: string,
     public wallet: Wallet,
-    public farm: Farm,
+    public farm: Farm | null,
     public ledger: Ledger,
     public rpc: RPC,
   ) {
@@ -106,13 +151,15 @@ export class Node extends EventEmitter {
      * Add each piece to the plot, if farming.
      */
     this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array, confirmedTxs: Tx[]) => {
-      if (this.isFarming) {
+      if (this.farm) {
         // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
         const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash);
-        for (const piece of pieceDataSet) {
-          await this.farm.addPiece(piece.piece, piece.data);
+        if (this.farm) {
+          for (const piece of pieceDataSet) {
+            await this.farm.addPiece(piece.piece, piece.data);
+          }
+          this.ledger.emit('completed-plotting');
         }
-        this.ledger.emit('completed-plotting');
       }
 
       // update account for each tx that links to an account for this node
@@ -176,6 +223,9 @@ export class Node extends EventEmitter {
    * Retains both the original ledger data within storage and the encoded piece set in the plot.
    */
   public async createLedgerAndFarm(chainCount: number): Promise<void> {
+    if (!this.farm) {
+      throw new Error('Cannot farm, this node is not configured as a farmer');
+    }
     this.isFarming = true;
     const account = await this.getOrCreateAccount();
     console.log('\nLaunching a new Subspace Full Node!');
@@ -197,6 +247,9 @@ export class Node extends EventEmitter {
   }
 
   public async farmBlock(): Promise<void> {
+    if (!this.farm) {
+      throw new Error('Cannot farm, this node is not configured as a farmer');
+    }
     // find best encoding for challenge
     console.log('\nSolving a new block challenge');
     console.log('------------------------------');
