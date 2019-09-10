@@ -76,7 +76,7 @@ export class Node extends EventEmitter {
 
     const network = new Network(...networkOptions);
 
-    const rpc = new RPC(network);
+    const rpc = new RPC(network, blsSignatures);
 
     return new Node(nodeType, wallet, farm, ledger, rpc);
   }
