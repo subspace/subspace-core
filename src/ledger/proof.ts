@@ -1,6 +1,7 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
 
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { IProofData, IProofValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex } from '../utils/utils';
@@ -173,7 +174,7 @@ export class Proof {
   /**
    * Validates that proof follows schema and is internally consistent, but not the proof is correct.
    */
-  public isValid(): boolean {
+  public isValid(blsSignatures: BlsSignatures): boolean {
 
     // validate genesis proof
     if (areArraysEqual(this._value.previousLevelHash, new Uint8Array(32))) {
@@ -234,7 +235,7 @@ export class Proof {
 
     // is signature valid for message and public key
     if (!areArraysEqual(this._value.signature, new Uint8Array(96))) {
-      if (!crypto.verifySignature(this.toBytes(false), this._value.signature, this._value.publicKey)) {
+      if (!blsSignatures.verifySignature(this.toBytes(false), this._value.signature, this._value.publicKey)) {
         throw new Error('Invalid proof, invalid signature for message and public key');
       }
     }
@@ -252,7 +253,7 @@ export class Proof {
   /**
    * Appends a detached BLS signature to a newly created proof.
    */
-  public sign(privateKey: Uint8Array): void {
-    this._value.signature = crypto.signMessage(this.toBytes(false), privateKey);
+  public sign(privateKey: Uint8Array, blsSignatures: BlsSignatures): void {
+    this._value.signature = blsSignatures.signMessage(this.toBytes(false), privateKey);
   }
 }

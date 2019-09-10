@@ -2,6 +2,7 @@
 // tslint:disable: object-literal-sort-keys
 
 import { ArrayMap, ArraySet } from "array-map-set";
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from "../crypto/crypto";
 import { Proof } from "../ledger/proof";
 import { Tx } from "../ledger/tx";
@@ -41,27 +42,33 @@ export class Wallet {
    * Returns a new wallet instance, loading any stored accounts from disk.
    * Using memory storage backend is redundant here as the accounts are already handled in a map.
    *
+   * @param blsSignatures
    * @param storageAdapter The type of storage backend for persisting wallet accounts.
+   * @param storageDir
+   * @param namespace
    *
-   * @return A wallet instance with all accounts loaded.
+   * @return A wallet instance with all accounts loaded
    */
-  public static async open(storageAdapter: string, storageDir: string, namespace = 'wallet'): Promise<Wallet> {
+  public static async open(blsSignatures: BlsSignatures, storageAdapter: string, storageDir: string, namespace = 'wallet'): Promise<Wallet> {
     const storage = new Storage(storageAdapter, storageDir, namespace);
-    const wallet = new Wallet(storage);
+    const wallet = new Wallet(blsSignatures, storage);
     await wallet.loadAccounts();
     return wallet;
   }
 
   public readonly addresses: Set<string> = new Set();
-  private accounts = ArrayMap<Uint8Array, IWalletAccount>();
-  private storage: Storage;
+  private readonly accounts = ArrayMap<Uint8Array, IWalletAccount>();
+  private readonly storage: Storage;
+  private readonly blsSignatures: BlsSignatures;
 
   /**
    * Base constructor for Wallet, for internal use only
    *
+   * @param blsSignatures
    * @param storage The storage instance used to persist account data
    */
-  constructor(storage: Storage) {
+  constructor(blsSignatures: BlsSignatures, storage: Storage) {
+    this.blsSignatures = blsSignatures;
     this.storage = storage;
   }
 
@@ -76,7 +83,7 @@ export class Wallet {
    */
   public async createAccount(name?: string, description?: string, seed?: Uint8Array): Promise<IWalletAccount> {
 
-    const keys = crypto.generateBLSKeys(seed);
+    const keys = this.blsSignatures.generateBLSKeys(seed);
     const address = crypto.hash(keys.binaryPublicKey);
 
     const account: IWalletAccount = {
@@ -188,7 +195,13 @@ export class Wallet {
    */
   public async createCoinBaseTx(blockReward: number, receiverPublicKey: Uint8Array): Promise<Tx> {
     const receiverAccount = this.getAccount(crypto.hash(receiverPublicKey));
-    const coinbaseTx = Tx.createCoinbase(receiverAccount.publicKey, blockReward, receiverAccount.nonce, receiverAccount.privateKey);
+    const coinbaseTx = Tx.createCoinbase(
+      receiverAccount.publicKey,
+      blockReward,
+      receiverAccount.nonce,
+      receiverAccount.privateKey,
+      this.blsSignatures,
+    );
     receiverAccount.nonce ++;
     receiverAccount.pendingBalance += blockReward;
     receiverAccount.credits.add(coinbaseTx.key);
@@ -208,7 +221,14 @@ export class Wallet {
    */
   public async createCreditTx(amount: number, senderPublicKey: Uint8Array,  receiverPublicKey: Uint8Array): Promise<Tx> {
     const senderAccount = this.getAccount(crypto.hash(senderPublicKey));
-    const tx = Tx.create(senderAccount.publicKey, receiverPublicKey, amount, senderAccount.nonce, senderAccount.privateKey);
+    const tx = Tx.create(
+      senderAccount.publicKey,
+      receiverPublicKey,
+      amount,
+      senderAccount.nonce,
+      senderAccount.privateKey,
+      this.blsSignatures,
+    );
     senderAccount.nonce ++;
     senderAccount.pendingBalance -= amount;
     senderAccount.debits.add(tx.key);
@@ -225,7 +245,7 @@ export class Wallet {
    */
   public signProof(proof: Proof): Proof {
     const account = this.getAccount(crypto.hash(proof.value.publicKey));
-    proof.sign(account.privateKey);
+    proof.sign(account.privateKey, this.blsSignatures);
     proof.setKey();
     return proof;
   }

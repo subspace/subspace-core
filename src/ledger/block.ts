@@ -1,6 +1,7 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
 
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { IBlockData, ICompactBlockData, ICompactBlockValue, IFullBlockValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex, smallBin2Num, smallNum2Bin } from '../utils/utils';
@@ -196,14 +197,14 @@ export class Block {
   /**
    * Validates that block follows schema and is internally consistent, but not that block is correct.
    */
-  public isValid(): boolean {
+  public isValid(blsSignatures: BlsSignatures): boolean {
 
     if (!areArraysEqual(this._value.proof.key, this._value.content.value.proofHash)) {
       throw new Error('Invalid block, content does not point to proof');
     }
 
     // validate content, will throw if invalid
-    this._value.proof.isValid();
+    this._value.proof.isValid(blsSignatures);
 
     // validate proof, will throw if invalid
     this._value.content.isValid();
@@ -231,7 +232,7 @@ export class Block {
     }
 
     // validate coinbase, will throw if invalid
-    this.value.coinbase.isValid();
+    this.value.coinbase.isValid(blsSignatures);
 
     // validate the coinbase tx has same public key as proof
     if (!areArraysEqual(this.value.coinbase.value.receiver, this._value.proof.value.publicKey)) {
