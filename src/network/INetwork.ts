@@ -44,15 +44,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  // gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void>;
-
-  /**
-   * Start gossiping command across the network (unreliable with UDP)
-   *
-   * @param command
-   * @param payload
-   */
-  // gossipUnreliable(command: ICommandsKeys, payload: Uint8Array): Promise<void>;
+  gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void>;
 
   destroy(): Promise<void>;
 
