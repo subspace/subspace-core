@@ -61,7 +61,7 @@ export const run = async (
 
   const selfContactInfo: IPeerContactInfo = {
     nodeId: new Uint8Array(),
-    address: 'loclahost',
+    address: 'localhost',
     udpPort: 8001,
     tcpPort: 8002,
     wsPort: 8003,
