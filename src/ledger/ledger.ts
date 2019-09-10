@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
-import { ICompactBlockData, IContentData, IPiece, IProofData, IStateData, ITxData } from '../main/interfaces';
+import { IPiece } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { areArraysEqual, bin2Hex, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
@@ -81,17 +81,17 @@ export class Ledger extends EventEmitter {
   public chainCount = 0;
   public readonly lastConfirmedLevel = 0;
   public accounts: Account;
-  public stateMap = ArrayMap<Uint8Array, IStateData>();
+  public stateMap = ArrayMap<Uint8Array, Uint8Array>();
 
   // memory pool, may be cleared after each level is confirmed (if not serving)
-  public compactBlockMap = ArrayMap<Uint8Array, ICompactBlockData>();
+  public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
   private lastStateHash: Uint8Array = new Uint8Array();
   private chains: Chain[] = [];
   // @ts-ignore TODO: Use it for something
   private storage: Storage;
-  private proofMap = ArrayMap<Uint8Array, IProofData>();
-  private contentMap = ArrayMap<Uint8Array, IContentData>();
-  private txMap = ArrayMap<Uint8Array, ITxData>();
+  private proofMap = ArrayMap<Uint8Array, Uint8Array>();
+  private contentMap = ArrayMap<Uint8Array, Uint8Array>();
+  private txMap = ArrayMap<Uint8Array, Uint8Array>();
   private unconfirmedTxs: Set<Uint8Array> = ArraySet(); // has not been included in a block
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
@@ -135,13 +135,13 @@ export class Ledger extends EventEmitter {
       previousProofHash = block.value.proof.key;
 
       // save the proof, append to level data
-      this.proofMap.set(block.value.proof.key, block.value.proof.toData());
+      this.proofMap.set(block.value.proof.key, block.value.proof.toBytes());
       const binProof = block.value.proof.toBytes();
       levelRecords.push(binProof);
       levelProofHashes.push(binProof);
 
       // save the content, append to level data
-      this.contentMap.set(block.value.content.key, block.value.content.toData());
+      this.contentMap.set(block.value.content.key, block.value.content.toBytes());
       levelRecords.push(block.value.content.toBytes());
 
       // extend the chain and to ledger
@@ -149,8 +149,7 @@ export class Ledger extends EventEmitter {
       this.chains.push(chain);
 
       // add compact block
-      const compactBlockData: ICompactBlockData = [block.value.proof.key, block.value.content.key];
-      this.compactBlockMap.set(block.key, compactBlockData);
+      this.compactBlockMap.set(block.key, block.toCompactBytes());
 
       // init each chain as unconfirmed
       this.unconfirmedChains.add(i);
@@ -175,24 +174,19 @@ export class Ledger extends EventEmitter {
       for (const blockId of chain.values()) {
         const compactBlockData = this.compactBlockMap.get(blockId);
         if (!compactBlockData) {
-          throw new Error('Cannot create new level, cannot fetch requisite compact block data');
+          throw new Error('Cannot create level, cannot retrieve required compact block data');
         }
-
-        const proofData = this.proofMap.get(compactBlockData[0]);
-        const contentData = this.contentMap.get(compactBlockData[1]);
+        const compactBlock = Block.fromCompactBytes(compactBlockData);
+        const proofData = this.proofMap.get(compactBlock.proofHash);
+        const contentData = this.contentMap.get(compactBlock.contentHash);
         if (!proofData || !contentData) {
           throw new Error('Cannot create new level, cannot fetch requisite proof or content data');
         }
 
-        // need to store as bytes
-        // add a from bytes method
-
-        const proof = Proof.load(proofData);
-        const binProof = proof.toBytes();
-        levelRecords.push(binProof);
-        levelProofHashes.push(compactBlockData[0]);
-        const content = Content.load(contentData);
-        levelRecords.push(content.toBytes());
+        levelRecords.push(proofData);
+        levelProofHashes.push(compactBlock.proofHash);
+        const content = Content.fromBytes(contentData);
+        levelRecords.push(contentData);
 
         for (const txId of content.value.payload) {
           uniqueTxSet.add(txId);
@@ -208,9 +202,9 @@ export class Ledger extends EventEmitter {
       if (!txData) {
         throw new Error('Cannot create new level, cannot fetch requisite transaction data');
       }
-      const tx = Tx.load(txData);
+      const tx = Tx.fromBytes(txData);
       confirmedTxs.push(tx);
-      levelRecords.push(tx.toBytes());
+      levelRecords.push(txData);
     }
 
     const levelProofHashesData = Buffer.concat(levelProofHashes);
@@ -276,7 +270,7 @@ export class Ledger extends EventEmitter {
       },
     };
 
-    this.stateMap.set(state.key, state.toData());
+    this.stateMap.set(state.key, state.toBytes());
     this.lastStateHash = state.key;
     return [pieceData];
   }
@@ -339,7 +333,7 @@ export class Ledger extends EventEmitter {
       };
     }
 
-    this.stateMap.set(state.key, state.toData());
+    this.stateMap.set(state.key, state.toBytes());
     this.lastStateHash = state.key;
 
     return pieceDataSet;
@@ -369,11 +363,12 @@ export class Ledger extends EventEmitter {
     // create the block
     const chainIndex = crypto.jumpHash(proof.key, this.chainCount);
     const parentBlockId = this.chains[chainIndex].head;
-    const compactParentBlock = this.compactBlockMap.get(parentBlockId);
-    if (!compactParentBlock) {
+    const compactParentBlockData = this.compactBlockMap.get(parentBlockId);
+    if (!compactParentBlockData) {
       throw new Error('Cannot get parent block when extending the chain.');
     }
-    const parentContentHash = compactParentBlock[1];
+    const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
+    const parentContentHash = compactParentBlock.contentHash;
     const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
     const block = Block.create(proof, parentContentHash, txIds, coinbaseTx);
     console.log(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
@@ -464,7 +459,7 @@ export class Ledger extends EventEmitter {
       if (!pieceStateData) {
         throw new Error('Invalid block proof, referenced state data is not in state map');
       }
-      const state = State.load(pieceStateData);
+      const state = State.fromBytes(pieceStateData);
       const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
       if (!validPieceProof) {
         throw new Error('Invalid block proof, piece proof is not a valid merkle path');
@@ -486,7 +481,7 @@ export class Ledger extends EventEmitter {
     if (!parentContentData) {
       throw new Error('Invalid block content, cannot retrieve parent content block');
     }
-    const parentContent = Content.load(parentContentData);
+    const parentContent = Content.fromBytes(parentContentData);
     if (areArraysEqual(parentContent.value.parentContentHash, new Uint8Array(32))) {
       const parentChainIndex = crypto.jumpHash(parentContent.value.proofHash, this.chainCount);
       if (parentChainIndex !== correctChainIndex) {
@@ -507,7 +502,7 @@ export class Ledger extends EventEmitter {
       if (!txData) {
         throw new Error('Invalid block content, cannot retrieve referenced tx id');
       }
-      const tx = Tx.load(txData);
+      const tx = Tx.fromBytes(txData);
       this.isValidTx(tx);
     }
 
@@ -524,15 +519,15 @@ export class Ledger extends EventEmitter {
       // extend the correct chain with block id and add to compact block map
       const chainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
       this.chains[chainIndex].addBlock(block.key);
-      this.compactBlockMap.set(block.key, [block.value.proof.key, block.value.content.key]);
+      this.compactBlockMap.set(block.key, block.toCompactBytes());
       this.unconfirmedBlocksByChain[chainIndex].add(block.key);
 
       // add proof to proof map and update last proof seen
-      this.proofMap.set(block.value.proof.key, block.value.proof.toData());
+      this.proofMap.set(block.value.proof.key, block.value.proof.toBytes());
       this.parentProofHash = block.value.proof.key;
 
       // add content to content map
-      this.contentMap.set(block.value.content.key, block.value.content.toData());
+      this.contentMap.set(block.value.content.key, block.value.content.toBytes());
 
       if (!block.value.coinbase) {
         throw new Error('Cannot apply block without a coinbase tx');
@@ -540,7 +535,7 @@ export class Ledger extends EventEmitter {
 
       // apply the coinbase tx (skip unconfirmed)
       const coinbase = block.value.coinbase;
-      this.txMap.set(coinbase.key, coinbase.toData());
+      this.txMap.set(coinbase.key, coinbase.toBytes());
       this.applyTx(coinbase);
 
       // for each credit tx, apply and remove from unconfirmed set, skipping the coinbase tx
@@ -551,7 +546,7 @@ export class Ledger extends EventEmitter {
         if (!txData) {
           throw new Error('Cannot apply tx that is not in the mempool');
         }
-        const tx = Tx.load(txData);
+        const tx = Tx.fromBytes(txData);
         this.applyTx(tx);
         this.unconfirmedTxs.delete(txId);
       }
@@ -638,5 +633,127 @@ export class Ledger extends EventEmitter {
       // note when tx is referenced (added to a block)
       // note when tx is confirmed (a block referencing is captured in a level)
       // note when tx is deep confirmed (N other levels have also been confirmed, 6?)
+  }
+
+  /**
+   * Searches memory and disk for a tx matching query.
+   *
+   * @param txId hash of tx data
+   *
+   * @return binary tx data or not found
+   */
+  public async getTx(txId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let txData: Uint8Array | undefined | null;
+    txData = this.txMap.get(txId);
+    if (!txData) {
+      txData = await this.storage.get(txId);
+    }
+    return txData;
+  }
+
+  /**
+   * Searches memory and disk for block metadata matching query.
+   *
+   * @param blockId hash of block data
+   *
+   * @return binary block metadata or not found
+   */
+  public async getCompactBlock(blockId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let blockData: Uint8Array | undefined | null;
+    blockData = this.compactBlockMap.get(blockId);
+    if (!blockData) {
+      blockData = await this.storage.get(blockId);
+    }
+    return blockData;
+  }
+
+  /**
+   * Searches memory and disk for a proof matching query.
+   *
+   * @param proofId hash of proof data
+   *
+   * @return binary proof data or not found
+   */
+  public async getProof(proofId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let proofData: Uint8Array | undefined | null;
+    proofData = this.proofMap.get(proofId);
+    if (!proofData) {
+      proofData = await this.storage.get(proofId);
+    }
+    return proofData;
+  }
+
+  /**
+   * Searches memory and disk for a content matching query.
+   *
+   * @param contentId   hash of content data
+   *
+   * @return binary content data or not found
+   */
+  public async getContent(contentId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let contentData: Uint8Array | undefined | null;
+    contentData = this.contentMap.get(contentId);
+    if (!contentData) {
+      contentData = await this.storage.get(contentId);
+    }
+    return contentData;
+  }
+
+  /**
+   * Searches memory and disk for a block matching query. Returns full block with proof, content, and all txs.
+   *
+   * @param blockId hash of block data
+   *
+   * @return binary block data or not found
+   */
+  public async getBlock(blockId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let compactBlockData: Uint8Array | undefined | null;
+    compactBlockData = this.compactBlockMap.get(blockId);
+    if (!compactBlockData) {
+      compactBlockData = await this.storage.get(blockId);
+    }
+
+    if (!compactBlockData) {
+      return;
+    }
+
+    const compactBlock = Block.fromCompactBytes(compactBlockData);
+    const proofData = await this.getProof(compactBlock.proofHash);
+    if (!proofData) {
+      return;
+    }
+
+    const contentData = await this.getContent(compactBlock.contentHash);
+    if (!contentData) {
+      return;
+    }
+
+    const content = Content.fromBytes(contentData);
+    const txDataArray: Uint8Array[] = [];
+    for (const txId of content.value.payload) {
+      const txData = await this.getTx(txId);
+      if (!txData) {
+        return;
+      }
+      txDataArray.push(txData);
+    }
+
+    return Buffer.concat([proofData, contentData, ...txDataArray]);
+  }
+
+  /**
+   * Searches memory and disk for a state block matching query.
+   *
+   * @param stateId hash of state data
+   *
+   * @return binary state data or not found
+   */
+  public async getState(stateId: Uint8Array): Promise<Uint8Array | null | undefined> {
+    let stateData: Uint8Array | undefined | null;
+    stateData = this.stateMap.get(stateId);
+    if (!stateData) {
+      stateData = await this.storage.get(stateId);
+    }
+    return stateData;
   }
 }

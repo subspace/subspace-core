@@ -159,21 +159,21 @@ describe('Gossip', () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       let waitingFor = 2;
-      networkClient2.on('transaction', (payload) => {
+      networkClient2.on('tx-gossip', (payload) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         --waitingFor;
         if (!waitingFor) {
           resolve();
         }
       });
-      networkClient3.on('transaction', (payload) => {
+      networkClient3.on('tx-gossip', (payload) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         --waitingFor;
         if (!waitingFor) {
           resolve();
         }
       });
-      networkClient1.gossip('transaction', randomPayload);
+      networkClient1.gossip('tx-gossip', randomPayload);
     });
   });
 });

@@ -2,7 +2,7 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { IStateData, IStateValue } from '../main/interfaces';
+import { IStateValue } from '../main/interfaces';
 import { bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
 
 /**
@@ -29,24 +29,6 @@ export class State {
       difficulty,
       version,
       indexPiece,
-    };
-    const state = new State(stateValue);
-    state.setKey();
-    return state;
-  }
-
-  /**
-   * Returns a state instance from existing data.
-   */
-  public static load(stateData: IStateData): State {
-    const stateValue: IStateValue = {
-      previousStateHash: stateData[0],
-      levelHash: stateData[1],
-      pieceRoot: stateData[2],
-      timestamp: stateData[3],
-      difficulty: stateData[4],
-      version: stateData[5],
-      indexPiece: stateData[6],
     };
     const state = new State(stateValue);
     state.setKey();
@@ -97,21 +79,6 @@ export class State {
       smallNum2Bin(this._value.difficulty),
       smallNum2Bin(this._value.version),
     ]);
-  }
-
-  /**
-   * Returns a compact serialized representation of the state data.
-   */
-  public toData(): IStateData {
-    return [
-      this._value.previousStateHash,
-      this._value.levelHash,
-      this._value.pieceRoot,
-      this._value.timestamp,
-      this._value.difficulty,
-      this._value.version,
-      this._value.indexPiece,
-    ];
   }
 
   /**

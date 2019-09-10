@@ -7,14 +7,14 @@ import {NODE_ID_LENGTH} from "../main/constants";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
 
-interface IAddress {
+export interface IAddress {
   address: string;
   port: number;
   // TODO: Support IPv6
   protocolVersion?: '4';
 }
 
-interface INodeAddress {
+export interface INodeAddress {
   address: string;
   nodeId: Uint8Array;
   port: number;

@@ -3,7 +3,7 @@
 
 import * as crypto from '../crypto/crypto';
 import { HASH_LENGTH } from '../main/constants';
-import { IContentData, IContentValue } from '../main/interfaces';
+import { IContentValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex } from '../utils/utils';
 
 /**
@@ -34,20 +34,6 @@ export class Content {
    */
   public static createGenesisContent(parentContentHash: Uint8Array, proofHash: Uint8Array): Content {
     return Content.create(parentContentHash, proofHash, []);
-  }
-
-  /**
-   * Returns a record instance from existing data.
-   */
-  public static load(contentData: IContentData): Content {
-    const contentValue: IContentValue = {
-      parentContentHash: contentData[0],
-      proofHash: contentData[1],
-      payload: contentData[2],
-    };
-    const content = new Content(contentValue);
-    content.setKey();
-    return content;
   }
 
   /**
@@ -111,17 +97,6 @@ export class Content {
       this._value.proofHash,
       ...this._value.payload,
     ]));
-  }
-
-  /**
-   * Returns a compact serialized representation of the content data.
-   */
-  public toData(): IContentData {
-    return [
-      this._value.parentContentHash,
-      this._value.proofHash,
-      this._value.payload,
-    ];
   }
 
   /**

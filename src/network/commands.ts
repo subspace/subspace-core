@@ -1,12 +1,14 @@
 // tslint:disable:object-literal-sort-keys
 export const COMMANDS = {
-  response: 0,
-  identification: 1,
-  gossip: 2,
-  ping: 3,
-  pong: 4,
-  block: 5,
-  transaction: 6,
+  'response': 0,
+  'identification': 1,
+  'gossip': 2,
+  'tx-gossip': 3,
+  'block-gossip': 4,
+  'ping': 5,
+  'pong': 6,
+  'tx-request': 7,
+  'block-request': 8,
 };
 // tslint:enable:object-literal-sort-keys
 
@@ -19,6 +21,6 @@ for (const command in COMMANDS) {
 }
 
 export const GOSSIP_COMMANDS = new Set<ICommandsKeys>([
-  'block',
-  'transaction',
+  'tx-gossip',
+  'block-gossip',
 ]);
