@@ -1,4 +1,4 @@
-import createBlsSignaturesModule = require('bls-signatures');
+import createBlsSignaturesModule = require('@subspace/bls-signatures');
 import * as crypto from 'crypto';
 import {IKeyPair} from "../main/interfaces";
 import {hash} from "./crypto";
