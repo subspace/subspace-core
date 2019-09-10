@@ -2,7 +2,7 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { IBlockData, ICompactBlockData, ICompactBlockValue, IFullBlockValue } from '../main/interfaces';
+import { ICompactBlockValue, IFullBlockValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex, smallBin2Num, smallNum2Bin } from '../utils/utils';
 import { Content } from './content';
 import { Proof } from './proof';
@@ -41,16 +41,6 @@ export class Block {
       content,
       coinbase,
     };
-    return new Block(fullBlockValue);
-  }
-
-  /**
-   * Returns a record instance from existing data.
-   */
-  public static load(blockData: IBlockData): Block {
-    const proof = Proof.load(blockData[0]);
-    const content = Content.load(blockData[1]);
-    const fullBlockValue: IFullBlockValue = { proof, content };
     return new Block(fullBlockValue);
   }
 
@@ -155,27 +145,6 @@ export class Block {
       this._value.content.key,
       this._value.coinbase ? this._value.coinbase.key : new Uint8Array(),
     ]));
-  }
-
-  /**
-   * Returns a compact serialized representation of the block data.
-   */
-  public toData(): IBlockData {
-    return [
-      this._value.proof.toData(),
-      this._value.content.toData(),
-      this._value.coinbase ? this._value.coinbase.toData() : undefined,
-    ];
-  }
-
-  /**
-   * Returns a tiny pointer to the proof and content for storage within in-memory chain objects.
-   */
-  public toCompactData(): ICompactBlockData {
-    return [
-      this._value.proof.key,
-      this._value.content.key,
-    ];
   }
 
   /**

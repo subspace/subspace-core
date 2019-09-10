@@ -16,11 +16,6 @@ export interface IStateValue {
 }
 
 /**
- * Compact representation of a State value.
- */
-export type IStateData = [Uint8Array, Uint8Array, Uint8Array, number, number, number, Uint8Array];
-
-/**
  * A logical Block contains a Proof, Content, and an array of Txs.
  */
 
@@ -30,17 +25,6 @@ export interface IFullBlockValue {
    coinbase?: Tx;
  }
 
-// export interface IBlockValue {
-//   proof: IProofValue;
-//   content: IContentValue;
-//   coinbase?: ITxValue;
-// }
-
-/**
- * Compact representation of a Block value.
- */
-export type IBlockData = [IProofData, IContentData, ITxData?];
-
 /**
  * An even smaller representation of a Block as pointers to store within Chain objects held in memory.
  */
@@ -48,11 +32,6 @@ export interface ICompactBlockValue {
   proofHash: Uint8Array;
   contentHash: Uint8Array;
 }
-
-/**
- * Compact representation of a compact Block.
- */
-export type ICompactBlockData = [Uint8Array, Uint8Array];
 
 /**
  * A canonical (non-malleable / unique) Proof of storage in response to a ledger challenge.
@@ -70,11 +49,6 @@ export interface IProofValue {
 }
 
 /**
- * Compact representation of a Proof value.
- */
-export type IProofData = [ Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array, Uint8Array ];
-
-/**
  * The malleable content associated with a block that includes a summary of Tx ids, not the Tx values themselves.
  * 64 bytes + (32 * # txs in block)
  * Max size needs to be set...
@@ -84,11 +58,6 @@ export interface IContentValue {
   proofHash: Uint8Array; // 32 byte hash of proof for this block
   payload: Uint8Array[]; // Array of all 32 byte tx ids in this block
 }
-
-/**
- * Compact representation of a Content value.
- */
-export type IContentData = [Uint8Array, Uint8Array, Uint8Array[]];
 
 /**
  * The value of a simple credit Tx.
@@ -104,11 +73,6 @@ export interface ITxValue {
   timestamp: number; // 4 byte a unix timestamp
   signature: Uint8Array; // 96 byte detached signature with sender's private key (credit tx) or receivers private key (coinbase tx)
 }
-
-/**
- * Compact representation of a Tx value.
- */
-export type ITxData = [ Uint8Array, Uint8Array, number, number, number, Uint8Array ];
 
 /**
  * The solution to a block challenge returned from Farm, used to create a Proof.

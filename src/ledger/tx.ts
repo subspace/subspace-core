@@ -1,7 +1,7 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
 import * as crypto from '../crypto/crypto';
-import { ITxData, ITxValue } from '../main/interfaces';
+import { ITxValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
 
 // ToDo
@@ -35,23 +35,6 @@ export class Tx {
    */
   public static createCoinbase(creatorPublicKey: Uint8Array, amount: number, nonce: number, creatorPrivateKey: Uint8Array): Tx {
     return Tx.create(new Uint8Array(48), creatorPublicKey, amount, nonce, creatorPrivateKey);
-  }
-
-  /**
-   * Returns a tx instance from existing data.
-   */
-  public static load(txData: ITxData): Tx {
-    const txValue: ITxValue = {
-      sender: txData[0],
-      receiver: txData[1],
-      amount: txData[2],
-      nonce: txData[3],
-      timestamp: txData[4],
-      signature: txData[5],
-    };
-    const tx = new Tx(txValue);
-    tx.setKey();
-    return tx;
   }
 
   /**
@@ -121,20 +104,6 @@ export class Tx {
       num2Bin(this._value.timestamp / 1000),
       signed ? this._value.signature : new Uint8Array(),
     ]));
-  }
-
-  /**
-   * Returns a compact serialized representation of the tx data.
-   */
-  public toData(): ITxData {
-    return [
-      this._value.sender,
-      this._value.receiver,
-      this._value.amount,
-      this._value.nonce,
-      this._value.timestamp,
-      this._value.signature,
-    ];
   }
 
   /**

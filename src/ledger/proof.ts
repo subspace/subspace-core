@@ -2,7 +2,7 @@
 // tslint:disable: variable-name
 
 import * as crypto from '../crypto/crypto';
-import { IProofData, IProofValue } from '../main/interfaces';
+import { IProofValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex } from '../utils/utils';
 
 // ToDo
@@ -49,25 +49,6 @@ export class Proof {
     const nullArray32 = new Uint8Array(32);
     const nullArray8 = new Uint8Array(8);
     const proof = Proof.create(nullArray32, previousProofHash, nullArray8, nullArray32, nullArray32, nullArray32, nullArray48);
-    proof.setKey();
-    return proof;
-  }
-
-  /**
-   * Returns a proof instance from existing data.
-   */
-  public static load(proofData: IProofData): Proof {
-    const proofValue: IProofValue = {
-      previousLevelHash: proofData[0],
-      previousProofHash: proofData[1],
-      solution: proofData[2],
-      pieceHash: proofData[3],
-      pieceStateHash: proofData[4],
-      publicKey: proofData[5],
-      signature: proofData[6],
-      pieceProof: proofData[7],
-    };
-    const proof = new Proof(proofValue);
     proof.setKey();
     return proof;
   }
@@ -132,22 +113,6 @@ export class Proof {
       this._value.pieceProof,
     ]));
     return asBytes;
-  }
-
-  /**
-   * Returns a compact serialized representation of the proof data.
-   */
-  public toData(): IProofData {
-    return [
-      this._value.previousLevelHash,
-      this._value.previousProofHash,
-      this._value.solution,
-      this._value.pieceHash,
-      this._value.pieceStateHash,
-      this._value.publicKey,
-      this._value.signature,
-      this._value.pieceProof,
-    ];
   }
 
   /**
