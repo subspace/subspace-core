@@ -338,45 +338,50 @@ export class Network extends EventEmitter implements INetwork {
         }
         try {
           const [command, requestId, payload] = parseMessage(message);
-          if (command === 'response') {
-            // TODO: No validation!
-            const requestCallback = this.requestCallbacks.get(requestId);
-            if (requestCallback) {
-              requestCallback(payload);
-              // TODO: Should this really be done in case we receive response from random sender?
-              this.requestCallbacks.delete(requestId);
-            }
-            return;
-          }
-          if (requestId) {
-            ++this.responseId;
-            const responseId = this.responseId;
-            this.responseCallbacks.set(
-              responseId,
-              async (payload) => {
-                this.responseCallbacks.delete(responseId);
-                const message = composeMessage('response', requestId, payload);
-                udp4Socket.send(message, remote.port, remote.address);
-              },
-            );
-            setTimeout(
-              () => {
-                this.responseCallbacks.delete(responseId);
-              },
-              this.DEFAULT_TIMEOUT * 1000,
-            ).unref();
-            this.emit(
-              command,
-              payload,
-              (responsePayload: Uint8Array) => {
-                const responseCallback = this.responseCallbacks.get(responseId);
-                if (responseCallback) {
-                  responseCallback(responsePayload);
-                }
-              },
-            );
-          } else {
-            this.emit(command, payload);
+          switch (command) {
+            case 'response':
+              // TODO: No validation!
+              const requestCallback = this.requestCallbacks.get(requestId);
+              if (requestCallback) {
+                requestCallback(payload);
+                // TODO: Should this really be done in case we receive response from random sender?
+                this.requestCallbacks.delete(requestId);
+              }
+              break;
+            case 'gossip':
+              this.handleIncomingGossip(payload);
+              break;
+            default:
+              if (requestId) {
+                ++this.responseId;
+                const responseId = this.responseId;
+                this.responseCallbacks.set(
+                  responseId,
+                  async (payload) => {
+                    this.responseCallbacks.delete(responseId);
+                    const message = composeMessage('response', requestId, payload);
+                    udp4Socket.send(message, remote.port, remote.address);
+                  },
+                );
+                setTimeout(
+                  () => {
+                    this.responseCallbacks.delete(responseId);
+                  },
+                  this.DEFAULT_TIMEOUT * 1000,
+                ).unref();
+                this.emit(
+                  command,
+                  payload,
+                  (responsePayload: Uint8Array) => {
+                    const responseCallback = this.responseCallbacks.get(responseId);
+                    if (responseCallback) {
+                      responseCallback(responsePayload);
+                    }
+                  },
+                );
+              } else {
+                this.emit(command, payload);
+              }
           }
         } catch (error) {
           // TODO: Log error in debug mode
@@ -471,6 +476,12 @@ export class Network extends EventEmitter implements INetwork {
             // TODO: Should this really be done in case we receive response from random sender?
             this.requestCallbacks.delete(requestId);
           }
+          break;
+        case 'gossip':
+          this.handleIncomingGossip(
+            payload,
+            this.tcpSocketToNodeIdMap.get(socket) as Uint8Array,
+          );
           break;
         default:
           if (!this.tcpSocketToNodeIdMap.has(socket)) {
@@ -590,6 +601,27 @@ export class Network extends EventEmitter implements INetwork {
     }
     // TODO: Implement fetching from DHT
     throw new Error('Sending to arbitrary nodeId is not implemented yet');
+  }
+
+  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
+    const command = COMMANDS_INVERSE[gossipMessage[0]];
+    if (!GOSSIP_COMMANDS.has(command)) {
+      // TODO: Log in debug mode
+      return;
+    }
+    const messageHash = hash(gossipMessage).join(',');
+    if (this.gossipCache.has(messageHash)) {
+      // Prevent infinite recursive gossiping
+      return;
+    }
+
+    const payload = gossipMessage.subarray(1);
+    this.emit(command, payload);
+
+    this.gossipInternal(gossipMessage, sourceNodeId)
+      .catch((_) => {
+        // TODO: Log in debug mode
+      });
   }
 
   private async gossipInternal(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): Promise<void> {
