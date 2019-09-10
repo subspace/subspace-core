@@ -27,7 +27,9 @@
     "start": "ts-node src/main/index.ts",
     "test": "npm run lint && npm run compile && jest --verbose",
     "test-new": "npm run lint && npm run compile && npm run clear-data && jest -o --verbose",
-    "build-and-publish": "npm run build && npm publish"
+    "build-and-publish": "npm run build && npm publish",
+    "test-browser": "npm run compile && npm run build-browser && npm run server",
+    "server": "cd app/web && php -S localhost:8080 server.php"
   },
   "repository": {
     "type": "git",
