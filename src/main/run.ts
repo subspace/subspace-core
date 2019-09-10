@@ -7,7 +7,7 @@ if (!globalThis.indexedDB) {
 
 import { randomBytes } from '../crypto/crypto';
 import { Node } from '../node/node';
-import { IPeerContactInfo, ISelfContactInfo } from './interfaces';
+import { IPeerContactInfo } from './interfaces';
 
 /**
  * Init Params
@@ -59,7 +59,8 @@ export const run = async (
       break;
   }
 
-  const selfContactInfo: ISelfContactInfo = {
+  const selfContactInfo: IPeerContactInfo = {
+    nodeId: new Uint8Array(),
     address: 'loclahost',
     udpPort: 8001,
     tcpPort: 8002,

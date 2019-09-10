@@ -70,8 +70,8 @@ export class RPC extends EventEmitter {
       });
   }
 
-  public async ping(nodeId: Uint8Array): Promise<void> {
-    return this.network.sendOneWayRequestUnreliable(nodeId, 'ping');
+  public async ping(nodeId: Uint8Array, payload?: Uint8Array): Promise<Uint8Array> {
+    return this.network.sendRequestUnreliable(nodeId, 'ping', payload);
   }
 
   /**
@@ -136,6 +136,10 @@ export class RPC extends EventEmitter {
       throw new Error('Received invalid block response from peer');
     }
     return block;
+  }
+
+  public async destroy(): Promise<void> {
+    await this.network.destroy();
   }
 
 }

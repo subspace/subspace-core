@@ -7,7 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { inspect } from 'util';
-import { IPeerContactInfo, ISelfContactInfo } from '../main/interfaces';
+import { IPeerContactInfo } from '../main/interfaces';
 import { IAddress, INodeAddress } from '../network/Network';
 
 /**
@@ -178,13 +178,13 @@ export function rmDirRecursiveSync(dirPath: string): void {
   }
 }
 
-export function parseContactInfo(nodeId: Uint8Array, selfContactInfo: ISelfContactInfo, peerContactInfo: IPeerContactInfo[]): {
-  bootstrapTcpNodes: INodeAddress[],
-  bootstrapUdPNodes: INodeAddress[],
-  ownNodeId: Uint8Array,
-  ownUdpAddress: IAddress,
-  ownTcpAddress: IAddress,
-} {
+export function parseContactInfo(selfContactInfo: IPeerContactInfo, peerContactInfo: IPeerContactInfo[]): [
+  INodeAddress[],
+  INodeAddress[],
+  Uint8Array,
+  IAddress,
+  IAddress,
+ ] {
   const bootstrapUdPNodes: INodeAddress [] = [];
   const bootstrapTcpNodes: INodeAddress [] = [];
 
@@ -204,7 +204,7 @@ export function parseContactInfo(nodeId: Uint8Array, selfContactInfo: ISelfConta
     });
   }
 
-  const ownNodeId = nodeId;
+  const ownNodeId = selfContactInfo.nodeId;
   const ownUdpAddress: IAddress = {
     address: selfContactInfo.address,
     port: selfContactInfo.udpPort,
@@ -217,11 +217,11 @@ export function parseContactInfo(nodeId: Uint8Array, selfContactInfo: ISelfConta
     protocolVersion: selfContactInfo.protocolVersion,
   };
 
-  return {
+  return [
     bootstrapUdPNodes,
     bootstrapTcpNodes,
     ownNodeId,
     ownUdpAddress,
     ownTcpAddress,
-  };
+  ];
 }

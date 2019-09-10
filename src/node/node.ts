@@ -13,7 +13,7 @@ import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
-import { IPeerContactInfo, ISelfContactInfo } from '../main/interfaces';
+import { IPeerContactInfo } from '../main/interfaces';
 import { Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { bin2Hex, hex2Bin, measureProximity, parseContactInfo, rmDirRecursiveSync } from '../utils/utils';
@@ -33,7 +33,7 @@ export class Node extends EventEmitter {
    * Instantiate a new empty node with only environment variables.
    */
   public static async init(
-    selfContactInfo: ISelfContactInfo,
+    selfContactInfo: IPeerContactInfo,
     peerContactInfo: IPeerContactInfo[],
     nodeType: string,
     storageAdapter = 'rocks',
@@ -68,15 +68,11 @@ export class Node extends EventEmitter {
     const ledger = await Ledger.init(storageAdapter, storageDir, validateRecords, encodingRounds);
     const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
 
-    const networkOptions = parseContactInfo(addresses[0], selfContactInfo, peerContactInfo);
+    selfContactInfo.nodeId = addresses[0];
 
-    const network = new Network(
-      networkOptions.bootstrapTcpNodes,
-      networkOptions.bootstrapUdPNodes,
-      networkOptions.ownNodeId,
-      networkOptions.ownUdpAddress,
-      networkOptions.ownTcpAddress,
-    );
+    const networkOptions = parseContactInfo(selfContactInfo, peerContactInfo);
+
+    const network = new Network(...networkOptions);
 
     const rpc = new RPC(network);
 
