@@ -213,6 +213,7 @@ export class Network extends EventEmitter implements INetwork {
   ): Promise<void> {
     const message = composeMessage(command, 0, payload);
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
+    // TODO: Fallback to reliable if no UDP route?
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(
         message,
@@ -267,6 +268,7 @@ export class Network extends EventEmitter implements INetwork {
       );
     }
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
+    // TODO: Fallback to reliable if no UDP route?
     return new Promise((resolve, reject) => {
       this.requestCallbacks.set(requestId, resolve);
       const timeout = setTimeout(
