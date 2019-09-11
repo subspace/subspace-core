@@ -9,6 +9,8 @@ import {NODE_ID_LENGTH} from "../main/constants";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
 
+type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
+
 export interface IAddress {
   address: string;
   port: number;
@@ -48,7 +50,11 @@ function composeMessage(command: ICommandsKeys, requestResponseId: number, paylo
  * @param requestResponseId `0` if no response is expected for request
  * @param payload
  */
-function composeMessageWithTcpHeader(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
+function composeMessageWithTcpHeader(
+  command: ICommandsKeys,
+  requestResponseId: number,
+  payload: Uint8Array,
+): Uint8Array {
   // 4 bytes for message length, 1 byte for command, 4 bytes for requestResponseId
   const message = new Uint8Array(4 + 1 + 4 + payload.length);
   const view = new DataView(message.buffer);
@@ -98,6 +104,12 @@ export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 
   return 0;
 }
 
+function nodeIdToHex(nodeId: Uint8Array): string {
+  return Array.from(nodeId)
+    .map((byte) => byte.toString(16))
+    .join('');
+}
+
 // 4 bytes for message length, 1 byte for command, 4 bytes for request ID
 const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
@@ -139,15 +151,17 @@ export class Network extends EventEmitter implements INetwork {
   private readonly nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToWsAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToTcpSocketMap = ArrayMap<Uint8Array, net.Socket>();
-  private readonly nodeIdToWsConnectionMap = ArrayMap<Uint8Array, websocket.connection>();
+  private readonly nodeIdToWsConnectionMap = ArrayMap<Uint8Array, WebSocketConnection>();
   private readonly tcpSocketToNodeIdMap = new Map<net.Socket, Uint8Array>();
-  private readonly wsConnectionToNodeIdMap = new Map<websocket.connection, Uint8Array>();
+  private readonly wsConnectionToNodeIdMap = new Map<WebSocketConnection, Uint8Array>();
   private readonly gossipCache = new Set<string>();
 
   constructor(
     bootstrapUdpNodes: INodeAddress[],
     bootstrapTcpNodes: INodeAddress[],
     bootstrapWsNodes: INodeAddress[],
+    // TODO: If `browserNode === true` then avoid running servers and establishing UDP/TCP connections
+    private readonly browserNode: boolean,
     private readonly ownNodeId: Uint8Array,
     ownUdpAddress: IAddress,
     ownTcpAddress: IAddress,
@@ -208,7 +222,18 @@ export class Network extends EventEmitter implements INetwork {
       return this.sendWsMessage(wsConnection, command, 0, payload);
     }
     const socket = await this.nodeIdToTcpSocket(nodeId);
-    return this.sendTcpMessage(socket, command, 0, payload);
+    if (socket) {
+      return this.sendTcpMessage(socket, command, 0, payload);
+    }
+
+    {
+      const wsConnection = await this.nodeIdToWsConnection(nodeId);
+      if (wsConnection) {
+        return this.sendWsMessage(wsConnection, command, 0, payload);
+      }
+
+      throw new Error(`Node ${nodeIdToHex(nodeId)} unreachable`);
+    }
   }
 
   public async sendOneWayRequestUnreliable(
@@ -235,7 +260,11 @@ export class Network extends EventEmitter implements INetwork {
     });
   }
 
-  public async sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<Uint8Array> {
+  public async sendRequest(
+    nodeId: Uint8Array,
+    command: ICommandsKeys,
+    payload: Uint8Array = emptyPayload,
+  ): Promise<Uint8Array> {
     ++this.requestId;
     const requestId = this.requestId;
     const wsConnection = this.nodeIdToWsConnectionMap.get(nodeId);
@@ -260,23 +289,50 @@ export class Network extends EventEmitter implements INetwork {
       });
     }
     const socket = await this.nodeIdToTcpSocket(nodeId);
-    return new Promise((resolve, reject) => {
-      this.requestCallbacks.set(requestId, resolve);
-      const timeout = setTimeout(
-        () => {
-          this.requestCallbacks.delete(requestId);
-          reject(new Error(`Request ${requestId} timeout out`));
-        },
-        this.DEFAULT_TIMEOUT * 1000,
-      );
-      timeout.unref();
-      this.sendTcpMessage(socket, command, requestId, payload)
-        .catch((error) => {
-          this.requestCallbacks.delete(requestId);
-          clearTimeout(timeout);
-          reject(error);
+    if (socket) {
+      return new Promise((resolve, reject) => {
+        this.requestCallbacks.set(requestId, resolve);
+        const timeout = setTimeout(
+          () => {
+            this.requestCallbacks.delete(requestId);
+            reject(new Error(`Request ${requestId} timeout out`));
+          },
+          this.DEFAULT_TIMEOUT * 1000,
+        );
+        timeout.unref();
+        this.sendTcpMessage(socket, command, requestId, payload)
+          .catch((error) => {
+            this.requestCallbacks.delete(requestId);
+            clearTimeout(timeout);
+            reject(error);
+          });
+      });
+    }
+
+    {
+      const wsConnection = await this.nodeIdToWsConnection(nodeId);
+      if (wsConnection) {
+        return new Promise((resolve, reject) => {
+          this.requestCallbacks.set(requestId, resolve);
+          const timeout = setTimeout(
+            () => {
+              this.requestCallbacks.delete(requestId);
+              reject(new Error(`Request ${requestId} timeout out`));
+            },
+            this.DEFAULT_TIMEOUT * 1000,
+          );
+          timeout.unref();
+          this.sendWsMessage(wsConnection, command, requestId, payload)
+            .catch((error) => {
+              this.requestCallbacks.delete(requestId);
+              clearTimeout(timeout);
+              reject(error);
+            });
         });
-    });
+      }
+
+      throw new Error(`Node ${nodeIdToHex(nodeId)} unreachable`);
+    }
   }
 
   public async sendRequestUnreliable(
@@ -478,7 +534,7 @@ export class Network extends EventEmitter implements INetwork {
     wsServer
       .on('request', (request: websocket.request) => {
         const connection = request.accept();
-        this.registerWsConnection(connection);
+        this.registerServerWsConnection(connection);
       })
       .on('close', (connection: websocket.connection) => {
         this.wsConnectionCloseHandler(connection);
@@ -608,7 +664,12 @@ export class Network extends EventEmitter implements INetwork {
    * @param requestResponseId `0` if no response is expected for request
    * @param payload
    */
-  private async sendTcpMessage(socket: net.Socket, command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Promise<void> {
+  private async sendTcpMessage(
+    socket: net.Socket,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void> {
     const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
     return this.sendTcpMessageRaw(socket, message);
   }
@@ -627,7 +688,7 @@ export class Network extends EventEmitter implements INetwork {
     }
   }
 
-  private registerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {
+  private registerServerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {
     connection
       .on('message', (message: websocket.IMessage) => {
         if (message.type !== 'binary') {
@@ -648,7 +709,23 @@ export class Network extends EventEmitter implements INetwork {
     }
   }
 
-  private handleWsMessage(connection: websocket.connection, message: Uint8Array): void {
+  private registerBrowserWsConnection(connection: websocket.w3cwebsocket, nodeId?: Uint8Array): void {
+    connection.onmessage = (event: MessageEvent) => {
+      if (!(event.data instanceof ArrayBuffer)) {
+        connection.close();
+        // TODO: Log in debug mode that only binary messages are supported
+        return;
+      }
+      this.handleWsMessage(connection, new Uint8Array(event.data));
+    };
+    // TODO: Connection expiration for cleanup
+    if (nodeId) {
+      this.nodeIdToWsConnectionMap.set(nodeId, connection);
+      this.wsConnectionToNodeIdMap.set(connection, nodeId);
+    }
+  }
+
+  private handleWsMessage(connection: WebSocketConnection, message: Uint8Array): void {
     if (message.length > this.WS_MESSAGE_SIZE_LIMIT) {
       // TODO: Log too big message in debug mode
       return;
@@ -733,7 +810,7 @@ export class Network extends EventEmitter implements INetwork {
     }
   }
 
-  private wsConnectionCloseHandler(connection: websocket.connection): void {
+  private wsConnectionCloseHandler(connection: WebSocketConnection): void {
     const nodeId = this.wsConnectionToNodeIdMap.get(connection);
     if (nodeId) {
       this.wsConnectionToNodeIdMap.delete(connection);
@@ -748,7 +825,7 @@ export class Network extends EventEmitter implements INetwork {
    * @param payload
    */
   private async sendWsMessage(
-    connection: websocket.connection,
+    connection: WebSocketConnection,
     command: ICommandsKeys,
     requestResponseId: number,
     payload: Uint8Array,
@@ -762,10 +839,14 @@ export class Network extends EventEmitter implements INetwork {
    * @param message
    */
   private async sendWsMessageRaw(
-    connection: websocket.connection,
+    connection: WebSocketConnection,
     message: Uint8Array,
   ): Promise<void> {
-    connection.sendBytes(Buffer.from(message));
+    if ('sendBytes' in connection) {
+      connection.sendBytes(Buffer.from(message));
+    } else {
+      connection.send(message);
+    }
   }
 
   private async nodeIdToUdpAddress(nodeId: Uint8Array): Promise<IAddress> {
@@ -777,49 +858,90 @@ export class Network extends EventEmitter implements INetwork {
     throw new Error('Sending to arbitrary nodeId is not implemented yet');
   }
 
-  private async nodeIdToTcpSocket(nodeId: Uint8Array): Promise<net.Socket> {
+  private async nodeIdToTcpSocket(nodeId: Uint8Array): Promise<net.Socket | null> {
     const socket = this.nodeIdToTcpSocketMap.get(nodeId);
     if (socket) {
       return socket;
     }
     const address = this.nodeIdToTcpAddressMap.get(nodeId);
-    if (address) {
-      return new Promise((resolve, reject) => {
-        let timedOut = false;
-        const timeout = setTimeout(
-          () => {
-            timedOut = true;
-            const hexNodeId = Array.from(nodeId)
-              .map((byte) => byte.toString(16))
-              .join('');
-            reject(new Error(`Connection to node ${hexNodeId}`));
-          },
-          this.DEFAULT_TIMEOUT * 1000,
-        );
-        timeout.unref();
-        const socket = net.createConnection(
-          address.port,
-          address.address,
-          () => {
-            clearTimeout(timeout);
-            if (timedOut) {
-              socket.destroy();
-            } else {
-              const identificationMessage = composeMessageWithTcpHeader(
-                'identification',
-                0,
-                this.ownNodeId,
-              );
-              socket.write(identificationMessage);
-              this.registerTcpConnection(socket, nodeId);
-              resolve(socket);
-            }
-          },
-        );
-      });
+    if (!address) {
+      return null;
     }
-    // TODO: Implement fetching from DHT
-    throw new Error('Sending to arbitrary nodeId is not implemented yet');
+    return new Promise((resolve, reject) => {
+      let timedOut = false;
+      const timeout = setTimeout(
+        () => {
+          timedOut = true;
+          reject(new Error(`Connection to node ${nodeIdToHex(nodeId)}`));
+        },
+        this.DEFAULT_TIMEOUT * 1000,
+      );
+      timeout.unref();
+      const socket = net.createConnection(
+        address.port,
+        address.address,
+        () => {
+          clearTimeout(timeout);
+          if (timedOut) {
+            socket.destroy();
+          } else {
+            const identificationMessage = composeMessageWithTcpHeader(
+              'identification',
+              0,
+              this.ownNodeId,
+            );
+            socket.write(identificationMessage);
+            this.registerTcpConnection(socket, nodeId);
+            resolve(socket);
+          }
+        },
+      );
+    });
+  }
+
+  private async nodeIdToWsConnection(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
+    const connection = this.nodeIdToWsConnectionMap.get(nodeId);
+    if (connection) {
+      return connection;
+    }
+    const address = this.nodeIdToWsAddressMap.get(nodeId);
+    if (!address) {
+      return null;
+    }
+    return new Promise((resolve, reject) => {
+      let timedOut = false;
+      const timeout = setTimeout(
+        () => {
+          timedOut = true;
+          reject(new Error(`Connection to node ${nodeIdToHex(nodeId)}`));
+        },
+        this.DEFAULT_TIMEOUT * 1000,
+      );
+      timeout.unref();
+      if (!this.browserNode) {
+        resolve(null);
+        return;
+      }
+      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.port}`);
+      connection.onopen = () => {
+        clearTimeout(timeout);
+        if (timedOut) {
+          connection.close();
+        } else {
+          const identificationMessage = composeMessage(
+            'identification',
+            0,
+            this.ownNodeId,
+          );
+          connection.send(identificationMessage);
+          this.registerBrowserWsConnection(connection, nodeId);
+          resolve(connection);
+        }
+      };
+      connection.onclose = () => {
+        this.wsConnectionCloseHandler(connection);
+      };
+    });
   }
 
   private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
@@ -913,9 +1035,19 @@ export class Network extends EventEmitter implements INetwork {
             // TODO: Log in debug mode
           });
       }
+
       this.nodeIdToTcpSocket(nodeId)
-        .then((socket) => {
-          return this.sendTcpMessageRaw(socket, message);
+        .then(async (socket) => {
+          if (socket) {
+            return this.sendTcpMessageRaw(socket, message);
+          }
+
+          const wsConnection = await this.nodeIdToWsConnection(nodeId);
+          if (wsConnection) {
+            return this.sendWsMessageRaw(wsConnection, message);
+          }
+
+          throw new Error(`Node ${nodeIdToHex(nodeId)} unreachable`);
         })
         .catch((_) => {
           // TODO: Log in debug mode

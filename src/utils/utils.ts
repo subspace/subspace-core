@@ -184,10 +184,15 @@ export function allocatePort(): number {
   return portOffset;
 }
 
-export function parseContactInfo(selfContactInfo: IPeerContactInfo, bootstrapPeerContactInfo: IPeerContactInfo[]): [
+export function parseContactInfo(
+  selfContactInfo: IPeerContactInfo,
+  bootstrapPeerContactInfo: IPeerContactInfo[],
+  browserNode: boolean = false,
+): [
   INodeAddress[],
   INodeAddress[],
   INodeAddress[],
+  boolean,
   Uint8Array,
   IAddress,
   IAddress,
@@ -243,6 +248,7 @@ export function parseContactInfo(selfContactInfo: IPeerContactInfo, bootstrapPee
     bootstrapUdPNodes,
     bootstrapTcpNodes,
     bootstrapWsNodes,
+    browserNode,
     ownNodeId,
     ownUdpAddress,
     ownTcpAddress,
