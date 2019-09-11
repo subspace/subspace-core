@@ -232,11 +232,9 @@ export const run = async (
     wallet = await Wallet.open(blsSignatures, storageAdapter, storagePath, 'wallet');
 
     const addresses: Uint8Array[] = [];
-    for (let i = 0; i < numberOfChains; ++i) {
+    for (let i = 0; i < numberOfPlots; ++i) {
       const account = await wallet.createAccount(`Plot-${i}`, `Wallet for plot ${i} from farm`);
       addresses.push(account.address);
-      // tslint:disable-next-line: no-console
-      console.log('created address');
     }
 
     // create farm

@@ -111,7 +111,6 @@ export class Node extends EventEmitter {
     const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
     console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
     for (const piece of pieceSet) {
-      console.log(piece);
       await this.farm.addPiece(piece.piece, piece.data);
     }
     console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
