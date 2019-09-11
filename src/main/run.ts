@@ -57,7 +57,7 @@ export const run = async (
   sizeOfFarm: number,
   validateRecords: boolean,
   encodingRounds: number,
-  storagePath?: string,
+  storageDir?: string,
   reset = true,
   contactInfo: IPeerContactInfo = defaultContactInfo,
   bootstrapPeers: IPeerContactInfo[] = defaultBootstrapPeers,
@@ -88,13 +88,31 @@ export const run = async (
   };
 
   // determine the basic system env
-  typeof window ? env = 'node' : env = 'browser';
+  typeof window === 'undefined' ? env = 'node' : env = 'browser';
 
   // are we persisting storage?
   const isPersistingStorage = plotMode === 'disk';
 
   // set storage path
-  storagePath ? storagePath = path.normalize(storagePath) : storagePath = `${os.homedir()}/subspace/data/`;
+  let storagePath: string;
+  if (storageDir) {
+    storagePath = path.normalize(storageDir);
+  } else {
+    switch (os.platform()) {
+      case 'linux':
+        storagePath = path.join(os.homedir(), '/.local/share/data/subspace');
+        break;
+      case 'darwin':
+        storagePath = path.join(os.homedir(), '/subspace');
+        break;
+      case 'win32':
+        storagePath = path.join(os.homedir(), '\AppData\Subspace');
+        break;
+      default:
+        storagePath = path.join(os.homedir(), '/subspace');
+        break;
+    }
+  }
 
   // configure persistent storage
   if (env === 'node' && isPersistingStorage) {

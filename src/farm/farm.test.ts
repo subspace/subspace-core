@@ -14,7 +14,7 @@ import { IPiece } from '../main/interfaces';
 import { rmDirRecursiveSync } from '../utils/utils';
 import { Farm } from './farm';
 
-const storageDir = `${os.homedir()}/subspace/tests/farm`;
+const storageDir = `${os.tmpdir()}/subspace/tests/farm`;
 
 if (fs.existsSync(storageDir)) {
   rmDirRecursiveSync(storageDir);
