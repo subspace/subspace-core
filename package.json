@@ -19,7 +19,7 @@
     "build-browser": "npm run browser-bundle && npm run browser-minify && npm run browser-copy-wasm",
     "browser-bundle": "browserify --standalone Subspace dist/main/index.js > app/web/build/bundle.js",
     "browser-minify": "terser --compress --mangle -- app/web/build/bundle.js > app/web/build/bundle.min.js",
-    "browser-copy-wasm": "cp node_modules/@subspace/bls-signatures/blsjs.wasm app/web/build/ && cp node_modules/@subspace/reed-solomon-erasure.wasm/dist/reed_solomon_erasure_bg.wasm app/web/build/",
+    "browser-copy-wasm": "node tools/copy-wasm.js",
     "gen-docs": "typedoc --out docs/ src/ --ignoreCompilerErrors",
     "clean": "rimraf dist",
     "compile": "tsc -b",
