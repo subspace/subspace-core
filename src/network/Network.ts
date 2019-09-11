@@ -142,10 +142,10 @@ export class Network extends EventEmitter implements INetwork {
    */
   private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => any>();
 
-  private readonly udp4Socket: dgram.Socket;
-  private readonly tcp4Server: net.Server;
-  private readonly wsServer: websocket.server;
-  private readonly httpServer: http.Server;
+  private readonly udp4Socket: dgram.Socket | undefined;
+  private readonly tcp4Server: net.Server | undefined;
+  private readonly wsServer: websocket.server | undefined;
+  private readonly httpServer: http.Server | undefined;
 
   private readonly nodeIdToUdpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
@@ -163,9 +163,9 @@ export class Network extends EventEmitter implements INetwork {
     // TODO: If `browserNode === true` then avoid running servers and establishing UDP/TCP connections
     private readonly browserNode: boolean,
     private readonly ownNodeId: Uint8Array,
-    ownUdpAddress: IAddress,
-    ownTcpAddress: IAddress,
-    ownWsAddress: IAddress,
+    ownUdpAddress?: IAddress,
+    ownTcpAddress?: IAddress,
+    ownWsAddress?: IAddress,
   ) {
     super();
     this.setMaxListeners(Infinity);
@@ -203,12 +203,18 @@ export class Network extends EventEmitter implements INetwork {
       );
     }
 
-    this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
-    this.tcp4Server = this.createTcp4Server(ownTcpAddress);
-    const httpServer = http.createServer();
-    this.wsServer = this.createWebSocketServer(httpServer);
-    httpServer.listen(ownWsAddress.port, ownWsAddress.address);
-    this.httpServer = httpServer;
+    if (ownUdpAddress) {
+      this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
+    }
+    if (ownTcpAddress) {
+      this.tcp4Server = this.createTcp4Server(ownTcpAddress);
+    }
+    if (ownWsAddress) {
+      const httpServer = http.createServer();
+      this.wsServer = this.createWebSocketServer(httpServer);
+      httpServer.listen(ownWsAddress.port, ownWsAddress.address);
+      this.httpServer = httpServer;
+    }
   }
 
   public async sendOneWayRequest(
@@ -241,11 +247,14 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
+    if (this.browserNode) {
+      return this.sendOneWayRequest(nodeId, command, payload);
+    }
     const message = composeMessage(command, 0, payload);
     const {address, port} = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
     return new Promise((resolve, reject) => {
-      this.udp4Socket.send(
+      (this.udp4Socket as dgram.Socket).send(
         message,
         port,
         address,
@@ -340,6 +349,9 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
+    if (this.browserNode) {
+      return this.sendRequest(nodeId, command, payload);
+    }
     ++this.requestId;
     const requestId = this.requestId;
     const message = composeMessage(command, requestId, payload);
@@ -361,7 +373,7 @@ export class Network extends EventEmitter implements INetwork {
         this.DEFAULT_TIMEOUT * 1000,
       );
       timeout.unref();
-      this.udp4Socket.send(
+      (this.udp4Socket as dgram.Socket).send(
         message,
         port,
         address,
@@ -389,20 +401,34 @@ export class Network extends EventEmitter implements INetwork {
   public async destroy(): Promise<void> {
     await Promise.all([
       new Promise((resolve) => {
-        this.udp4Socket.close(resolve);
+        if (this.udp4Socket) {
+          this.udp4Socket.close(resolve);
+        } else {
+          resolve();
+        }
       }),
       new Promise((resolve) => {
         for (const socket of this.nodeIdToTcpSocketMap.values()) {
           socket.destroy();
         }
-        this.tcp4Server.close(resolve);
+        if (this.tcp4Server) {
+          this.tcp4Server.close(resolve);
+        } else {
+          resolve();
+        }
       }),
       new Promise((resolve) => {
         for (const connection of this.nodeIdToWsConnectionMap.values()) {
           connection.close();
         }
-        this.wsServer.shutDown();
-        this.httpServer.close(resolve);
+        if (this.wsServer) {
+          this.wsServer.shutDown();
+        }
+        if (this.httpServer) {
+          this.httpServer.close(resolve);
+        } else {
+          resolve();
+        }
       }),
     ]);
   }
@@ -859,6 +885,9 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   private async nodeIdToTcpSocket(nodeId: Uint8Array): Promise<net.Socket | null> {
+    if (this.browserNode) {
+      return null;
+    }
     const socket = this.nodeIdToTcpSocketMap.get(nodeId);
     if (socket) {
       return socket;
@@ -955,6 +984,7 @@ export class Network extends EventEmitter implements INetwork {
       // Prevent infinite recursive gossiping
       return;
     }
+    this.gossipCache.add(messageHash);
 
     const payload = gossipMessage.subarray(1);
     this.emit(command, payload);
@@ -986,6 +1016,7 @@ export class Network extends EventEmitter implements INetwork {
     const allNodesSet = ArraySet([
       ...this.nodeIdToUdpAddressMap.keys(),
       ...this.nodeIdToTcpAddressMap.keys(),
+      ...this.nodeIdToWsAddressMap.keys(),
       ...this.nodeIdToTcpSocketMap.keys(),
       ...this.nodeIdToWsConnectionMap.keys(),
     ]);
@@ -1014,7 +1045,7 @@ export class Network extends EventEmitter implements INetwork {
         continue;
       }
       const udpAddress = this.nodeIdToUdpAddressMap.get(nodeId);
-      if (fitsInUdp && udpAddress) {
+      if (this.udp4Socket && fitsInUdp && udpAddress) {
         this.udp4Socket.send(
           message,
           udpAddress.port,

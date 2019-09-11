@@ -194,28 +194,30 @@ export function parseContactInfo(
   INodeAddress[],
   boolean,
   Uint8Array,
-  IAddress,
-  IAddress,
-  IAddress,
+  IAddress | undefined,
+  IAddress | undefined,
+  IAddress | undefined,
  ] {
-  const bootstrapUdPNodes: INodeAddress [] = [];
+  const bootstrapUdpNodes: INodeAddress [] = [];
   const bootstrapTcpNodes: INodeAddress [] = [];
   const bootstrapWsNodes: INodeAddress [] = [];
 
   for (const peer of bootstrapPeerContactInfo) {
-    bootstrapUdPNodes.push({
-      nodeId: peer.nodeId,
-      address: peer.address,
-      port: peer.udpPort,
-      protocolVersion: peer.protocolVersion,
-    });
+    if (!browserNode) {
+      bootstrapUdpNodes.push({
+        nodeId: peer.nodeId,
+        address: peer.address,
+        port: peer.udpPort,
+        protocolVersion: peer.protocolVersion,
+      });
 
-    bootstrapTcpNodes.push({
-      nodeId: peer.nodeId,
-      address: peer.address,
-      port: peer.tcpPort,
-      protocolVersion: peer.protocolVersion,
-    });
+      bootstrapTcpNodes.push({
+        nodeId: peer.nodeId,
+        address: peer.address,
+        port: peer.tcpPort,
+        protocolVersion: peer.protocolVersion,
+      });
+    }
 
     bootstrapWsNodes.push({
       nodeId: peer.nodeId,
@@ -245,13 +247,13 @@ export function parseContactInfo(
   };
 
   return [
-    bootstrapUdPNodes,
+    bootstrapUdpNodes,
     bootstrapTcpNodes,
     bootstrapWsNodes,
     browserNode,
     ownNodeId,
-    ownUdpAddress,
-    ownTcpAddress,
-    ownWsAddress,
+    browserNode ? undefined : ownUdpAddress,
+    browserNode ? undefined : ownTcpAddress,
+    browserNode ? undefined : ownWsAddress,
   ];
 }
