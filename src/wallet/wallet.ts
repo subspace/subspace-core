@@ -66,6 +66,14 @@ export class Wallet {
   }
 
   /**
+   * Check if this wallet has any accounts within it.
+   *
+   */
+  public hasAccount(): boolean {
+    return this.accounts.size > 0;
+  }
+
+  /**
    * Creates a new account for this node with optional params
    *
    * @param name Optional human readable name for the account

@@ -1,11 +1,7 @@
 // tslint:disable: no-console
 // tslint:disable: member-ordering
 
-// import * as codes from '../codes/codes';
 import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
@@ -13,132 +9,28 @@ import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
-import { IPeerContactInfo } from '../main/interfaces';
-import { Network } from '../network/Network';
+import { INodeConfig, INodeSettings } from '../main/interfaces';
 import { RPC } from '../network/rpc';
-import { bin2Hex, hex2Bin, measureProximity, parseContactInfo, rmDirRecursiveSync } from '../utils/utils';
-import { IWalletAccount, Wallet } from '../wallet/wallet';
+import { bin2Hex, measureProximity } from '../utils/utils';
+import { Wallet } from '../wallet/wallet';
 
 // ToDo
   // add time logging
-  // detect type of storage for storage adapter
   // sync an existing ledger
 
 export class Node extends EventEmitter {
 
-  /**
-   * Instantiate a new empty node with only environment variables.
-   */
-  public static async init(
-    selfContactInfo: IPeerContactInfo,
-    peerContactInfo: IPeerContactInfo[],
-    nodeType: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
-    storageAdapter: 'rocks' | 'browser' | 'memory' = 'rocks',
-    plotMode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB = 'mem-db',
-    numberOfPlots: number,
-    farmSize: number,
-    validateRecords: boolean,
-    encodingRounds: number,
-    storageDir?: string,
-    reset = true,
-  ): Promise<Node> {
-
-    switch (nodeType) {
-      case 'full': {
-        // does everything, default mode
-        // must have a public/static IP address
-        // receives, validates and routes gossip on the relay network
-        // stores head of the ledger in memory
-        // stores the raw blockchain on disk
-        // stores the archival state as the state chain
-        // stores its segment of the piece set in plot (encoded blockchain)
-        // attempts to solve the block challenge and gossips new blocks it creates
-        // announces itself on the dht and serves requests for pieces from its segment of the ledger
-        // serves rpc requests over the network
-        // serves json-rpc requests over https
-        // serves as a bootstrap server for new nodes joining the network
-        break;
-      } case 'validator': {
-        // receives, validates and routes gossip on the relay network
-        // stores head of the ledger in memory
-        // stores the raw blockchain on disk
-        // stores the archival state as the state chain
-        // serves rpc requests over the network
-        break;
-      } case 'farmer': {
-        // receives, validates and routes gossip on the relay network
-        // stores head of the ledger in memory
-        // stores the archival state as the state chain
-        // stores its segment of the piece set in plot (encoded blockchain)
-        // attempts to solve the block challenge and gossips new blocks it creates
-        // announces itself on the dht and serves requests for pieces from its segment of the ledger
-        break;
-      } case 'gateway': {
-        // must have a public/static IP address
-        // receives, validates and routes gossip on the relay network
-        // stores head of the ledger in memory
-        // stores the raw blockchain on disk
-        // stores the archival state as the state chain
-        // serves rpc requests over the network
-        // serves json-rpc requests over https
-        // serves as a bootstrap server for new nodes joining the network
-        break;
-      } case 'client': {
-        // receives, validates and routes gossip on the relay network
-        // stores head of the ledger in memory
-        // stores the archival state as the state chain
-        break;
-      }
-    }
-
-    // initialize storage directory
-    // storageDir ? storageDir = path.normalize(storageDir) : storageDir = `${os.homedir()}/subspace/data/`;
-
-    if (reset && fs.existsSync(storageDir)) {
-     rmDirRecursiveSync(storageDir);
-    }
-
-    if (!fs.existsSync(storageDir)) {
-      fs.mkdirSync(storageDir, { recursive: true });
-    }
-
-    const wallet = await Wallet.open(storageAdapter, storageDir);
-
-    for (let i = 0; i < numberOfPlots; ++i) {
-      await wallet.createAccount(`Plot-${i}`);
-    }
-
-    const addresses = [...wallet.addresses].map((address) => hex2Bin(address));
-
-    const ledger = await Ledger.init(storageAdapter, storageDir, validateRecords, encodingRounds);
-    const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
-
-    selfContactInfo.nodeId = addresses[0];
-
-    const networkOptions = parseContactInfo(selfContactInfo, peerContactInfo);
-
-    const network = new Network(...networkOptions);
-
-    const rpc = new RPC(network);
-
-    return new Node(nodeType, wallet, farm, ledger, rpc);
-  }
-
-  public readonly type: string;
-  public isFarming: boolean;
-  public isRelay = true;
-  public isServing = true;
-
   constructor(
-    nodeType: string,
-    public wallet: Wallet,
-    public farm: Farm | null,
-    public ledger: Ledger,
-    public rpc: RPC,
+    public readonly type: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
+    public readonly config: INodeConfig,
+    public readonly settings: INodeSettings,
+    private rpc: RPC,
+    private ledger: Ledger,
+    private wallet: Wallet | undefined,
+    private farm: Farm | undefined,
   ) {
 
     super();
-    this.type = nodeType;
     this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
     this.rpc.on('pong', () => this.emit('pong'));
     this.rpc.on('tx-gossip', (tx: Tx) => this.onTx(tx));
@@ -163,10 +55,12 @@ export class Node extends EventEmitter {
       }
 
       // update account for each tx that links to an account for this node
-      const addresses = this.wallet.addresses;
-      for (const tx of confirmedTxs) {
-        if (addresses.has(bin2Hex(tx.senderAddress)) || addresses.has(bin2Hex(tx.receiverAddress))) {
-          await wallet.onTxConfirmed(tx);
+      if (this.wallet) {
+        const addresses = this.wallet.addresses;
+        for (const tx of confirmedTxs) {
+          if (addresses.has(bin2Hex(tx.senderAddress)) || addresses.has(bin2Hex(tx.receiverAddress))) {
+            await this.wallet.onTxConfirmed(tx);
+          }
         }
       }
     });
@@ -176,8 +70,6 @@ export class Node extends EventEmitter {
      * Encode the block as binary and gossip over the network.
      */
     this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
-      // console.log('New block received in node.');
-      // console.log(`Encoding length is ${encoding.length}`);
       console.log('New block received by Node.');
       if (this.ledger.isValidating) {
         await this.ledger.isValidBlock(block, encoding);
@@ -194,40 +86,23 @@ export class Node extends EventEmitter {
     this.ledger.on('tx', (tx: Tx) => {
       this.rpc.gossipTx(tx);
     });
-  }
 
-  /**
-   * Looks for an existing address within the wallet, creating a new one if one does not exist.
-   */
-  public async getOrCreateAccount(): Promise<IWalletAccount> {
-    const accounts = this.wallet.getAccounts();
-    let account: IWalletAccount;
-    accounts.length ? account = accounts[0] : account = await this.wallet.createAccount('test', 'A test account');
-    return account;
+    switch (this.type) {
+      case 'full': {
+        this.createLedgerAndFarm(this.settings.numberOfChains);
+      }
+    }
   }
-
-  /**
-   * Tests the plotting workflow for some random data.
-   */
-  // public async plot(): Promise<void> {
-  //   const data = crypto.randomBytes(520191);
-  //   const paddedData = codes.padLevel(data);
-  //   const encodedData = await codes.erasureCodeLevel(paddedData);
-  //   const pieceSet = codes.sliceLevel(encodedData);
-  //   await this.farm.seedPlot(this.address, pieceSet);
-  //   console.log(`Completed plotting ${pieceSet.length} pieces.`);
-  // }
 
   /**
    * Starts a new ledger from genesis and begins farming its own plot in isolation. Mostly for testing.
    * Retains both the original ledger data within storage and the encoded piece set in the plot.
    */
   public async createLedgerAndFarm(chainCount: number): Promise<void> {
-    if (!this.farm) {
+    if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
-    this.isFarming = true;
-    const account = await this.getOrCreateAccount();
+    const account = this.wallet.getAccounts()[0];
     console.log('\nLaunching a new Subspace Full Node!');
     console.log('-----------------------------------\n');
     console.log(`Created a new node identity with address ${bin2Hex(account.address)}`);
@@ -236,18 +111,19 @@ export class Node extends EventEmitter {
     const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
     console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
     for (const piece of pieceSet) {
+      console.log(piece);
       await this.farm.addPiece(piece.piece, piece.data);
     }
     console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
 
     // start a farming evaluation loop
-    while (this.isFarming) {
+    while (this.config.farm) {
       await this.farmBlock();
     }
   }
 
   public async farmBlock(): Promise<void> {
-    if (!this.farm) {
+    if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
     // find best encoding for challenge
@@ -347,12 +223,14 @@ export class Node extends EventEmitter {
    */
   public async onTx(tx: Tx): Promise<void> {
     if (this.ledger.isValidTx(tx)) {
-      const addresses = this.wallet.addresses;
-      if (addresses.has(bin2Hex(tx.receiverAddress))) {
-        this.wallet.onTxReceived(tx);
-      }
       this.ledger.applyTx(tx);
       this.rpc.gossipTx(tx);
+      if (this.wallet) {
+        const addresses = this.wallet.addresses;
+        if (addresses.has(bin2Hex(tx.receiverAddress))) {
+          this.wallet.onTxReceived(tx);
+        }
+      }
     }
 
     // ToDo
