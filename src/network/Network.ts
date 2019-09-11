@@ -754,6 +754,17 @@ export class Network extends EventEmitter implements INetwork {
     payload: Uint8Array,
   ): Promise<void> {
     const message = composeMessage(command, requestResponseId, payload);
+    return this.sendWsMessageRaw(connection, message);
+  }
+
+  /**
+   * @param connection
+   * @param message
+   */
+  private async sendWsMessageRaw(
+    connection: websocket.connection,
+    message: Uint8Array,
+  ): Promise<void> {
     connection.sendBytes(Buffer.from(message));
   }
 
@@ -854,6 +865,7 @@ export class Network extends EventEmitter implements INetwork {
       ...this.nodeIdToUdpAddressMap.keys(),
       ...this.nodeIdToTcpAddressMap.keys(),
       ...this.nodeIdToTcpSocketMap.keys(),
+      ...this.nodeIdToWsConnectionMap.keys(),
     ]);
     if (sourceNodeId) {
       allNodesSet.delete(sourceNodeId);
@@ -892,6 +904,14 @@ export class Network extends EventEmitter implements INetwork {
           },
         );
         continue;
+      }
+      const wsConnection = this.nodeIdToWsConnectionMap.get(nodeId);
+      if (wsConnection) {
+        // Node likely doesn't have any other way to communicate besides WebSocket
+        this.sendWsMessageRaw(wsConnection, message)
+          .catch((_) => {
+            // TODO: Log in debug mode
+          });
       }
       this.nodeIdToTcpSocket(nodeId)
         .then((socket) => {
