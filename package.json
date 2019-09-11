@@ -29,7 +29,7 @@
     "test-new": "npm run lint && npm run compile && npm run clear-data && jest -o --verbose",
     "build-and-publish": "npm run build && npm publish",
     "test-browser": "npm run compile && npm run build-browser && npm run server",
-    "server": "cd app/web && php -S localhost:8080 server.php"
+    "server": "live-server --mount=/:app/web --watch=app/web"
   },
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
     "@types/jest": "^24.0.18",
     "browserify": "^16.5.0",
     "jest": "^24.9.0",
+    "live-server": "^1.2.1",
     "terser": "^4.3.1",
     "ts-node": "^8.3.0",
     "tslint": "^5.20.0",
@@ -66,7 +67,6 @@
     "level-js": "^4.0.1",
     "level-rocksdb": "^4.0.0",
     "levelup": "^4.2.0",
-    "live-server": "^1.2.1",
     "merkle-tree-binary": "^2.0.1",
     "websocket": "^1.0.29"
   }
