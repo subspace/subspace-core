@@ -8,6 +8,7 @@ if (!globalThis.indexedDB) {
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Ledger } from '../ledger/ledger';
@@ -217,16 +218,18 @@ export const run = async (
   // instantiate a single storage instance
   // storage = new Storage(storageAdapter, 'storage', 'storage');
 
+  const blsSignatures = await BlsSignatures.init();
+
   // instantiate a wallet
   if (config.wallet && !config.farm) {
-    wallet = await Wallet.open(storageAdapter, storagePath, 'wallet');
+    wallet = await Wallet.open(blsSignatures, storageAdapter, storagePath, 'wallet');
   }
 
   // instantiate a farm
   if (config.farm && config.wallet) {
 
     // create wallet and addresses
-    wallet = await Wallet.open(storageAdapter, storagePath, 'wallet');
+    wallet = await Wallet.open(blsSignatures, storageAdapter, storagePath, 'wallet');
 
     const addresses: Uint8Array[] = [];
     for (let i = 0; i < numberOfChains; ++i) {
@@ -241,13 +244,13 @@ export const run = async (
   }
 
   // instantiate a ledger
-  ledger = await Ledger.init(storageAdapter, storagePath, validateRecords, encodingRounds);
+  ledger = await Ledger.init(blsSignatures, storageAdapter, storagePath, validateRecords, encodingRounds);
 
   // instantiate the network & rpc interface
   contactInfo.nodeId = crypto.randomBytes(32);
   const networkOptions = parseContactInfo(contactInfo, bootstrapPeers);
   const network = new Network(...networkOptions);
-  rpc = new RPC(network);
+  rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {
     storagePath,

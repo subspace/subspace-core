@@ -1,11 +1,12 @@
 import { EventEmitter } from "events";
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import { Block } from "../ledger/block";
 import { Tx } from "../ledger/tx";
 import { Network } from './Network';
 
 export class RPC extends EventEmitter {
 
-  constructor(private network: Network) {
+  constructor(private readonly network: Network, private readonly blsSignatures: BlsSignatures) {
       super();
 
       // received a ping from another node
@@ -25,7 +26,7 @@ export class RPC extends EventEmitter {
       // received a new tx via gossip
       this.network.on('tx-gossip', (payload: Uint8Array) => {
         const tx = Tx.fromBytes(payload);
-        if (!tx.isValid()) {
+        if (!tx.isValid(blsSignatures)) {
           // TODO
             // Drop the node who sent response from peer table
             // Add to blacklisted nodes
@@ -38,7 +39,7 @@ export class RPC extends EventEmitter {
       this.network.on('block-gossip', (payload: Uint8Array) => {
         const encoding = payload.subarray(0, 4096);
         const block = Block.fromFullBytes(payload.subarray(4096));
-        if (!block.isValid()) {
+        if (!block.isValid(blsSignatures)) {
           // TODO
             // Drop the node who sent response from peer table
             // Add to blacklisted nodes
@@ -107,7 +108,7 @@ export class RPC extends EventEmitter {
   public async requestTx(nodeId: Uint8Array, txId: Uint8Array): Promise<Tx> {
     const binaryTx = await this.network.sendRequestUnreliable(nodeId, 'tx-request', txId);
     const tx = Tx.fromBytes(binaryTx);
-    if (!tx.isValid()) {
+    if (!tx.isValid(this.blsSignatures)) {
       // TODO
         // Drop the node who sent response from peer table
         // Add to blacklisted nodes
@@ -128,7 +129,7 @@ export class RPC extends EventEmitter {
   public async requestBlock(nodeId: Uint8Array, blockId: Uint8Array): Promise<Block> {
     const binaryBlock = await this.network.sendRequestUnreliable(nodeId, 'block-request', blockId);
     const block = Block.fromFullBytes(binaryBlock);
-    if (!block.isValid()) {
+    if (!block.isValid(this.blsSignatures)) {
       // TODO
         // Drop the node who sent response from peer table
         // Add to blacklisted nodes

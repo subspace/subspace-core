@@ -1,5 +1,6 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: variable-name
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { ITxValue } from '../main/interfaces';
 import { areArraysEqual, bin2Hex, bin2Num, num2Bin, num2Date, smallBin2Num, smallNum2Bin } from '../utils/utils';
@@ -15,7 +16,14 @@ export class Tx {
   /**
    * Returns a new signed tx instance given correct inputs.
    */
-  public static create(senderPublicKey: Uint8Array, receiverPublicKey: Uint8Array, amount: number, nonce: number, senderPrivateKey: Uint8Array): Tx {
+  public static create(
+    senderPublicKey: Uint8Array,
+    receiverPublicKey: Uint8Array,
+    amount: number,
+    nonce: number,
+    senderPrivateKey: Uint8Array,
+    blsSignatures: BlsSignatures,
+  ): Tx {
     const txValue: ITxValue = {
       sender: senderPublicKey,
       receiver: receiverPublicKey,
@@ -25,7 +33,7 @@ export class Tx {
       signature: new Uint8Array(),
     };
     const tx = new Tx(txValue);
-    tx.sign(senderPrivateKey);
+    tx.sign(senderPrivateKey, blsSignatures);
     tx.setKey();
     return tx;
   }
@@ -33,8 +41,21 @@ export class Tx {
   /**
    * Creates a coinbase tx to reward the farmer who creates a new block.
    */
-  public static createCoinbase(creatorPublicKey: Uint8Array, amount: number, nonce: number, creatorPrivateKey: Uint8Array): Tx {
-    return Tx.create(new Uint8Array(48), creatorPublicKey, amount, nonce, creatorPrivateKey);
+  public static createCoinbase(
+    creatorPublicKey: Uint8Array,
+    amount: number,
+    nonce: number,
+    creatorPrivateKey: Uint8Array,
+    blsSignatures: BlsSignatures,
+  ): Tx {
+    return Tx.create(
+      new Uint8Array(48),
+      creatorPublicKey,
+      amount,
+      nonce,
+      creatorPrivateKey,
+      blsSignatures,
+    );
   }
 
   /**
@@ -127,7 +148,7 @@ export class Tx {
   /**
    * Validates that tx follows schema and is internally consistent, but not that it has sufficient funds.
    */
-  public isValid(): boolean {
+  public isValid(blsSignatures: BlsSignatures): boolean {
 
     // validate signature is 96 bytes (BLS signature)
     if (this._value.signature.length !== 96) {
@@ -167,7 +188,7 @@ export class Tx {
     let sender: Uint8Array;
     areArraysEqual(this._value.sender, new Uint8Array(48)) ? sender = this._value.receiver : sender = this._value.sender;
 
-    if (!crypto.verifySignature(this.toBytes(false), this._value.signature, sender)) {
+    if (!blsSignatures.verifySignature(this.toBytes(false), this._value.signature, sender)) {
       throw new Error('Invalid tx, invalid signature for message and public key');
     }
 
@@ -188,7 +209,7 @@ export class Tx {
   /**
    * Appends a detached BLS signature to a newly created tx.
    */
-  public sign(privateKey: Uint8Array): void {
-    this._value.signature = crypto.signMessage(this.toBytes(false), privateKey);
+  public sign(privateKey: Uint8Array, blsSignatures: BlsSignatures): void {
+    this._value.signature = blsSignatures.signMessage(this.toBytes(false), privateKey);
   }
 }

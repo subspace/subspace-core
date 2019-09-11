@@ -5,6 +5,7 @@
 import { ArrayMap, ArraySet } from "array-map-set";
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
+import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
 import { IPiece } from '../main/interfaces';
@@ -55,12 +56,14 @@ import { Tx } from './tx';
 export class Ledger extends EventEmitter {
 
   public static async init(
+    blsSignatures: BlsSignatures,
     storageAdapter: string,
     storageDir: string,
     validateRecords: boolean,
     encodingRounds: number,
   ): Promise<Ledger> {
     const ledger = new Ledger(
+      blsSignatures,
       storageAdapter,
       storageDir,
       validateRecords,
@@ -87,6 +90,7 @@ export class Ledger extends EventEmitter {
   public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
   private lastStateHash: Uint8Array = new Uint8Array();
   private chains: Chain[] = [];
+  private readonly blsSignatures: BlsSignatures;
   // @ts-ignore TODO: Use it for something
   private storage: Storage;
   private proofMap = ArrayMap<Uint8Array, Uint8Array>();
@@ -97,12 +101,14 @@ export class Ledger extends EventEmitter {
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
 
   constructor(
+    blsSignatures: BlsSignatures,
     storageAdapter: string,
     storageDir: string,
     validateRecords: boolean,
     encodingRounds: number,
   ) {
     super();
+    this.blsSignatures = blsSignatures;
     this.storage = new Storage(storageAdapter, storageDir, 'farm');
     this.accounts = new Account();
     this.isValidating = validateRecords;
@@ -395,7 +401,7 @@ export class Ledger extends EventEmitter {
     // console.log(encoding);
 
     // validate the block, proof, content, and coinbase tx are all well formed, will throw if not
-    block.isValid();
+    block.isValid(this.blsSignatures);
 
     // handle genesis blocks ...
     if (areArraysEqual(block.value.proof.value.previousLevelHash, new Uint8Array(32))) {

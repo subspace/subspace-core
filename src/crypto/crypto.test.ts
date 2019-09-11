@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 
+import {BlsSignatures} from "./BlsSignatures";
 import * as crypto from './crypto';
 
 const hashData = Buffer.from('hello subspace');
@@ -39,6 +40,12 @@ const binaryPublicKey = Uint8Array.from([
 
 const dateRange = 1000;
 
+let blsSignatures: BlsSignatures;
+
+beforeAll(async () => {
+  blsSignatures = await BlsSignatures.init();
+});
+
 test('sha-256-hash', () => {
   expect(Buffer.from(crypto.hash(hashData)).toString('hex')).toBe(hashValue);
 });
@@ -68,12 +75,12 @@ test('invalid-date', () => {
 });
 
 test('bls-keys', () => {
-  const keyPair = crypto.generateBLSKeys();
-  const signature = crypto.signMessage(Buffer.from(hashValue), keyPair.binaryPrivateKey);
-  expect(crypto.verifySignature(Buffer.from(hashValue), signature, keyPair.binaryPublicKey)).toBe(true);
+  const keyPair = blsSignatures.generateBLSKeys();
+  const signature = blsSignatures.signMessage(Buffer.from(hashValue), keyPair.binaryPrivateKey);
+  expect(blsSignatures.verifySignature(Buffer.from(hashValue), signature, keyPair.binaryPublicKey)).toBe(true);
 
-  const signature1 = crypto.signMessage(Buffer.from(hashValue), binaryPrivateKey);
-  expect(crypto.verifySignature(Buffer.from(hashValue), signature1, binaryPublicKey)).toBe(true);
+  const signature1 = blsSignatures.signMessage(Buffer.from(hashValue), binaryPrivateKey);
+  expect(blsSignatures.verifySignature(Buffer.from(hashValue), signature1, binaryPublicKey)).toBe(true);
 });
 
 test('merkle-workflow', () => {

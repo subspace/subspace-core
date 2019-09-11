@@ -1,3 +1,5 @@
+import {BlsSignatures} from "../crypto/BlsSignatures";
+
 if (!globalThis.indexedDB) {
   // Only import when not preset (in Node.js)
   // tslint:disable-next-line:no-var-requires no-submodule-imports
@@ -40,16 +42,20 @@ const networkOptions2 = parseContactInfo(peer2, [peer1]);
 const network1 = new Network(...networkOptions1);
 const network2 = new Network(...networkOptions2);
 
-const rpc1 = new RPC(network1);
-const rpc2 = new RPC(network2);
+let rpc1: RPC;
+let rpc2: RPC;
 
 let tx: Tx;
+// tslint:disable-next-line: prefer-const
 let wallet: Wallet;
 
 const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomBytes(32));
 
 beforeAll(async () => {
-  wallet = await Wallet.open('memory', 'rpc-test');
+  const blsSignatures = await BlsSignatures.init();
+  rpc1 = new RPC(network1, blsSignatures);
+  rpc2 = new RPC(network2, blsSignatures);
+  const wallet = await Wallet.open(blsSignatures, 'memory', 'rpc-test');
   wallet.createAccount();
   const publicKey = wallet.getAccounts()[0].publicKey;
   tx = await wallet.createCoinBaseTx(1, publicKey);

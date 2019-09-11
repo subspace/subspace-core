@@ -9,13 +9,17 @@
   "bin": {
     "subspace": "bin/subspace.js"
   },
+  "files": [
+    "bin",
+    "dist"
+  ],
   "scripts": {
     "subspace": "bin/subspace.js",
     "build": "npm run clean && npm run lint && npm run gen-docs && npm run compile",
     "build-browser": "npm run browser-bundle && npm run browser-minify && npm run browser-copy-wasm",
     "browser-bundle": "browserify --standalone Subspace dist/main/index.js > app/web/build/bundle.js",
     "browser-minify": "terser --compress --mangle -- app/web/build/bundle.js > app/web/build/bundle.min.js",
-    "browser-copy-wasm": "cp node_modules/*/*/dist/*.wasm app/web/build",
+    "browser-copy-wasm": "find node_modules -name '*.wasm' -type f -exec cp {} app/web/ \\;",
     "gen-docs": "typedoc --out docs/ src/ --ignoreCompilerErrors",
     "clean": "rm -rf dist",
     "compile": "tsc -b",
@@ -23,7 +27,9 @@
     "start": "ts-node src/main/index.ts",
     "test": "npm run lint && npm run compile && jest --verbose",
     "test-new": "npm run lint && npm run compile && npm run clear-data && jest -o --verbose",
-    "build-and-publish": "npm run build && npm publish"
+    "build-and-publish": "npm run build && npm publish",
+    "test-browser": "npm run compile && npm run build-browser && npm run server",
+    "server": "cd app/web && php -S localhost:8080 server.php"
   },
   "repository": {
     "type": "git",
@@ -39,26 +45,26 @@
     "@types/jest": "^24.0.18",
     "browserify": "^16.5.0",
     "jest": "^24.9.0",
-    "terser": "^4.2.1",
+    "terser": "^4.3.1",
     "ts-node": "^8.3.0",
-    "tslint": "^5.19.0",
+    "tslint": "^5.20.0",
     "typedoc": "^0.15.0",
-    "typescript": "^3.6.2"
+    "typescript": "^3.6.3"
   },
   "dependencies": {
-    "@subspace/jump-consistent-hash": "^1.0.0",
+    "@subspace/bls-signatures": "^0.2.0",
+    "@subspace/jump-consistent-hash": "^1.1.0",
     "@subspace/red-black-tree": "^0.1.3",
     "@subspace/reed-solomon-erasure.wasm": "^0.2.4",
     "@types/level-js": "^4.0.1",
     "@types/levelup": "^3.1.1",
-    "@types/node": "^12.7.2",
+    "@types/node": "^12.7.4",
     "array-map-set": "^1.0.3",
-    "bls-signatures": "^0.1.9",
-    "commander": "^3.0.0",
+    "commander": "^3.0.1",
     "fake-indexeddb": "^2.1.1",
     "level-js": "^4.0.1",
     "level-rocksdb": "^4.0.0",
-    "levelup": "^4.1.0",
+    "levelup": "^4.2.0",
     "live-server": "^1.2.1",
     "merkle-tree-binary": "^2.0.1"
   }
