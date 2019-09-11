@@ -178,17 +178,26 @@ export function rmDirRecursiveSync(dirPath: string): void {
   }
 }
 
-export function parseContactInfo(selfContactInfo: IPeerContactInfo, peerContactInfo: IPeerContactInfo[]): [
+let portOffset = 20000;
+export function allocatePort(): number {
+  ++portOffset;
+  return portOffset;
+}
+
+export function parseContactInfo(selfContactInfo: IPeerContactInfo, bootstrapPeerContactInfo: IPeerContactInfo[]): [
+  INodeAddress[],
   INodeAddress[],
   INodeAddress[],
   Uint8Array,
   IAddress,
   IAddress,
+  IAddress,
  ] {
   const bootstrapUdPNodes: INodeAddress [] = [];
   const bootstrapTcpNodes: INodeAddress [] = [];
+  const bootstrapWsNodes: INodeAddress [] = [];
 
-  for (const peer of peerContactInfo) {
+  for (const peer of bootstrapPeerContactInfo) {
     bootstrapUdPNodes.push({
       nodeId: peer.nodeId,
       address: peer.address,
@@ -199,7 +208,14 @@ export function parseContactInfo(selfContactInfo: IPeerContactInfo, peerContactI
     bootstrapTcpNodes.push({
       nodeId: peer.nodeId,
       address: peer.address,
-      port: peer.udpPort,
+      port: peer.tcpPort,
+      protocolVersion: peer.protocolVersion,
+    });
+
+    bootstrapWsNodes.push({
+      nodeId: peer.nodeId,
+      address: peer.address,
+      port: peer.wsPort,
       protocolVersion: peer.protocolVersion,
     });
   }
@@ -217,11 +233,19 @@ export function parseContactInfo(selfContactInfo: IPeerContactInfo, peerContactI
     protocolVersion: selfContactInfo.protocolVersion,
   };
 
+  const ownWsAddress: IAddress = {
+    address: selfContactInfo.address,
+    port: selfContactInfo.wsPort,
+    protocolVersion: selfContactInfo.protocolVersion,
+  };
+
   return [
     bootstrapUdPNodes,
     bootstrapTcpNodes,
+    bootstrapWsNodes,
     ownNodeId,
     ownUdpAddress,
     ownTcpAddress,
+    ownWsAddress,
   ];
 }

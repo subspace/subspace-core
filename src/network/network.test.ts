@@ -1,101 +1,48 @@
 import {randomBytes} from "crypto";
+import * as crypto from "../crypto/crypto";
+import {IPeerContactInfo} from "../main/interfaces";
+import {allocatePort, parseContactInfo} from "../utils/utils";
 import {Network} from "./Network";
 
-const nodeIdClient1 = new Uint8Array(32);
-nodeIdClient1.set([1]);
-const udpPortClient1 = 11888;
-const tcpPortClient1 = 11889;
+const peer1: IPeerContactInfo = {
+  address: 'localhost',
+  nodeId: crypto.randomBytes(32),
+  protocolVersion: '4',
+  tcpPort: allocatePort(),
+  udpPort: allocatePort(),
+  wsPort: allocatePort(),
+};
 
-const nodeIdClient2 = new Uint8Array(32);
-nodeIdClient2.set([2]);
-const udpPortClient2 = 12888;
-const tcpPortClient2 = 12889;
+const peer2: IPeerContactInfo = {
+  address: 'localhost',
+  nodeId: crypto.randomBytes(32),
+  protocolVersion: '4',
+  tcpPort: allocatePort(),
+  udpPort: allocatePort(),
+  wsPort: allocatePort(),
+};
 
-const nodeIdClient3 = new Uint8Array(33);
-nodeIdClient3.set([3]);
-const udpPortClient3 = 13888;
-const tcpPortClient3 = 13889;
+const peer3: IPeerContactInfo = {
+  address: 'localhost',
+  nodeId: crypto.randomBytes(32),
+  protocolVersion: '4',
+  tcpPort: allocatePort(),
+  udpPort: allocatePort(),
+  wsPort: allocatePort(),
+};
+
+const networkOptions1 = parseContactInfo(peer1, [peer2]);
+const networkOptions2 = parseContactInfo(peer2, [peer1]);
+const networkOptions3 = parseContactInfo(peer3, [peer1]);
 
 let networkClient1: Network;
 let networkClient2: Network;
 let networkClient3: Network;
 
 beforeEach(() => {
-  networkClient1 = new Network(
-    [
-      {
-        address: 'localhost',
-        nodeId: nodeIdClient2,
-        port: udpPortClient2,
-      },
-    ],
-    [
-      {
-        address: 'localhost',
-        nodeId: nodeIdClient2,
-        port: tcpPortClient2,
-      },
-    ],
-    nodeIdClient1,
-    {
-      address: 'localhost',
-      port: udpPortClient1,
-    },
-    {
-      address: 'localhost',
-      port: tcpPortClient1,
-    },
-  );
-  networkClient2 = new Network(
-    [
-      {
-        address: 'localhost',
-        nodeId: nodeIdClient1,
-        port: udpPortClient1,
-      },
-    ],
-    [
-      {
-        address: 'localhost',
-        nodeId: nodeIdClient1,
-        port: tcpPortClient1,
-      },
-    ],
-    nodeIdClient2,
-    {
-      address: 'localhost',
-      port: udpPortClient2,
-    },
-    {
-      address: 'localhost',
-      port: tcpPortClient2,
-    },
-  );
-  networkClient3 = new Network(
-    [
-      {
-        address: 'localhost',
-        nodeId: nodeIdClient1,
-        port: udpPortClient1,
-      },
-    ],
-    [
-      {
-        address: 'localhost',
-        nodeId: nodeIdClient1,
-        port: tcpPortClient1,
-      },
-    ],
-    nodeIdClient3,
-    {
-      address: 'localhost',
-      port: udpPortClient3,
-    },
-    {
-      address: 'localhost',
-      port: tcpPortClient3,
-    },
-  );
+  networkClient1 = new Network(...networkOptions1);
+  networkClient2 = new Network(...networkOptions2);
+  networkClient3 = new Network(...networkOptions3);
 });
 
 describe('UDP', () => {
@@ -106,7 +53,7 @@ describe('UDP', () => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         resolve();
       });
-      networkClient1.sendOneWayRequestUnreliable(nodeIdClient2, 'ping', randomPayload);
+      networkClient1.sendOneWayRequestUnreliable(peer2.nodeId, 'ping', randomPayload);
     });
   });
 
@@ -120,7 +67,7 @@ describe('UDP', () => {
           resolve();
         });
       }),
-      networkClient1.sendRequestUnreliable(nodeIdClient2, 'ping', randomPayload),
+      networkClient1.sendRequestUnreliable(peer2.nodeId, 'ping', randomPayload),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
@@ -134,7 +81,7 @@ describe('TCP', () => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         resolve();
       });
-      networkClient1.sendOneWayRequest(nodeIdClient2, 'ping', randomPayload);
+      networkClient1.sendOneWayRequest(peer2.nodeId, 'ping', randomPayload);
     });
   });
 
@@ -148,7 +95,7 @@ describe('TCP', () => {
           resolve();
         });
       }),
-      networkClient1.sendRequest(nodeIdClient2, 'ping', randomPayload),
+      networkClient1.sendRequest(peer2.nodeId, 'ping', randomPayload),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });

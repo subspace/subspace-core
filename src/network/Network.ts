@@ -1,7 +1,9 @@
 import {ArrayMap, ArraySet} from "array-map-set";
 import * as dgram from "dgram";
 import {EventEmitter} from "events";
+import * as http from "http";
 import * as net from "net";
+import * as websocket from "websocket";
 import {hash} from "../crypto/crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
@@ -112,6 +114,8 @@ export class Network extends EventEmitter implements INetwork {
   private readonly UDP_MESSAGE_SIZE_LIMIT = 508;
   // In bytes, excluding 4-bytes header with message length
   private readonly TCP_MESSAGE_SIZE_LIMIT = 2 * 1024 * 1024; // 2 MiB
+  // In bytes
+  private readonly WS_MESSAGE_SIZE_LIMIT = this.TCP_MESSAGE_SIZE_LIMIT;
 
   // Will 2**32 be enough?
   private requestId: number = 0;
@@ -128,21 +132,26 @@ export class Network extends EventEmitter implements INetwork {
 
   private readonly udp4Socket: dgram.Socket;
   private readonly tcp4Server: net.Server;
+  private readonly wsServer: websocket.server;
+  private readonly httpServer: http.Server;
 
   private readonly nodeIdToUdpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
+  private readonly nodeIdToWsAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToTcpSocketMap = ArrayMap<Uint8Array, net.Socket>();
+  private readonly nodeIdToWsConnectionMap = ArrayMap<Uint8Array, websocket.connection>();
   private readonly tcpSocketToNodeIdMap = new Map<net.Socket, Uint8Array>();
+  private readonly wsConnectionToNodeIdMap = new Map<websocket.connection, Uint8Array>();
   private readonly gossipCache = new Set<string>();
 
   constructor(
     bootstrapUdpNodes: INodeAddress[],
     bootstrapTcpNodes: INodeAddress[],
-    // bootstrapWsNodes: INodeAddress[],
+    bootstrapWsNodes: INodeAddress[],
     private readonly ownNodeId: Uint8Array,
     ownUdpAddress: IAddress,
     ownTcpAddress: IAddress,
-    // ownWsAddress: IAddress,
+    ownWsAddress: IAddress,
   ) {
     super();
     this.setMaxListeners(Infinity);
@@ -169,8 +178,23 @@ export class Network extends EventEmitter implements INetwork {
       );
     }
 
+    for (const bootstrapWsNode of bootstrapWsNodes) {
+      this.nodeIdToWsAddressMap.set(
+        bootstrapWsNode.nodeId,
+        {
+          address: bootstrapWsNode.address,
+          port: bootstrapWsNode.port,
+          protocolVersion: bootstrapWsNode.protocolVersion,
+        },
+      );
+    }
+
     this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
     this.tcp4Server = this.createTcp4Server(ownTcpAddress);
+    const httpServer = http.createServer();
+    this.wsServer = this.createWebSocketServer(httpServer);
+    httpServer.listen(ownWsAddress.port, ownWsAddress.address);
+    this.httpServer = httpServer;
   }
 
   public async sendOneWayRequest(
@@ -288,6 +312,13 @@ export class Network extends EventEmitter implements INetwork {
           socket.destroy();
         }
         this.tcp4Server.close(resolve);
+      }),
+      new Promise((resolve) => {
+        for (const connection of this.nodeIdToWsConnectionMap.values()) {
+          connection.close();
+        }
+        this.wsServer.shutDown();
+        this.httpServer.close(resolve);
       }),
     ]);
   }
@@ -407,6 +438,25 @@ export class Network extends EventEmitter implements INetwork {
     tcp4Server.listen(ownTcpAddress.port, ownTcpAddress.address);
 
     return tcp4Server;
+  }
+
+  private createWebSocketServer(httpServer: http.Server): websocket.server {
+    const wsServer = new websocket.server({
+      fragmentOutgoingMessages: false,
+      httpServer,
+      keepaliveGracePeriod: 5000,
+      keepaliveInterval: 2000,
+    });
+    wsServer
+      .on('request', (request: websocket.request) => {
+        const connection = request.accept();
+        this.registerWsConnection(connection);
+      })
+      .on('close', (connection: websocket.connection) => {
+        this.wsConnectionCloseHandler(connection);
+      });
+
+    return wsServer;
   }
 
   private registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
@@ -547,6 +597,136 @@ export class Network extends EventEmitter implements INetwork {
         });
       });
     }
+  }
+
+  private registerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {
+    connection
+      .on('message', (message: websocket.IMessage) => {
+        if (message.type !== 'binary') {
+          connection.close();
+          // Because https://github.com/theturtle32/WebSocket-Node/issues/354
+          this.wsConnectionCloseHandler(connection);
+          // TODO: Log in debug mode that only binary messages are supported
+          return;
+        }
+        const buffer = message.binaryData as Buffer;
+        const uint8Array = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        this.handleWsMessage(connection, uint8Array);
+      });
+    // TODO: Connection expiration for cleanup
+    if (nodeId) {
+      this.nodeIdToWsConnectionMap.set(nodeId, connection);
+      this.wsConnectionToNodeIdMap.set(connection, nodeId);
+    }
+  }
+
+  private handleWsMessage(connection: websocket.connection, message: Uint8Array): void {
+    if (message.length > this.WS_MESSAGE_SIZE_LIMIT) {
+      // TODO: Log too big message in debug mode
+      return;
+    }
+    try {
+      const [command, requestId, payload] = parseMessage(message);
+      // TODO: Almost no validation!
+      switch (command) {
+        case 'identification':
+          if (payload.length !== NODE_ID_LENGTH) {
+            // TODO: Log in debug mode that payload length is incorrect
+            connection.close();
+            // Because https://github.com/theturtle32/WebSocket-Node/issues/354
+            this.wsConnectionCloseHandler(connection);
+          } else if (this.nodeIdToTcpSocketMap.has(payload)) {
+            // TODO: Log in debug mode that node mapping is already present
+            connection.close();
+            // Because https://github.com/theturtle32/WebSocket-Node/issues/354
+            this.wsConnectionCloseHandler(connection);
+          } else {
+            const nodeId = payload.slice();
+            this.nodeIdToWsConnectionMap.set(nodeId, connection);
+            this.wsConnectionToNodeIdMap.set(connection, nodeId);
+          }
+          break;
+        case 'response':
+          if (!this.wsConnectionToNodeIdMap.has(connection)) {
+            // TODO: Log in debug mode that non-identified node tried to send message
+            break;
+          }
+          const requestCallback = this.requestCallbacks.get(requestId);
+          if (requestCallback) {
+            requestCallback(payload);
+            // TODO: Should this really be done in case we receive response from random sender?
+            this.requestCallbacks.delete(requestId);
+          }
+          break;
+        case 'gossip':
+          this.handleIncomingGossip(
+            payload,
+            this.wsConnectionToNodeIdMap.get(connection) as Uint8Array,
+          );
+          break;
+        default:
+          if (!this.wsConnectionToNodeIdMap.has(connection)) {
+            // TODO: Log in debug mode that non-identified node tried to send message
+            break;
+          }
+          if (requestId) {
+            ++this.responseId;
+            const responseId = this.responseId;
+            this.responseCallbacks.set(
+              responseId,
+              (payload) => {
+                this.responseCallbacks.delete(responseId);
+                return this.sendWsMessage(connection, 'response', requestId, payload);
+              },
+            );
+            setTimeout(
+              () => {
+                this.responseCallbacks.delete(responseId);
+              },
+              this.DEFAULT_TIMEOUT * 1000,
+            ).unref();
+            this.emit(
+              command,
+              payload,
+              (responsePayload: Uint8Array) => {
+                const responseCallback = this.responseCallbacks.get(responseId);
+                if (responseCallback) {
+                  responseCallback(responsePayload);
+                }
+              },
+            );
+          } else {
+            this.emit(command, payload);
+          }
+          break;
+      }
+    } catch (error) {
+      // TODO: Log error in debug mode
+    }
+  }
+
+  private wsConnectionCloseHandler(connection: websocket.connection): void {
+    const nodeId = this.wsConnectionToNodeIdMap.get(connection);
+    if (nodeId) {
+      this.wsConnectionToNodeIdMap.delete(connection);
+      this.nodeIdToWsConnectionMap.delete(nodeId);
+    }
+  }
+
+  /**
+   * @param connection
+   * @param command
+   * @param requestResponseId `0` if no response is expected for request
+   * @param payload
+   */
+  private async sendWsMessage(
+    connection: websocket.connection,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void> {
+    const message = composeMessage(command, requestResponseId, payload);
+    connection.sendBytes(Buffer.from(message));
   }
 
   private async nodeIdToUdpAddress(nodeId: Uint8Array): Promise<IAddress> {

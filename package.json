@@ -59,6 +59,7 @@
     "@types/level-js": "^4.0.1",
     "@types/levelup": "^3.1.1",
     "@types/node": "^12.7.4",
+    "@types/websocket": "0.0.40",
     "array-map-set": "^1.0.3",
     "commander": "^3.0.1",
     "fake-indexeddb": "^2.1.1",
@@ -66,6 +67,7 @@
     "level-rocksdb": "^4.0.0",
     "levelup": "^4.2.0",
     "live-server": "^1.2.1",
-    "merkle-tree-binary": "^2.0.1"
+    "merkle-tree-binary": "^2.0.1",
+    "websocket": "^1.0.29"
   }
 }
