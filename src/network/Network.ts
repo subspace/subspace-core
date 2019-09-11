@@ -8,6 +8,7 @@ import {hash} from "../crypto/crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
+import {composeMessage, parseMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
@@ -35,21 +36,6 @@ function noopResponseCallback(): void {
  * @param requestResponseId `0` if no response is expected for request
  * @param payload
  */
-function composeMessage(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
-  // 1 byte for command, 4 bytes for requestResponseId
-  const message = new Uint8Array(1 + 4 + payload.length);
-  const view = new DataView(message.buffer);
-  message.set([COMMANDS[command]]);
-  view.setUint32(1, requestResponseId, false);
-  message.set(payload, 1 + 4);
-  return message;
-}
-
-/**
- * @param command
- * @param requestResponseId `0` if no response is expected for request
- * @param payload
- */
 function composeMessageWithTcpHeader(
   command: ICommandsKeys,
   requestResponseId: number,
@@ -63,32 +49,6 @@ function composeMessageWithTcpHeader(
   view.setUint32(4 + 1, requestResponseId, false);
   message.set(payload, 4 + 1 + 4);
   return message;
-}
-
-/**
- * TODO: There is no verification about where message came from
- *
- * @param message
- *
- * @return [command, requestId, payload]
- */
-function parseMessage(message: Uint8Array): [ICommandsKeys, number, Uint8Array] {
-  if (message.length < 5) {
-    throw new Error(`Incorrect message length ${message.length} bytes, at least 5 bytes expected`);
-  }
-  const command = COMMANDS_INVERSE[message[0]];
-  if (!command) {
-    throw new Error(`Unknown command number ${message[0]}`);
-  }
-  const view = new DataView(message.buffer, message.byteOffset, message.byteLength);
-  const requestId = view.getUint32(1);
-  const payload = new Uint8Array(
-    message.buffer,
-    message.byteOffset + 5,
-    message.byteLength - 5,
-  );
-
-  return [command, requestId, payload];
 }
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
@@ -487,9 +447,9 @@ export class Network extends EventEmitter implements INetwork {
         }
         try {
           const [command, requestId, payload] = parseMessage(message);
+          // TODO: Almost no validation!
           switch (command) {
             case 'response':
-              // TODO: No validation!
               const requestCallback = this.requestCallbacks.get(requestId);
               if (requestCallback) {
                 requestCallback(payload);
