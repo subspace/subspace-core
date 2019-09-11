@@ -152,10 +152,27 @@ export interface IPeerContactInfo {
   protocolVersion?: '4';
 }
 
-// export interface ISelfContactInfo {
-//   address: string;
-//   udpPort: number;
-//   tcpPort: number;
-//   wsPort: number;
-//   protocolVersion?: '4';
-// }
+export interface INodeConfig {
+  storage: boolean;   // is storage being persisted to disk?
+  wallet: boolean;    // is the wallet module being instantiated? (not needed for a validator)
+  farm: boolean;      // is the farm module be instantiated?
+  archive: boolean;   // is the full ledger history being stored?
+  state: boolean;     // is the ledger state chain being stored?
+  accounts: boolean;  // are ledger account balances being tracked?
+  head: boolean;      // is ledger head state being retained? (last N confirmed levels plus mempool)
+  relay: boolean;     // is the node joining the gossip relay network?
+  krpc: boolean;      // is the node joining the kademlia DHT?
+  srpc: boolean;      // is node serving requests on the subspace network rpc
+  jrpc: boolean;      // is node serving requests over json-rpc (https)
+}
+
+export interface INodeSettings {
+  storagePath: string | undefined;      // optional user defined path for persistent storage (defaults to homedir)
+  numberOfChains: number;               // number of chains on the ledger
+  numberOfPlots: number;                // number of plots, 0 denotes not farming
+  sizeOfFarm: number;                   // size of farm in bytes, 0 denotes not farming
+  encodingRounds: number;               // rounds of encoding/decoding to apply to pieces
+  validateRecords: boolean;             // if to validate new records as they are created
+  contactInfo: IPeerContactInfo;        // network contact info for this node
+  bootstrapPeers: IPeerContactInfo [];  // known network contact info for other nodes
+}

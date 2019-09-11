@@ -25,7 +25,7 @@ const seed = crypto.randomBytes(32);
 let coinbaseTx: Tx;
 let creditTx: Tx;
 
-const storageDir = `${os.homedir()}/subspace/tests/wallet`;
+const storageDir = `${os.tmpdir()}/subspace/tests/wallet`;
 
 if (fs.existsSync(storageDir)) {
   rmDirRecursiveSync(storageDir);

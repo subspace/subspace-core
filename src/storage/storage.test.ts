@@ -86,7 +86,7 @@ const storageTest = (storage: Storage) => {
   });
 };
 
-const storageDir = `${os.homedir()}/subspace/tests/storage`;
+const storageDir = `${os.tmpdir()}/subspace/tests/storage`;
 
 if (fs.existsSync(storageDir)) {
   rmDirRecursiveSync(storageDir);

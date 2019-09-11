@@ -32,7 +32,7 @@ let ledgerWallet: Wallet;
 let senderAccount: IWalletAccount;
 let receiverAccount: IWalletAccount;
 
-const storageDir = `${os.homedir()}/subspace/tests/ledger`;
+const storageDir = `${os.tmpdir()}/subspace/tests/ledger`;
 
 if (fs.existsSync(storageDir)) {
   rmDirRecursiveSync(storageDir);

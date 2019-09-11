@@ -71,14 +71,15 @@ export class State {
    * Returns a compact binary representation of the state data.
    */
   public toBytes(): Uint8Array {
-    return Buffer.concat([
+    return Uint8Array.from(Buffer.concat([
       this._value.previousStateHash,
       this._value.levelHash,
       this._value.pieceRoot,
       num2Bin(this._value.timestamp / 1000),
       smallNum2Bin(this._value.difficulty),
       smallNum2Bin(this._value.version),
-    ]);
+      this._value.indexPiece,
+    ]));
   }
 
   /**
@@ -95,6 +96,7 @@ export class State {
         timestamp: num2Date(this._value.timestamp),
         difficulty: this._value.difficulty,
         version: this._value.version,
+        indexPiece: bin2Hex(this._value.indexPiece),
       },
     };
   }
