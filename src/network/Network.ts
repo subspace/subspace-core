@@ -8,6 +8,7 @@ import {hash} from "../crypto/crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
+import {TcpManager} from "./TcpManager";
 import {composeMessage, parseMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -107,12 +108,12 @@ export class Network extends EventEmitter implements INetwork {
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
 
+  private readonly tcpManager: TcpManager;
+
   private readonly nodeIdToUdpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
   private readonly nodeIdToWsAddressMap = ArrayMap<Uint8Array, IAddress>();
-  private readonly nodeIdToTcpSocketMap = ArrayMap<Uint8Array, net.Socket>();
   private readonly nodeIdToWsConnectionMap = ArrayMap<Uint8Array, WebSocketConnection>();
-  private readonly tcpSocketToNodeIdMap = new Map<net.Socket, Uint8Array>();
   private readonly wsConnectionToNodeIdMap = new Map<WebSocketConnection, Uint8Array>();
   private readonly gossipCache = new Set<string>();
 
@@ -129,6 +130,16 @@ export class Network extends EventEmitter implements INetwork {
   ) {
     super();
     this.setMaxListeners(Infinity);
+
+    const tcpManager = new TcpManager(this.TCP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    tcpManager
+      .on('gossip', (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => {
+        this.handleIncomingGossip(gossipMessage, sourceNodeId);
+      })
+      .on('command', (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => {
+        this.emit(command, payload, responseCallback);
+      });
+    this.tcpManager = tcpManager;
 
     for (const bootstrapUdpNode of bootstrapUdpNodes) {
       this.nodeIdToUdpAddressMap.set(
@@ -189,7 +200,7 @@ export class Network extends EventEmitter implements INetwork {
     }
     const socket = await this.nodeIdToTcpSocket(nodeId);
     if (socket) {
-      return this.sendTcpMessage(socket, command, 0, payload);
+      return this.tcpManager.sendMessage(socket, command, 0, payload);
     }
 
     {
@@ -262,10 +273,10 @@ export class Network extends EventEmitter implements INetwork {
     const socket = await this.nodeIdToTcpSocket(nodeId);
     if (socket) {
       return new Promise((resolve, reject) => {
-        this.requestCallbacks.set(requestId, resolve);
+        this.tcpManager.requestCallbacks.set(requestId, resolve);
         const timeout = setTimeout(
           () => {
-            this.requestCallbacks.delete(requestId);
+            this.tcpManager.requestCallbacks.delete(requestId);
             reject(new Error(`Request ${requestId} timeout out`));
           },
           this.DEFAULT_TIMEOUT * 1000,
@@ -273,9 +284,9 @@ export class Network extends EventEmitter implements INetwork {
         if (timeout.unref) {
           timeout.unref();
         }
-        this.sendTcpMessage(socket, command, requestId, payload)
+        this.tcpManager.sendMessage(socket, command, requestId, payload)
           .catch((error) => {
-            this.requestCallbacks.delete(requestId);
+            this.tcpManager.requestCallbacks.delete(requestId);
             clearTimeout(timeout);
             reject(error);
           });
@@ -376,7 +387,7 @@ export class Network extends EventEmitter implements INetwork {
         }
       }),
       new Promise((resolve) => {
-        for (const socket of this.nodeIdToTcpSocketMap.values()) {
+        for (const socket of this.tcpManager.nodeIdToConnectionMap.values()) {
           socket.destroy();
         }
         if (this.tcp4Server) {
@@ -549,15 +560,18 @@ export class Network extends EventEmitter implements INetwork {
             break;
           }
           const message = receivedBuffer.slice(4, 4 + messageLength);
-          this.handleTcpMessage(socket, message);
+          this.tcpManager.handleIncomingMessage(socket, message)
+            .catch((_) => {
+              // TODO: Handle errors
+            });
           receivedBuffer = receivedBuffer.slice(4 + messageLength);
         }
       })
       .on('close', () => {
-        const nodeId = this.tcpSocketToNodeIdMap.get(socket);
+        const nodeId = this.tcpManager.connectionToNodeIdMap.get(socket);
         if (nodeId) {
-          this.tcpSocketToNodeIdMap.delete(socket);
-          this.nodeIdToTcpSocketMap.delete(nodeId);
+          this.tcpManager.connectionToNodeIdMap.delete(socket);
+          this.tcpManager.nodeIdToConnectionMap.delete(nodeId);
         }
       })
       .setTimeout(this.DEFAULT_CONNECTION_EXPIRATION * 1000)
@@ -566,119 +580,8 @@ export class Network extends EventEmitter implements INetwork {
       });
     // TODO: Connection expiration for cleanup
     if (nodeId) {
-      this.nodeIdToTcpSocketMap.set(nodeId, socket);
-      this.tcpSocketToNodeIdMap.set(socket, nodeId);
-    }
-  }
-
-  private handleTcpMessage(socket: net.Socket, message: Buffer): void {
-    if (message.length > this.TCP_MESSAGE_SIZE_LIMIT) {
-      // TODO: Log too big message in debug mode
-      return;
-    }
-    try {
-      const [command, requestId, payload] = parseMessage(message);
-      // TODO: Almost no validation!
-      switch (command) {
-        case 'identification':
-          if (payload.length !== NODE_ID_LENGTH) {
-            // TODO: Log in debug mode that payload length is incorrect
-            socket.destroy();
-          } else if (this.nodeIdToTcpSocketMap.has(payload)) {
-            // TODO: Log in debug mode that node mapping is already present
-            socket.destroy();
-          } else {
-            const nodeId = payload.slice();
-            this.nodeIdToTcpSocketMap.set(nodeId, socket);
-            this.tcpSocketToNodeIdMap.set(socket, nodeId);
-          }
-          break;
-        case 'response':
-          if (!this.tcpSocketToNodeIdMap.has(socket)) {
-            // TODO: Log in debug mode that non-identified node tried to send message
-            break;
-          }
-          const requestCallback = this.requestCallbacks.get(requestId);
-          if (requestCallback) {
-            requestCallback(payload);
-            // TODO: Should this really be done in case we receive response from random sender?
-            this.requestCallbacks.delete(requestId);
-          }
-          break;
-        case 'gossip':
-          this.handleIncomingGossip(
-            payload,
-            this.tcpSocketToNodeIdMap.get(socket) as Uint8Array,
-          );
-          break;
-        default:
-          if (!this.tcpSocketToNodeIdMap.has(socket)) {
-            // TODO: Log in debug mode that non-identified node tried to send message
-            break;
-          }
-          if (requestId) {
-            ++this.responseId;
-            const responseId = this.responseId;
-            this.responseCallbacks.set(
-              responseId,
-              (payload) => {
-                this.responseCallbacks.delete(responseId);
-                return this.sendTcpMessage(socket, 'response', requestId, payload);
-              },
-            );
-            setTimeout(
-              () => {
-                this.responseCallbacks.delete(responseId);
-              },
-              this.DEFAULT_TIMEOUT * 1000,
-            ).unref();
-            this.emit(
-              command,
-              payload,
-              (responsePayload: Uint8Array) => {
-                const responseCallback = this.responseCallbacks.get(responseId);
-                if (responseCallback) {
-                  responseCallback(responsePayload);
-                }
-              },
-            );
-          } else {
-            this.emit(command, payload);
-          }
-          break;
-      }
-    } catch (error) {
-      // TODO: Log error in debug mode
-    }
-  }
-
-  /**
-   * @param socket
-   * @param command
-   * @param requestResponseId `0` if no response is expected for request
-   * @param payload
-   */
-  private async sendTcpMessage(
-    socket: net.Socket,
-    command: ICommandsKeys,
-    requestResponseId: number,
-    payload: Uint8Array,
-  ): Promise<void> {
-    const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
-    return this.sendTcpMessageRaw(socket, message);
-  }
-
-  private async sendTcpMessageRaw(socket: net.Socket, message: Uint8Array): Promise<void> {
-    if (!socket.destroyed) {
-      await new Promise((resolve, reject) => {
-        socket.write(message, (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
+      this.tcpManager.nodeIdToConnectionMap.set(nodeId, socket);
+      this.tcpManager.connectionToNodeIdMap.set(socket, nodeId);
     }
   }
 
@@ -734,7 +637,7 @@ export class Network extends EventEmitter implements INetwork {
             connection.close();
             // Because https://github.com/theturtle32/WebSocket-Node/issues/354
             this.wsConnectionCloseHandler(connection);
-          } else if (this.nodeIdToTcpSocketMap.has(payload)) {
+          } else if (this.tcpManager.nodeIdToConnectionMap.has(payload)) {
             // TODO: Log in debug mode that node mapping is already present
             connection.close();
             // Because https://github.com/theturtle32/WebSocket-Node/issues/354
@@ -856,7 +759,7 @@ export class Network extends EventEmitter implements INetwork {
     if (this.browserNode) {
       return null;
     }
-    const socket = this.nodeIdToTcpSocketMap.get(nodeId);
+    const socket = this.tcpManager.nodeIdToConnectionMap.get(nodeId);
     if (socket) {
       return socket;
     }
@@ -991,7 +894,7 @@ export class Network extends EventEmitter implements INetwork {
       ...this.nodeIdToUdpAddressMap.keys(),
       ...this.nodeIdToTcpAddressMap.keys(),
       ...this.nodeIdToWsAddressMap.keys(),
-      ...this.nodeIdToTcpSocketMap.keys(),
+      ...this.tcpManager.nodeIdToConnectionMap.keys(),
       ...this.nodeIdToWsConnectionMap.keys(),
     ]);
     if (sourceNodeId) {
@@ -1010,9 +913,9 @@ export class Network extends EventEmitter implements INetwork {
     const fitsInUdp = message.length <= this.UDP_MESSAGE_SIZE_LIMIT;
 
     for (const nodeId of nodesToGossipTo) {
-      const socket = this.nodeIdToTcpSocketMap.get(nodeId);
+      const socket = this.tcpManager.nodeIdToConnectionMap.get(nodeId);
       if (socket) {
-        this.sendTcpMessageRaw(socket, message)
+        this.tcpManager.sendRawMessage(socket, message)
           .catch((_) => {
             // TODO: Log in debug mode
           });
@@ -1044,7 +947,7 @@ export class Network extends EventEmitter implements INetwork {
       this.nodeIdToTcpSocket(nodeId)
         .then(async (socket) => {
           if (socket) {
-            return this.sendTcpMessageRaw(socket, message);
+            return this.tcpManager.sendRawMessage(socket, message);
           }
 
           const wsConnection = await this.nodeIdToWsConnection(nodeId);

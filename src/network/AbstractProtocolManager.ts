@@ -13,12 +13,18 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   // private requestId: number = 0;
   // Will 2**32 be enough?
   private responseId: number = 0;
-  private readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
-  private readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
+  // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
+  // tslint:disable-next-line
+  public readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
+  // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
+  // tslint:disable-next-line
+  public readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
    */
-  private readonly requestCallbacks = new Map<number, (payload: Uint8Array) => any>();
+  // TODO: This property is public only for refactoring period and should be changed to `private` afterwards
+  // tslint:disable-next-line
+  public readonly requestCallbacks = new Map<number, (payload: Uint8Array) => any>();
   /**
    * Mapping from responseId to callback
    */
@@ -100,7 +106,23 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
     return EventEmitter.prototype.emit.call(this, event, arg1, arg2, arg3);
   }
 
-  protected handleIncomingMessage(connection: Connection, message: Buffer): void {
+  /**
+   * @param connection
+   * @param command
+   * @param requestResponseId `0` if no response is expected for request
+   * @param payload
+   */
+  public abstract sendMessage(
+    connection: Connection,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void>;
+
+  public abstract sendRawMessage(connection: Connection, message: Uint8Array): Promise<void>;
+
+  // TODO: This method is public only for refactoring period and should be changed to `protected` afterwards
+  public async handleIncomingMessage(connection: Connection, message: Buffer): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       // TODO: Log too big message in debug mode
       return;
@@ -182,15 +204,6 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
         break;
     }
   }
-
-  protected abstract sendMessage(
-    connection: Connection,
-    command: ICommandsKeys,
-    requestResponseId: number,
-    payload: Uint8Array,
-  ): void;
-
-  protected abstract sendRawMessage(connection: Connection, message: Uint8Array): void;
 
   protected abstract destroyConnection(connection: Connection): void;
 }
