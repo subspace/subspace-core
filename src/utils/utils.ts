@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { inspect } from 'util';
+import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
 import { IAddress, INodeAddress } from '../network/Network';
 
@@ -256,4 +257,37 @@ export function parseContactInfo(
     browserNode ? undefined : ownTcpAddress,
     browserNode ? undefined : ownWsAddress,
   ];
+}
+
+export interface ILogger {
+  error: winston.LeveledLogMethod;
+  warn: winston.LeveledLogMethod;
+  info: winston.LeveledLogMethod;
+  debug: winston.LeveledLogMethod;
+  verbose: winston.LeveledLogMethod;
+
+  /**
+   * Create child logger with additional metadata
+   *
+   * @param metadata
+   */
+  child(metadata: {}): ILogger;
+}
+
+export function createLogger(logLevel: 'error' | 'warn' | 'info' | 'debug' | 'verbose', metadata?: {}): ILogger {
+  return winston.createLogger({
+    defaultMeta: metadata,
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.metadata({
+        fillExcept: ['message', 'level', 'timestamp'],
+      }),
+      winston.format.cli(),
+      winston.format.simple(),
+    ),
+    level: logLevel,
+    transports: [
+      new winston.transports.Console(),
+    ],
+  });
 }
