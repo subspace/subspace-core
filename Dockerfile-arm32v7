@@ -9,7 +9,6 @@ COPY docker/install-production-dependencies.sh /install-production-dependencies.
 
 RUN ["/install-production-dependencies.sh"]
 
-
 # Build TypeScript with amd64 image for better performance
 FROM subspacelabs/node:12
 
