@@ -225,7 +225,7 @@ export const run = async (
     wallet = await Wallet.open(blsSignatures, storageAdapter, storagePath, 'wallet');
   }
 
-  // instantiate a farm
+  // instantiate a farm & wallet
   if (config.farm && config.wallet) {
 
     // create wallet and addresses
@@ -245,6 +245,7 @@ export const run = async (
   ledger = await Ledger.init(blsSignatures, storageAdapter, storagePath, validateRecords, encodingRounds);
 
   // instantiate the network & rpc interface
+  // TODO: replace with ECDSA network keys
   contactInfo.nodeId = crypto.randomBytes(32);
   const networkOptions = parseContactInfo(contactInfo, bootstrapPeers);
   const network = new Network(...networkOptions);

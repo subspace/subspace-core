@@ -87,11 +87,13 @@ export class Node extends EventEmitter {
       this.rpc.gossipTx(tx);
     });
 
-    switch (this.type) {
-      case 'full': {
-        this.createLedgerAndFarm(this.settings.numberOfChains);
-      }
-    }
+    // switch (this.type) {
+    //   case 'full': {
+    //     this.createLedgerAndFarm(this.settings.numberOfChains);
+    //   } case 'validator': {
+    //     this.syncLedgerAndServe();
+    //   }
+    // }
   }
 
   /**

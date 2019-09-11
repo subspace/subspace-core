@@ -88,7 +88,7 @@ export class Ledger extends EventEmitter {
 
   // memory pool, may be cleared after each level is confirmed (if not serving)
   public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
-  private lastStateHash: Uint8Array = new Uint8Array();
+  private lastStateHash: Uint8Array = new Uint8Array(32);
   private chains: Chain[] = [];
   private readonly blsSignatures: BlsSignatures;
   // @ts-ignore TODO: Use it for something
@@ -263,7 +263,7 @@ export class Ledger extends EventEmitter {
       pieceHash,
       DIFFICULTY,
       VERSION,
-      new Uint8Array(),
+      new Uint8Array(32),
     );
 
     const pieceData: IPiece = {
@@ -380,7 +380,7 @@ export class Ledger extends EventEmitter {
     console.log(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
 
     // pass up to node for gossip across the network
-    // this.emit('block', block, encoding);
+    this.emit('block', block, encoding);
     if (this.isValidating) {
       await this.isValidBlock(block, encoding);
     }
