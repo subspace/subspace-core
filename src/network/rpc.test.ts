@@ -10,7 +10,7 @@ import * as crypto from '../crypto/crypto';
 import { Block } from '../ledger/block';
 import { Tx } from '../ledger/tx';
 import { IPeerContactInfo } from '../main/interfaces';
-import { parseContactInfo } from '../utils/utils';
+import {allocatePort, parseContactInfo} from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { Network } from './Network';
 import { RPC } from './rpc';
@@ -21,18 +21,18 @@ import { RPC } from './rpc';
 const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
   address: 'localhost',
-  udpPort: 11888,
-  tcpPort: 11889,
-  wsPort: 11890,
+  udpPort: allocatePort(),
+  tcpPort: allocatePort(),
+  wsPort: allocatePort(),
   protocolVersion: '4',
 };
 
 const peer2: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
   address: 'localhost',
-  udpPort: 12888,
-  tcpPort: 12889,
-  wsPort: 12890,
+  udpPort: allocatePort(),
+  tcpPort: allocatePort(),
+  wsPort: allocatePort(),
   protocolVersion: '4',
 };
 

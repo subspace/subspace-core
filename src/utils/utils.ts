@@ -178,28 +178,51 @@ export function rmDirRecursiveSync(dirPath: string): void {
   }
 }
 
-export function parseContactInfo(selfContactInfo: IPeerContactInfo, peerContactInfo: IPeerContactInfo[]): [
+let portOffset = 20000;
+export function allocatePort(): number {
+  ++portOffset;
+  return portOffset;
+}
+
+export function parseContactInfo(
+  selfContactInfo: IPeerContactInfo,
+  bootstrapPeerContactInfo: IPeerContactInfo[],
+  browserNode: boolean = false,
+): [
   INodeAddress[],
   INodeAddress[],
+  INodeAddress[],
+  boolean,
   Uint8Array,
-  IAddress,
-  IAddress,
+  IAddress | undefined,
+  IAddress | undefined,
+  IAddress | undefined,
  ] {
-  const bootstrapUdPNodes: INodeAddress [] = [];
+  const bootstrapUdpNodes: INodeAddress [] = [];
   const bootstrapTcpNodes: INodeAddress [] = [];
+  const bootstrapWsNodes: INodeAddress [] = [];
 
-  for (const peer of peerContactInfo) {
-    bootstrapUdPNodes.push({
+  for (const peer of bootstrapPeerContactInfo) {
+    if (!browserNode) {
+      bootstrapUdpNodes.push({
+        nodeId: peer.nodeId,
+        address: peer.address,
+        port: peer.udpPort,
+        protocolVersion: peer.protocolVersion,
+      });
+
+      bootstrapTcpNodes.push({
+        nodeId: peer.nodeId,
+        address: peer.address,
+        port: peer.tcpPort,
+        protocolVersion: peer.protocolVersion,
+      });
+    }
+
+    bootstrapWsNodes.push({
       nodeId: peer.nodeId,
       address: peer.address,
-      port: peer.udpPort,
-      protocolVersion: peer.protocolVersion,
-    });
-
-    bootstrapTcpNodes.push({
-      nodeId: peer.nodeId,
-      address: peer.address,
-      port: peer.udpPort,
+      port: peer.wsPort,
       protocolVersion: peer.protocolVersion,
     });
   }
@@ -217,11 +240,20 @@ export function parseContactInfo(selfContactInfo: IPeerContactInfo, peerContactI
     protocolVersion: selfContactInfo.protocolVersion,
   };
 
+  const ownWsAddress: IAddress = {
+    address: selfContactInfo.address,
+    port: selfContactInfo.wsPort,
+    protocolVersion: selfContactInfo.protocolVersion,
+  };
+
   return [
-    bootstrapUdPNodes,
+    bootstrapUdpNodes,
     bootstrapTcpNodes,
+    bootstrapWsNodes,
+    browserNode,
     ownNodeId,
-    ownUdpAddress,
-    ownTcpAddress,
+    browserNode ? undefined : ownUdpAddress,
+    browserNode ? undefined : ownTcpAddress,
+    browserNode ? undefined : ownWsAddress,
   ];
 }
