@@ -202,6 +202,11 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
+    const wsConnection = this.nodeIdToWsConnectionMap.get(nodeId);
+    if (wsConnection) {
+      // Node likely doesn't have any other way to communicate besides WebSocket
+      return this.sendWsMessage(wsConnection, command, 0, payload);
+    }
     const socket = await this.nodeIdToTcpSocket(nodeId);
     return this.sendTcpMessage(socket, command, 0, payload);
   }
@@ -233,6 +238,27 @@ export class Network extends EventEmitter implements INetwork {
   public async sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload: Uint8Array = emptyPayload): Promise<Uint8Array> {
     ++this.requestId;
     const requestId = this.requestId;
+    const wsConnection = this.nodeIdToWsConnectionMap.get(nodeId);
+    if (wsConnection) {
+      // Node likely doesn't have any other way to communicate besides WebSocket
+      return new Promise((resolve, reject) => {
+        this.requestCallbacks.set(requestId, resolve);
+        const timeout = setTimeout(
+          () => {
+            this.requestCallbacks.delete(requestId);
+            reject(new Error(`Request ${requestId} timeout out`));
+          },
+          this.DEFAULT_TIMEOUT * 1000,
+        );
+        timeout.unref();
+        this.sendWsMessage(wsConnection, command, requestId, payload)
+          .catch((error) => {
+            this.requestCallbacks.delete(requestId);
+            clearTimeout(timeout);
+            reject(error);
+          });
+      });
+    }
     const socket = await this.nodeIdToTcpSocket(nodeId);
     return new Promise((resolve, reject) => {
       this.requestCallbacks.set(requestId, resolve);
