@@ -4,3 +4,4 @@ data
 docs
 dist
 node_modules
+app/web/build
