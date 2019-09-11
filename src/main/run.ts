@@ -88,7 +88,7 @@ export const run = async (
   };
 
   // determine the basic system env
-env = typeof window === 'undefined' ? 'node' : 'browser';
+  env = typeof window === 'undefined' ? 'node' : 'browser';
 
   // are we persisting storage?
   const isPersistingStorage = plotMode === 'disk';

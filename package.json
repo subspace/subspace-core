@@ -47,7 +47,7 @@
     "jest": "^24.9.0",
     "live-server": "^1.2.1",
     "terser": "^4.3.1",
-    "ts-node": "^8.3.0",
+    "ts-node": "8.1.1",
     "tslint": "^5.20.0",
     "typedoc": "^0.15.0",
     "typescript": "^3.6.3"

@@ -288,7 +288,9 @@ export class Network extends EventEmitter implements INetwork {
           },
           this.DEFAULT_TIMEOUT * 1000,
         );
-        timeout.unref();
+        if (timeout.unref) {
+          timeout.unref();
+        }
         this.sendWsMessage(wsConnection, command, requestId, payload)
           .catch((error) => {
             this.requestCallbacks.delete(requestId);
@@ -308,7 +310,9 @@ export class Network extends EventEmitter implements INetwork {
           },
           this.DEFAULT_TIMEOUT * 1000,
         );
-        timeout.unref();
+        if (timeout.unref) {
+          timeout.unref();
+        }
         this.sendTcpMessage(socket, command, requestId, payload)
           .catch((error) => {
             this.requestCallbacks.delete(requestId);
@@ -330,7 +334,9 @@ export class Network extends EventEmitter implements INetwork {
             },
             this.DEFAULT_TIMEOUT * 1000,
           );
-          timeout.unref();
+          if (timeout.unref) {
+            timeout.unref();
+          }
           this.sendWsMessage(wsConnection, command, requestId, payload)
             .catch((error) => {
               this.requestCallbacks.delete(requestId);
@@ -372,7 +378,9 @@ export class Network extends EventEmitter implements INetwork {
         },
         this.DEFAULT_TIMEOUT * 1000,
       );
-      timeout.unref();
+      if (timeout.unref) {
+        timeout.unref();
+      }
       (this.udp4Socket as dgram.Socket).send(
         message,
         port,
@@ -905,7 +913,9 @@ export class Network extends EventEmitter implements INetwork {
         },
         this.DEFAULT_TIMEOUT * 1000,
       );
-      timeout.unref();
+      if (timeout.unref) {
+        timeout.unref();
+      }
       const socket = net.createConnection(
         address.port,
         address.address,
@@ -946,7 +956,9 @@ export class Network extends EventEmitter implements INetwork {
         },
         this.DEFAULT_TIMEOUT * 1000,
       );
-      timeout.unref();
+      if (timeout.unref) {
+        timeout.unref();
+      }
       if (!this.browserNode) {
         resolve(null);
         return;
@@ -1011,7 +1023,9 @@ export class Network extends EventEmitter implements INetwork {
       },
       this.GOSSIP_CACHE_TIMEOUT * 1000,
     );
-    timeout.unref();
+    if (timeout.unref) {
+      timeout.unref();
+    }
 
     const allNodesSet = ArraySet([
       ...this.nodeIdToUdpAddressMap.keys(),
