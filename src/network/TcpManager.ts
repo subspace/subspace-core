@@ -33,19 +33,19 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
   }
 
   public sendMessage(
-    connection: net.Socket,
+    socket: net.Socket,
     command: ICommandsKeys,
     requestResponseId: number,
     payload: Uint8Array,
   ): Promise<void> {
     const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
-    return this.sendRawMessage(connection, message);
+    return this.sendRawMessage(socket, message);
   }
 
-  public async sendRawMessage(connection: net.Socket, message: Uint8Array): Promise<void> {
-    if (!connection.destroyed) {
+  public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
+    if (!socket.destroyed) {
       await new Promise((resolve, reject) => {
-        connection.write(message, (error) => {
+        socket.write(message, (error) => {
           if (error) {
             reject(error);
           } else {
@@ -56,7 +56,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     }
   }
 
-  protected destroyConnection(connection: net.Socket): void {
-    connection.destroy();
+  protected destroyConnection(socket: net.Socket): void {
+    socket.destroy();
   }
 }

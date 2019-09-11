@@ -122,7 +122,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   public abstract sendRawMessage(connection: Connection, message: Uint8Array): Promise<void>;
 
   // TODO: This method is public only for refactoring period and should be changed to `protected` afterwards
-  public async handleIncomingMessage(connection: Connection, message: Buffer): Promise<void> {
+  public async handleIncomingMessage(connection: Connection, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       // TODO: Log too big message in debug mode
       return;
