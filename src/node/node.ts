@@ -88,11 +88,12 @@ export class Node extends EventEmitter {
     });
 
     switch (this.type) {
-      case 'full': {
+      case 'full':
         this.createLedgerAndFarm(this.settings.numberOfChains);
-      } case 'validator': {
+        break;
+      case 'validator':
         this.syncLedgerAndServe();
-      }
+        break;
     }
   }
 
