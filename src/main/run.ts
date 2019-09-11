@@ -106,7 +106,7 @@ export const run = async (
         storagePath = path.join(os.homedir(), '/subspace');
         break;
       case 'win32':
-        storagePath = path.join(os.homedir(), '\AppData\Subspace');
+        storagePath = path.join(os.homedir(), '\\AppData\\Subspace');
         break;
       default:
         storagePath = path.join(os.homedir(), '/subspace');
