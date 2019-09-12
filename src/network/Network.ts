@@ -1,18 +1,14 @@
-import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import * as http from "http";
-import * as net from "net";
 import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
-import {COMMANDS, ICommandsKeys} from "./commands";
+import {ICommandsKeys} from "./commands";
 import {GossipManager} from "./GossipManager";
 import {INetwork} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
-import {composeMessage, noopResponseCallback} from "./utils";
+import {noopResponseCallback} from "./utils";
 import {WsManager} from "./WsManager";
-
-type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
 export interface IAddress {
   address: string;
@@ -27,26 +23,6 @@ export interface INodeAddress {
   port: number;
   // TODO: Support IPv6
   protocolVersion?: '4';
-}
-
-/**
- * @param command
- * @param requestResponseId `0` if no response is expected for request
- * @param payload
- */
-function composeMessageWithTcpHeader(
-  command: ICommandsKeys,
-  requestResponseId: number,
-  payload: Uint8Array,
-): Uint8Array {
-  // 4 bytes for message length, 1 byte for command, 4 bytes for requestResponseId
-  const message = new Uint8Array(4 + 1 + 4 + payload.length);
-  const view = new DataView(message.buffer);
-  view.setUint32(0, 1 + 4 + payload.length, false);
-  message.set([COMMANDS[command]], 4);
-  view.setUint32(4 + 1, requestResponseId, false);
-  message.set(payload, 4 + 1 + 4);
-  return message;
 }
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
@@ -86,16 +62,12 @@ export class Network extends EventEmitter implements INetwork {
   private readonly wsManager: WsManager;
   private readonly gossipManager: GossipManager;
 
-  private readonly nodeIdToUdpAddressMap = ArrayMap<Uint8Array, IAddress>();
-  private readonly nodeIdToTcpAddressMap = ArrayMap<Uint8Array, IAddress>();
-  private readonly nodeIdToWsAddressMap = ArrayMap<Uint8Array, IAddress>();
-
   constructor(
     bootstrapUdpNodes: INodeAddress[],
     bootstrapTcpNodes: INodeAddress[],
     bootstrapWsNodes: INodeAddress[],
     private readonly browserNode: boolean,
-    private readonly ownNodeId: Uint8Array,
+    ownNodeId: Uint8Array,
     ownUdpAddress?: IAddress,
     ownTcpAddress?: IAddress,
     ownWsAddress?: IAddress,
@@ -110,26 +82,38 @@ export class Network extends EventEmitter implements INetwork {
       this.httpServer = httpServer;
     }
 
-    const udpManager = new UdpManager(this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT, ownUdpAddress);
+    const udpManager = new UdpManager(
+      bootstrapUdpNodes,
+      browserNode,
+      this.UDP_MESSAGE_SIZE_LIMIT,
+      this.DEFAULT_TIMEOUT,
+      ownUdpAddress,
+    );
     this.udpManager = udpManager;
 
     const tcpManager = new TcpManager(
+      ownNodeId,
+      bootstrapTcpNodes,
+      browserNode,
       this.TCP_MESSAGE_SIZE_LIMIT,
+      this.DEFAULT_TIMEOUT,
       this.DEFAULT_TIMEOUT,
       this.DEFAULT_CONNECTION_EXPIRATION,
       ownTcpAddress,
     );
     this.tcpManager = tcpManager;
 
-    const wsManager = new WsManager(this.WS_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    const wsManager = new WsManager(
+      ownNodeId,
+      bootstrapWsNodes,
+      browserNode,
+      this.WS_MESSAGE_SIZE_LIMIT,
+      this.DEFAULT_TIMEOUT,
+      this.DEFAULT_TIMEOUT,
+    );
     this.wsManager = wsManager;
 
     const gossipManager = new GossipManager(
-      this.nodeIdToUdpAddressMap,
-      this.nodeIdToTcpAddressMap,
-      this.nodeIdToWsAddressMap,
-      this.nodeIdToTcpSocket.bind(this),
-      this.nodeIdToWsConnection.bind(this),
       browserNode,
       udpManager,
       tcpManager,
@@ -144,39 +128,6 @@ export class Network extends EventEmitter implements INetwork {
         this.emit.bind(this),
       );
     }
-
-    for (const bootstrapUdpNode of bootstrapUdpNodes) {
-      this.nodeIdToUdpAddressMap.set(
-        bootstrapUdpNode.nodeId,
-        {
-          address: bootstrapUdpNode.address,
-          port: bootstrapUdpNode.port,
-          protocolVersion: bootstrapUdpNode.protocolVersion,
-        },
-      );
-    }
-
-    for (const bootstrapTcpNode of bootstrapTcpNodes) {
-      this.nodeIdToTcpAddressMap.set(
-        bootstrapTcpNode.nodeId,
-        {
-          address: bootstrapTcpNode.address,
-          port: bootstrapTcpNode.port,
-          protocolVersion: bootstrapTcpNode.protocolVersion,
-        },
-      );
-    }
-
-    for (const bootstrapWsNode of bootstrapWsNodes) {
-      this.nodeIdToWsAddressMap.set(
-        bootstrapWsNode.nodeId,
-        {
-          address: bootstrapWsNode.address,
-          port: bootstrapWsNode.port,
-          protocolVersion: bootstrapWsNode.protocolVersion,
-        },
-      );
-    }
   }
 
   public async sendOneWayRequest(
@@ -189,13 +140,13 @@ export class Network extends EventEmitter implements INetwork {
       // Node likely doesn't have any other way to communicate besides WebSocket
       return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
     }
-    const socket = await this.nodeIdToTcpSocket(nodeId);
+    const socket = await this.tcpManager.nodeIdToConnection(nodeId);
     if (socket) {
       return this.tcpManager.sendMessageOneWay(socket, command, payload);
     }
 
     {
-      const wsConnection = await this.nodeIdToWsConnection(nodeId);
+      const wsConnection = await this.wsManager.nodeIdToConnection(nodeId);
       if (wsConnection) {
         return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
       }
@@ -213,9 +164,13 @@ export class Network extends EventEmitter implements INetwork {
       return this.sendOneWayRequest(nodeId, command, payload);
     }
 
-    const address = await this.nodeIdToUdpAddress(nodeId);
-    // TODO: Fallback to reliable if no UDP route?
-    return this.udpManager.sendMessageOneWay(address, command, payload);
+    const address = await this.udpManager.nodeIdToConnection(nodeId);
+    if (address) {
+      return this.udpManager.sendMessageOneWay(address, command, payload);
+    } else {
+      // TODO: Fallback to reliable if no UDP route?
+      throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
+    }
   }
 
   public async sendRequest(
@@ -228,13 +183,13 @@ export class Network extends EventEmitter implements INetwork {
       // Node likely doesn't have any other way to communicate besides WebSocket
       return this.wsManager.sendMessage(wsConnection, command, payload);
     }
-    const socket = await this.nodeIdToTcpSocket(nodeId);
+    const socket = await this.tcpManager.nodeIdToConnection(nodeId);
     if (socket) {
       return this.tcpManager.sendMessage(socket, command, payload);
     }
 
     {
-      const wsConnection = await this.nodeIdToWsConnection(nodeId);
+      const wsConnection = await this.wsManager.nodeIdToConnection(nodeId);
       if (wsConnection) {
         return this.wsManager.sendMessage(wsConnection, command, payload);
       }
@@ -251,9 +206,13 @@ export class Network extends EventEmitter implements INetwork {
     if (this.browserNode) {
       return this.sendRequest(nodeId, command, payload);
     }
-    const address = await this.nodeIdToUdpAddress(nodeId);
-    // TODO: Fallback to reliable if no UDP route?
-    return this.udpManager.sendMessage(address, command, payload);
+    const address = await this.udpManager.nodeIdToConnection(nodeId);
+    if (address) {
+      return this.udpManager.sendMessage(address, command, payload);
+    } else {
+      // TODO: Fallback to reliable if no UDP route?
+      throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
+    }
   }
 
   public async gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
@@ -355,126 +314,5 @@ export class Network extends EventEmitter implements INetwork {
       this.wsManager.nodeIdToConnectionMap.set(nodeId, connection);
       this.wsManager.connectionToNodeIdMap.set(connection, nodeId);
     }
-  }
-
-  private registerBrowserWsConnection(connection: websocket.w3cwebsocket, nodeId?: Uint8Array): void {
-    connection.onmessage = (event: MessageEvent) => {
-      if (!(event.data instanceof ArrayBuffer)) {
-        connection.close();
-        // TODO: Log in debug mode that only binary messages are supported
-        return;
-      }
-      this.wsManager.handleIncomingMessage(connection, new Uint8Array(event.data))
-        .catch((_) => {
-          // TODO: Handle errors
-        });
-    };
-    // TODO: Connection expiration for cleanup
-    if (nodeId) {
-      this.wsManager.nodeIdToConnectionMap.set(nodeId, connection);
-      this.wsManager.connectionToNodeIdMap.set(connection, nodeId);
-    }
-  }
-
-  private async nodeIdToUdpAddress(nodeId: Uint8Array): Promise<IAddress> {
-    const address = this.nodeIdToUdpAddressMap.get(nodeId);
-    if (address) {
-      return address;
-    }
-    // TODO: Implement fetching from DHT
-    throw new Error('Sending to arbitrary nodeId is not implemented yet');
-  }
-
-  private async nodeIdToTcpSocket(nodeId: Uint8Array): Promise<net.Socket | null> {
-    if (this.browserNode) {
-      return null;
-    }
-    const socket = this.tcpManager.nodeIdToConnectionMap.get(nodeId);
-    if (socket) {
-      return socket;
-    }
-    const address = this.nodeIdToTcpAddressMap.get(nodeId);
-    if (!address) {
-      return null;
-    }
-    return new Promise((resolve, reject) => {
-      let timedOut = false;
-      const timeout = setTimeout(
-        () => {
-          timedOut = true;
-          reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
-        },
-        this.DEFAULT_TIMEOUT * 1000,
-      );
-      if (timeout.unref) {
-        timeout.unref();
-      }
-      const socket = net.createConnection(
-        address.port,
-        address.address,
-        () => {
-          clearTimeout(timeout);
-          if (timedOut) {
-            socket.destroy();
-          } else {
-            const identificationMessage = composeMessageWithTcpHeader(
-              'identification',
-              0,
-              this.ownNodeId,
-            );
-            socket.write(identificationMessage);
-            this.tcpManager.registerTcpConnection(socket, nodeId);
-            resolve(socket);
-          }
-        },
-      );
-    });
-  }
-
-  private async nodeIdToWsConnection(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
-    const connection = this.wsManager.nodeIdToConnectionMap.get(nodeId);
-    if (connection) {
-      return connection;
-    }
-    const address = this.nodeIdToWsAddressMap.get(nodeId);
-    if (!address) {
-      return null;
-    }
-    return new Promise((resolve, reject) => {
-      let timedOut = false;
-      const timeout = setTimeout(
-        () => {
-          timedOut = true;
-          reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
-        },
-        this.DEFAULT_TIMEOUT * 1000,
-      );
-      if (timeout.unref) {
-        timeout.unref();
-      }
-      if (!this.browserNode) {
-        resolve(null);
-        return;
-      }
-      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.port}`);
-      connection.onopen = () => {
-        clearTimeout(timeout);
-        if (timedOut) {
-          connection.close();
-        } else {
-          const identificationMessage = composeMessage(
-            'identification',
-            0,
-            this.ownNodeId,
-          );
-          connection.send(identificationMessage);
-          this.registerBrowserWsConnection(connection, nodeId);
-          resolve(connection);
-        }
-      };
-      connection.onclose = () => {
-        this.wsManager.connectionCloseHandler(connection);
-      };
-    });
   }
 }

@@ -1,7 +1,7 @@
 import * as dgram from "dgram";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./commands";
-import {IAddress} from "./Network";
+import {IAddress, INodeAddress} from "./Network";
 import {composeMessage} from "./utils";
 
 export class UdpManager extends AbstractProtocolManager<IAddress> {
@@ -10,15 +10,35 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   private readonly udp4Socket: dgram.Socket;
 
   /**
+   * @param bootstrapUdpNodes
+   * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param ownUdpAddress
    */
-  public constructor(messageSizeLimit: number, responseTimeout: number, ownUdpAddress?: IAddress) {
-    super(messageSizeLimit, responseTimeout, false);
+  public constructor(
+    bootstrapUdpNodes: INodeAddress[],
+    browserNode: boolean,
+    messageSizeLimit: number,
+    responseTimeout: number,
+    ownUdpAddress?: IAddress,
+  ) {
+    super(bootstrapUdpNodes, browserNode, messageSizeLimit, responseTimeout, false);
     this.setMaxListeners(Infinity);
 
     this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
+  }
+
+  public async nodeIdToConnection(nodeId: Uint8Array): Promise<IAddress | null> {
+    if (this.browserNode) {
+      return null;
+    }
+    const address = this.nodeIdToAddressMap.get(nodeId);
+    if (address) {
+      return address;
+    }
+    // TODO: Implement fetching from DHT
+    throw new Error('Sending to arbitrary nodeId is not implemented yet');
   }
 
   public async sendRawMessage(address: IAddress, message: Uint8Array): Promise<void> {

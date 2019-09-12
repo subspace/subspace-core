@@ -1,7 +1,8 @@
 import * as net from "net";
+import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {COMMANDS, ICommandsKeys} from "./commands";
-import {IAddress} from "./Network";
+import {IAddress, INodeAddress} from "./Network";
 
 /**
  * @param command
@@ -28,28 +29,86 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
 export class TcpManager extends AbstractProtocolManager<net.Socket> {
   private readonly tcp4Server: net.Server | undefined;
+  private readonly ownNodeId: Uint8Array;
+  private readonly connectionTimeout: number;
   private readonly connectionExpiration: number;
 
   /**
+   * @param ownNodeId
+   * @param bootstrapTcpNodes
+   * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
+   * @param connectionTimeout In seconds
    * @param connectionExpiration In seconds
    * @param ownTcpAddress
    */
   public constructor(
+    ownNodeId: Uint8Array,
+    bootstrapTcpNodes: INodeAddress[],
+    browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
+    connectionTimeout: number,
     connectionExpiration: number,
     ownTcpAddress?: IAddress,
   ) {
-    super(messageSizeLimit, responseTimeout, true);
+    super(bootstrapTcpNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
+    this.ownNodeId = ownNodeId;
+    this.connectionTimeout = connectionTimeout;
     this.connectionExpiration = connectionExpiration;
 
     if (ownTcpAddress) {
       this.tcp4Server = this.createTcp4Server(ownTcpAddress);
     }
+  }
+
+  public async nodeIdToConnection(nodeId: Uint8Array): Promise<net.Socket | null> {
+    if (this.browserNode) {
+      return null;
+    }
+    const socket = this.nodeIdToConnectionMap.get(nodeId);
+    if (socket) {
+      return socket;
+    }
+    const address = this.nodeIdToAddressMap.get(nodeId);
+    if (!address) {
+      return null;
+    }
+    return new Promise((resolve, reject) => {
+      let timedOut = false;
+      const timeout = setTimeout(
+        () => {
+          timedOut = true;
+          reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
+        },
+        this.connectionTimeout * 1000,
+      );
+      if (timeout.unref) {
+        timeout.unref();
+      }
+      const socket = net.createConnection(
+        address.port,
+        address.address,
+        () => {
+          clearTimeout(timeout);
+          if (timedOut) {
+            socket.destroy();
+          } else {
+            const identificationMessage = composeMessageWithTcpHeader(
+              'identification',
+              0,
+              this.ownNodeId,
+            );
+            socket.write(identificationMessage);
+            this.registerTcpConnection(socket, nodeId);
+            resolve(socket);
+          }
+        },
+      );
+    });
   }
 
   public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {

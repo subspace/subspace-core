@@ -1,11 +1,9 @@
 import {ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
-import * as net from "net";
-import * as websocket from "websocket";
 import {hash} from "../crypto/crypto";
 import {bin2Hex} from "../utils/utils";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
-import {compareUint8Array, IAddress} from "./Network";
+import {compareUint8Array} from "./Network";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {composeMessage, noopResponseCallback} from "./utils";
@@ -16,12 +14,6 @@ export class GossipManager extends EventEmitter {
   private readonly maxMessageSizeLimit: number;
 
   constructor(
-    private readonly nodeIdToUdpAddressMap: Map<Uint8Array, IAddress>,
-    private readonly nodeIdToTcpAddressMap: Map<Uint8Array, IAddress>,
-    private readonly nodeIdToWsAddressMap: Map<Uint8Array, IAddress>,
-    private readonly nodeIdToTcpSocket: (nodeId: Uint8Array) => Promise<net.Socket | null>,
-    private readonly nodeIdToWsConnection: (nodeId: Uint8Array) => Promise<websocket.w3cwebsocket | websocket.connection | null>,
-    // TODO: All of above arguments just for migration purpose and should be removed in the future
     private readonly browserNode: boolean,
     private readonly udpManager: UdpManager,
     private readonly tcpManager: TcpManager,
@@ -109,9 +101,7 @@ export class GossipManager extends EventEmitter {
     }
 
     const allNodesSet = ArraySet([
-      ...this.nodeIdToUdpAddressMap.keys(),
-      ...this.nodeIdToTcpAddressMap.keys(),
-      ...this.nodeIdToWsAddressMap.keys(),
+      ...this.udpManager.getKnownNodeIds(),
       ...this.tcpManager.getKnownNodeIds(),
       ...this.wsManager.getKnownNodeIds(),
     ]);
@@ -139,7 +129,7 @@ export class GossipManager extends EventEmitter {
           });
         continue;
       }
-      const udpAddress = this.nodeIdToUdpAddressMap.get(nodeId);
+      const udpAddress = await this.udpManager.nodeIdToConnection(nodeId);
       if (!this.browserNode && fitsInUdp && udpAddress) {
         this.udpManager.sendRawMessage(
           udpAddress,
@@ -161,13 +151,13 @@ export class GossipManager extends EventEmitter {
           });
       }
 
-      this.nodeIdToTcpSocket(nodeId)
+      this.tcpManager.nodeIdToConnection(nodeId)
         .then(async (socket) => {
           if (socket) {
             return this.tcpManager.sendRawMessage(socket, message);
           }
 
-          const wsConnection = await this.nodeIdToWsConnection(nodeId);
+          const wsConnection = await this.wsManager.nodeIdToConnection(nodeId);
           if (wsConnection) {
             return this.wsManager.sendRawMessage(wsConnection, message);
           }

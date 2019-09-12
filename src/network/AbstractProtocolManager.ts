@@ -2,42 +2,59 @@ import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {ICommandsKeys} from "./commands";
+import {IAddress, INodeAddress} from "./Network";
 import {noopResponseCallback, parseMessage} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
-  // Will 2**32 be enough?
-  private requestId: number = 0;
-  // Will 2**32 be enough?
-  private responseId: number = 0;
   // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
   // tslint:disable-next-line
   public readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
+  protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, IAddress>();
   // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
   // tslint:disable-next-line
   public readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
    */
-  // TODO: This property is public only for refactoring period and should be changed to `private` afterwards
-  // tslint:disable-next-line
+    // TODO: This property is public only for refactoring period and should be changed to `private` afterwards
+    // tslint:disable-next-line
   public readonly requestCallbacks = new Map<number, (payload: Uint8Array) => any>();
   /**
    * Mapping from responseId to callback
    */
   private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => any>();
+  // Will 2**32 be enough?
+  private requestId: number = 0;
+  // Will 2**32 be enough?
+  private responseId: number = 0;
 
   /**
+   * @param bootstrapNodes
+   * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
+    bootstrapNodes: INodeAddress[],
+    protected readonly browserNode: boolean,
     protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
     private readonly connectionBased: boolean,
   ) {
     super();
     this.setMaxListeners(Infinity);
+
+    for (const bootstrapNode of bootstrapNodes) {
+      this.nodeIdToAddressMap.set(
+        bootstrapNode.nodeId,
+        {
+          address: bootstrapNode.address,
+          port: bootstrapNode.port,
+          protocolVersion: bootstrapNode.protocolVersion,
+        },
+      );
+    }
   }
 
   // Below EventEmitter-derived methods are mostly to make nice TypeScript interface
@@ -106,7 +123,10 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    * @return Quickly returns non-unique list of nodeIds protocol manager knows about
    */
   public getKnownNodeIds(): Uint8Array[] {
-    return Array.from(this.nodeIdToConnectionMap.keys());
+    return [
+      ...this.nodeIdToAddressMap.keys(),
+      ...this.nodeIdToConnectionMap.keys(),
+    ];
   }
 
   /**
@@ -115,6 +135,8 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   public getMessageSizeLimit(): number {
     return this.messageSizeLimit;
   }
+
+  public abstract nodeIdToConnection(nodeId: Uint8Array): Promise<Connection | null>;
 
   /**
    * @param connection
