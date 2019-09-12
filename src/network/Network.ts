@@ -5,7 +5,7 @@ import * as http from "http";
 import * as net from "net";
 import * as websocket from "websocket";
 import {hash} from "../crypto/crypto";
-import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
+import {COMMANDS, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
@@ -118,30 +118,39 @@ export class Network extends EventEmitter implements INetwork {
     super();
     this.setMaxListeners(Infinity);
 
-    const udpManager = new UdpManager(this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    const udpManager = new UdpManager(this.gossipCache, this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
     udpManager
       .on('gossip', (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => {
-        this.handleIncomingGossip(gossipMessage, sourceNodeId);
+        this.gossipInternal(gossipMessage, sourceNodeId)
+          .catch((_) => {
+            // TODO: Log in debug mode
+          });
       })
       .on('command', (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => {
         this.emit(command, payload, responseCallback);
       });
     this.udpManager = udpManager;
 
-    const tcpManager = new TcpManager(this.TCP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    const tcpManager = new TcpManager(this.gossipCache, this.TCP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
     tcpManager
       .on('gossip', (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => {
-        this.handleIncomingGossip(gossipMessage, sourceNodeId);
+        this.gossipInternal(gossipMessage, sourceNodeId)
+          .catch((_) => {
+            // TODO: Log in debug mode
+          });
       })
       .on('command', (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => {
         this.emit(command, payload, responseCallback);
       });
     this.tcpManager = tcpManager;
 
-    const wsManager = new WsManager(this.WS_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    const wsManager = new WsManager(this.gossipCache, this.WS_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
     wsManager
       .on('gossip', (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => {
-        this.handleIncomingGossip(gossipMessage, sourceNodeId);
+        this.gossipInternal(gossipMessage, sourceNodeId)
+          .catch((_) => {
+            // TODO: Log in debug mode
+          });
       })
       .on('command', (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => {
         this.emit(command, payload, responseCallback);
@@ -602,28 +611,6 @@ export class Network extends EventEmitter implements INetwork {
         this.wsManager.connectionCloseHandler(connection);
       };
     });
-  }
-
-  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
-    const command = COMMANDS_INVERSE[gossipMessage[0]];
-    if (!GOSSIP_COMMANDS.has(command)) {
-      // TODO: Log in debug mode
-      return;
-    }
-    const messageHash = hash(gossipMessage).join(',');
-    if (this.gossipCache.has(messageHash)) {
-      // Prevent infinite recursive gossiping
-      return;
-    }
-    this.gossipCache.add(messageHash);
-
-    const payload = gossipMessage.subarray(1);
-    this.emit(command, payload);
-
-    this.gossipInternal(gossipMessage, sourceNodeId)
-      .catch((_) => {
-        // TODO: Log in debug mode
-      });
   }
 
   private async gossipInternal(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): Promise<void> {

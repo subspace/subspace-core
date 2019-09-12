@@ -1,7 +1,8 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
+import {hash} from "../crypto/crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
-import {ICommandsKeys} from "./commands";
+import {COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {parseMessage} from "./utils";
 
 function noopResponseCallback(): void {
@@ -31,11 +32,13 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => any>();
 
   /**
+   * @param gossipCache
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
+    private readonly gossipCache: Set<string>,
     protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
     private readonly connectionBased: boolean,
@@ -61,7 +64,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   }
 
   public once(
-    event: 'gossip',
+    event: 're-gossip',
     listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
   ): this;
   public once(
@@ -74,7 +77,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   }
 
   public off(
-    event: 'gossip',
+    event: 're-gossip',
     listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
   ): this;
   public off(
@@ -87,7 +90,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   }
 
   public emit(
-    event: 'gossip',
+    event: 're-gossip',
     gossipMessage: Uint8Array,
     sourceNodeId?: Uint8Array,
   ): boolean;
@@ -195,11 +198,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
         }
         break;
       case 'gossip':
-        this.emit(
-          'gossip',
-          payload,
-          this.connectionToNodeIdMap.get(connection) as Uint8Array,
-        );
+        this.handleIncomingGossip(payload, this.connectionToNodeIdMap.get(connection) as Uint8Array);
         break;
       default:
         if (requestId) {
@@ -254,4 +253,22 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   ): Promise<void>;
 
   protected abstract destroyConnection(connection: Connection): void;
+
+  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
+    const command = COMMANDS_INVERSE[gossipMessage[0]];
+    if (!GOSSIP_COMMANDS.has(command)) {
+      // TODO: Log in debug mode
+      return;
+    }
+    const messageHash = hash(gossipMessage).join(',');
+    if (this.gossipCache.has(messageHash)) {
+      // Prevent infinite recursive gossiping
+      return;
+    }
+    this.gossipCache.add(messageHash);
+
+    const payload = gossipMessage.subarray(1);
+    this.emit('command', command, payload, noopResponseCallback);
+    this.emit('re-gossip', gossipMessage, sourceNodeId);
+  }
 }
