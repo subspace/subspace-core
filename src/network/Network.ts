@@ -124,7 +124,7 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
-    const wsConnection = this.wsManager.nodeIdToConnectionMap.get(nodeId);
+    const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
     if (wsConnection) {
       // Node likely doesn't have any other way to communicate besides WebSocket
       return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
@@ -167,7 +167,7 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
-    const wsConnection = this.wsManager.nodeIdToConnectionMap.get(nodeId);
+    const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
     if (wsConnection) {
       // Node likely doesn't have any other way to communicate besides WebSocket
       return this.wsManager.sendMessage(wsConnection, command, payload);

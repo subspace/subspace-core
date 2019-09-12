@@ -6,9 +6,7 @@ import {IAddress, INodeAddress} from "./Network";
 import {noopResponseCallback, parseMessage} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
-  // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
-  // tslint:disable-next-line
-  public readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
+  protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
   protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, IAddress>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
@@ -130,6 +128,15 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    */
   public getMessageSizeLimit(): number {
     return this.messageSizeLimit;
+  }
+
+  /**
+   * @param nodeId
+   *
+   * @return Active connection if already present, null otherwise
+   */
+  public nodeIdToActiveConnection(nodeId: Uint8Array): Connection | null {
+    return this.nodeIdToConnectionMap.get(nodeId) || null;
   }
 
   public abstract nodeIdToConnection(nodeId: Uint8Array): Promise<Connection | null>;

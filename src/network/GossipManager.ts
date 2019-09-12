@@ -120,7 +120,7 @@ export class GossipManager extends EventEmitter {
     const fitsInUdp = message.length <= this.udpManager.getMessageSizeLimit();
 
     for (const nodeId of nodesToGossipTo) {
-      const socket = this.tcpManager.nodeIdToConnectionMap.get(nodeId);
+      const socket = this.tcpManager.nodeIdToActiveConnection(nodeId);
       if (socket) {
         this.tcpManager.sendRawMessage(socket, message)
           .catch((_) => {
@@ -141,7 +141,7 @@ export class GossipManager extends EventEmitter {
           });
         continue;
       }
-      const wsConnection = this.wsManager.nodeIdToConnectionMap.get(nodeId);
+      const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
       if (wsConnection) {
         // Node likely doesn't have any other way to communicate besides WebSocket
         this.wsManager.sendRawMessage(wsConnection, message)
