@@ -142,9 +142,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     this.connectionCloseHandler(connection);
   }
 
-  // TODO: This method is public only for refactoring period and should be changed to `private` afterwards
-  // tslint:disable-next-line
-  public connectionCloseHandler(connection: WebSocketConnection): void {
+  private connectionCloseHandler(connection: WebSocketConnection): void {
     const nodeId = this.connectionToNodeIdMap.get(connection);
     if (nodeId) {
       this.connectionToNodeIdMap.delete(connection);

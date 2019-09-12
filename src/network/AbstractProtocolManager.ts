@@ -10,15 +10,11 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   // tslint:disable-next-line
   public readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
   protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, IAddress>();
-  // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
-  // tslint:disable-next-line
-  public readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
+  protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
    */
-    // TODO: This property is public only for refactoring period and should be changed to `private` afterwards
-    // tslint:disable-next-line
-  public readonly requestCallbacks = new Map<number, (payload: Uint8Array) => any>();
+  private readonly requestCallbacks = new Map<number, (payload: Uint8Array) => any>();
   /**
    * Mapping from responseId to callback
    */
@@ -190,8 +186,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
 
   public abstract destroy(): Promise<void>;
 
-  // TODO: This method is public only for refactoring period and should be changed to `protected` afterwards
-  public async handleIncomingMessage(connection: Connection, message: Uint8Array): Promise<void> {
+  protected async handleIncomingMessage(connection: Connection, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       // TODO: Log too big message in debug mode
       return;

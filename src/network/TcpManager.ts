@@ -176,9 +176,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     return tcp4Server;
   }
 
-  // TODO: This method is public only for refactoring period and should be changed to `private` afterwards
-  // tslint:disable-next-line:member-ordering
-  public registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
+  private registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
     let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
     socket
       .on('data', (buffer: Buffer) => {
@@ -208,7 +206,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
       .on('timeout', () => {
         socket.destroy();
       });
-    // TODO: Connection expiration for cleanup
+
     if (nodeId) {
       this.nodeIdToConnectionMap.set(nodeId, socket);
       this.connectionToNodeIdMap.set(socket, nodeId);

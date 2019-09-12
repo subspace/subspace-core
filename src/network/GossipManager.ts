@@ -82,7 +82,6 @@ export class GossipManager extends EventEmitter {
 
   private async gossipInternal(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): Promise<void> {
     const message = composeMessage('gossip', 0, gossipMessage);
-    // TODO: Store hash of the message and do not re-gossip it further
     if (message.length >= this.maxMessageSizeLimit) {
       throw new Error(
         `Too big message of ${message.length} bytes, can't gossip more than ${this.maxMessageSizeLimit} bytes`,
