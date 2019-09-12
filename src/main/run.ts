@@ -234,9 +234,6 @@ export const run = async (
   env === 'node' && config.farm && isPersistingStorage ? plotAdapter = 'disk-db' : plotAdapter = 'mem-db';
   env === 'browser' && config.farm && isPersistingStorage ? plotAdapter = 'indexed-db' : plotAdapter = 'mem-db';
 
-  // instantiate a single storage instance
-  // storage = new Storage(storageAdapter, 'storage', 'storage');
-
   const blsSignatures = await BlsSignatures.init();
   const storage = new Storage(storageAdapter, storagePath, 'storage');
 
@@ -271,10 +268,10 @@ export const run = async (
 
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys
-  contactInfo.nodeId = crypto.randomBytes(32);
+  if (!contactInfo.nodeId) {
+    contactInfo.nodeId = crypto.randomBytes(32);
+  }
   const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, env === 'browser' ? true : false);
-  // tslint:disable-next-line: no-console
-  console.log('Launching network');
   const network = new Network(...networkOptions);
   rpc = new RPC(network, blsSignatures);
 

@@ -63,12 +63,14 @@ export function measureProximity(a: Uint8Array, b: Uint8Array, reverse = false):
  * Pauses execution synchronously for the specified time period.
  */
 export async function wait(delay: number): Promise<void> {
-  const startTime = Date.now();
-  let now = startTime;
-  while ((now - startTime) < delay) {
-    now = Date.now();
-    return;
-  }
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    let now = startTime;
+    while ((now - startTime) < delay) {
+      now = Date.now();
+      resolve();
+    }
+  });
 }
 
 /**

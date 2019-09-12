@@ -31,8 +31,14 @@ export class Node extends EventEmitter {
   ) {
 
     super();
-    this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
-    this.rpc.on('pong', () => this.emit('pong'));
+    this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => {
+      console.log('Received a ping request');
+      responseCallback(payload);
+    });
+    this.rpc.on('pong', () => {
+      console.log('received a pong response');
+      this.emit('pong');
+    });
     this.rpc.on('tx-gossip', (tx: Tx) => this.onTx(tx));
     this.rpc.on('block-gossip', (block: Block, encoding: Uint8Array) => this.onBlock(block, encoding));
     this.rpc.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onTxRequest(txId, responseCallback));
@@ -87,14 +93,14 @@ export class Node extends EventEmitter {
       this.rpc.gossipTx(tx);
     });
 
-    switch (this.type) {
-      case 'full':
-        this.createLedgerAndFarm(this.settings.numberOfChains);
-        break;
-      case 'validator':
-        this.syncLedgerAndServe();
-        break;
-    }
+    // switch (this.type) {
+    //   case 'full':
+    //     this.createLedgerAndFarm(this.settings.numberOfChains);
+    //     break;
+    //   case 'validator':
+    //     this.syncLedgerAndValidate();
+    //     break;
+    // }
   }
 
   /**
@@ -125,6 +131,7 @@ export class Node extends EventEmitter {
   }
 
   public async farmBlock(): Promise<void> {
+    // await wait(1000);
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
@@ -199,6 +206,15 @@ export class Node extends EventEmitter {
   }
 
   /**
+   * Syncs the ledger from the network.
+   * Validates and forwards new blocks and txs received over the network.
+   */
+  public async syncLedgerAndValidate(): Promise<void> {
+    console.log('\nLaunching a new Subspace Validator Node!');
+    console.log('-----------------------------------\n');
+  }
+
+  /**
    * Syncs the ledger from existing nodes and serves RPC requests for structured data. Equivalent to a full validator node.
    * Retains the full unencoded ledger within persistent storage.
    */
@@ -214,8 +230,8 @@ export class Node extends EventEmitter {
     return;
   }
 
-  public async ping(nodeId: Uint8Array): Promise<void> {
-    await this.rpc.ping(nodeId);
+  public async ping(nodeId: Uint8Array, payload?: Uint8Array): Promise<void> {
+    await this.rpc.ping(nodeId, payload);
   }
 
   /**

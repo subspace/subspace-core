@@ -13,6 +13,8 @@ export class RPC extends EventEmitter {
       this.network.on('ping', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
         // TODO
           // how do we know who the ping is from?
+        // tslint:disable: no-console
+        console.log('rpc heard a ping from network');
         this.emit('ping', payload, responseCallback);
       });
 
@@ -20,6 +22,7 @@ export class RPC extends EventEmitter {
       this.network.on('pong', (payload: Uint8Array) => {
         // TODO
           // how do we know who the ping is from?
+        console.log('rpc heard a pong from network');
         this.emit('pong', payload);
       });
 
@@ -37,6 +40,8 @@ export class RPC extends EventEmitter {
 
       // received a new block and encoding via gossip
       this.network.on('block-gossip', (payload: Uint8Array) => {
+        // tslint:disable-next-line: no-console
+        console.log('Received a block via gossip over the network');
         const encoding = payload.subarray(0, 4096);
         const block = Block.fromFullBytes(payload.subarray(4096));
         if (!block.isValid(blsSignatures)) {

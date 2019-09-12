@@ -1,10 +1,10 @@
 // tslint:disable: object-literal-sort-keys
+// tslint:disable: no-console
 
-import { Node } from '../node/node';
-import { IPeerContactInfo } from "./interfaces";
-import { run } from './run';
-
-// may need to add a delay to allow sync to occur (slow it down)
+import * as crypto from '../../crypto/crypto';
+import { Node } from '../../node/node';
+import { IPeerContactInfo } from "../interfaces";
+import { run } from '../run';
 
 /**
  * Step one: test that validator receives and validates new blocks from gateway
@@ -12,13 +12,14 @@ import { run } from './run';
  * Step three: test that a new farmer can join, sync the ledger manually, and start farming
  * Step four: test that a light client can join and sync state before validating new blocks
  */
-const testLocalNetwork = async () => {
+const testValidatorNode = async () => {
 
-  const chainCount = 1;
+  const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
+  // const chainCount = 1;
 
   // spin up the gateway node
   const gatewayContactInfo: IPeerContactInfo = {
-    nodeId: new Uint8Array(),
+    nodeId: gatewayNodeId,
     address: 'localhost',
     udpPort: 10888,
     tcpPort: 10889,
@@ -26,25 +27,11 @@ const testLocalNetwork = async () => {
     protocolVersion: '4',
   };
 
-  const gatewayNode: Node = await run(
-    'full',
-    1,
-    'memory',
-    1,
-    100000000,
-    true,
-    3,
-    undefined,
-    true,
-    gatewayContactInfo,
-    [],
-  );
-
-  gatewayContactInfo.nodeId = gatewayNode.settings.contactInfo.nodeId;
+  const validatorNodeId = crypto.hash(Buffer.from('validator'));
 
   // spin up the validator node
   const validatorContactInfo: IPeerContactInfo = {
-    nodeId: new Uint8Array(),
+    nodeId: validatorNodeId,
     address: 'localhost',
     udpPort: 11888,
     tcpPort: 11889,
@@ -55,21 +42,18 @@ const testLocalNetwork = async () => {
   const validatorNode: Node = await run(
     'validator',
     1,
-    'memory',
+    'disk',
     0,
     0,
     true,
     3,
-    undefined,
+    '~/node2/',
     true,
     validatorContactInfo,
     [gatewayContactInfo],
   );
 
-  validatorContactInfo.nodeId = validatorNode.settings.contactInfo.nodeId;
-
-  // start farming from genesis on the gateway node, validator should receive blocks via gossip and validate to true
-  gatewayNode.createLedgerAndFarm(chainCount);
+  validatorNode.ping(gatewayNodeId);
 };
 
-testLocalNetwork();
+testValidatorNode();
