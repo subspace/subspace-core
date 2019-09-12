@@ -28,7 +28,12 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
       );
     }
     if (!this.ready) {
-      await this.readyPromise;
+      try {
+        await this.readyPromise;
+      } catch {
+        // Just to avoid unhandled Promise exception
+        return;
+      }
     }
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(

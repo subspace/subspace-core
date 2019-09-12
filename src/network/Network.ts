@@ -62,9 +62,6 @@ export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 
   return 0;
 }
 
-// 4 bytes for message length, 1 byte for command, 4 bytes for request ID
-const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
-
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
@@ -81,7 +78,6 @@ export class Network extends EventEmitter implements INetwork {
   // In bytes
   private readonly WS_MESSAGE_SIZE_LIMIT = this.TCP_MESSAGE_SIZE_LIMIT;
 
-  private readonly tcp4Server: net.Server | undefined;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
 
@@ -107,9 +103,6 @@ export class Network extends EventEmitter implements INetwork {
     super();
     this.setMaxListeners(Infinity);
 
-    if (ownTcpAddress) {
-      this.tcp4Server = this.createTcp4Server(ownTcpAddress);
-    }
     if (ownWsAddress) {
       const httpServer = http.createServer();
       this.wsServer = this.createWebSocketServer(httpServer);
@@ -120,7 +113,12 @@ export class Network extends EventEmitter implements INetwork {
     const udpManager = new UdpManager(this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT, ownUdpAddress);
     this.udpManager = udpManager;
 
-    const tcpManager = new TcpManager(this.TCP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    const tcpManager = new TcpManager(
+      this.TCP_MESSAGE_SIZE_LIMIT,
+      this.DEFAULT_TIMEOUT,
+      this.DEFAULT_CONNECTION_EXPIRATION,
+      ownTcpAddress,
+    );
     this.tcpManager = tcpManager;
 
     const wsManager = new WsManager(this.WS_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
@@ -265,16 +263,7 @@ export class Network extends EventEmitter implements INetwork {
   public async destroy(): Promise<void> {
     await Promise.all([
       this.udpManager.destroy(),
-      new Promise((resolve) => {
-        for (const socket of this.tcpManager.nodeIdToConnectionMap.values()) {
-          socket.destroy();
-        }
-        if (this.tcp4Server) {
-          this.tcp4Server.close(resolve);
-        } else {
-          resolve();
-        }
-      }),
+      this.tcpManager.destroy(),
       new Promise((resolve) => {
         for (const connection of this.wsManager.nodeIdToConnectionMap.values()) {
           connection.close();
@@ -326,19 +315,6 @@ export class Network extends EventEmitter implements INetwork {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
   }
 
-  private createTcp4Server(ownTcpAddress: IAddress): net.Server {
-    const tcp4Server = net.createServer();
-    tcp4Server.on('connection', (socket: net.Socket) => {
-      this.registerTcpConnection(socket);
-    });
-    tcp4Server.on('error', () => {
-      // TODO: Handle errors
-    });
-    tcp4Server.listen(ownTcpAddress.port, ownTcpAddress.address);
-
-    return tcp4Server;
-  }
-
   private createWebSocketServer(httpServer: http.Server): websocket.server {
     const wsServer = new websocket.server({
       fragmentOutgoingMessages: false,
@@ -356,43 +332,6 @@ export class Network extends EventEmitter implements INetwork {
       });
 
     return wsServer;
-  }
-
-  private registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
-    let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
-    socket
-      .on('data', (buffer: Buffer) => {
-        receivedBuffer = Buffer.concat([receivedBuffer, buffer]);
-
-        while (receivedBuffer.length >= MIN_TCP_MESSAGE_SIZE) {
-          const messageLength = receivedBuffer.readUInt32BE(0);
-          if (receivedBuffer.length < (4 + messageLength)) {
-            break;
-          }
-          const message = receivedBuffer.slice(4, 4 + messageLength);
-          this.tcpManager.handleIncomingMessage(socket, message)
-            .catch((_) => {
-              // TODO: Handle errors
-            });
-          receivedBuffer = receivedBuffer.slice(4 + messageLength);
-        }
-      })
-      .on('close', () => {
-        const nodeId = this.tcpManager.connectionToNodeIdMap.get(socket);
-        if (nodeId) {
-          this.tcpManager.connectionToNodeIdMap.delete(socket);
-          this.tcpManager.nodeIdToConnectionMap.delete(nodeId);
-        }
-      })
-      .setTimeout(this.DEFAULT_CONNECTION_EXPIRATION * 1000)
-      .on('timeout', () => {
-        socket.destroy();
-      });
-    // TODO: Connection expiration for cleanup
-    if (nodeId) {
-      this.tcpManager.nodeIdToConnectionMap.set(nodeId, socket);
-      this.tcpManager.connectionToNodeIdMap.set(socket, nodeId);
-    }
   }
 
   private registerServerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {
@@ -484,7 +423,7 @@ export class Network extends EventEmitter implements INetwork {
               this.ownNodeId,
             );
             socket.write(identificationMessage);
-            this.registerTcpConnection(socket, nodeId);
+            this.tcpManager.registerTcpConnection(socket, nodeId);
             resolve(socket);
           }
         },
