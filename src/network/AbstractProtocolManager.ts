@@ -10,7 +10,7 @@ function noopResponseCallback(): void {
 
 export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   // Will 2**32 be enough?
-  // private requestId: number = 0;
+  private requestId: number = 0;
   // Will 2**32 be enough?
   private responseId: number = 0;
   // TODO: This property is public only for refactoring period and should be changed to `protected` afterwards
@@ -109,15 +109,50 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   /**
    * @param connection
    * @param command
-   * @param requestResponseId `0` if no response is expected for request
    * @param payload
    */
-  public abstract sendMessage(
+  public sendMessageOneWay(
     connection: Connection,
     command: ICommandsKeys,
-    requestResponseId: number,
     payload: Uint8Array,
-  ): Promise<void>;
+  ): Promise<void> {
+    return this.sendMessageImplementation(connection, command, 0, payload);
+  }
+
+  /**
+   * @param connection
+   * @param command
+   * @param payload
+   */
+  public sendMessage(
+    connection: Connection,
+    command: ICommandsKeys,
+    payload: Uint8Array,
+  ): Promise<Uint8Array> {
+    // TODO: Handle 32-bit overflow
+    ++this.requestId;
+    const requestId = this.requestId;
+    // Node likely doesn't have any other way to communicate besides WebSocket
+    return new Promise((resolve, reject) => {
+      this.requestCallbacks.set(requestId, resolve);
+      const timeout = setTimeout(
+        () => {
+          this.requestCallbacks.delete(requestId);
+          reject(new Error(`Request ${requestId} timeout out`));
+        },
+        this.responseTimeout * 1000,
+      );
+      if (timeout.unref) {
+        timeout.unref();
+      }
+      this.sendMessageImplementation(connection, command, requestId, payload)
+        .catch((error) => {
+          this.requestCallbacks.delete(requestId);
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
+  }
 
   public abstract sendRawMessage(connection: Connection, message: Uint8Array): Promise<void>;
 
@@ -175,7 +210,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
             responseId,
             (payload) => {
               this.responseCallbacks.delete(responseId);
-              return this.sendMessage(connection, 'response', requestId, payload);
+              return this.sendMessageImplementation(connection, 'response', requestId, payload);
             },
           );
           const timeout = setTimeout(
@@ -204,6 +239,19 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
         break;
     }
   }
+
+  /**
+   * @param connection
+   * @param command
+   * @param requestResponseId `0` if no response is expected for request
+   * @param payload
+   */
+  protected abstract sendMessageImplementation(
+    connection: Connection,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void>;
 
   protected abstract destroyConnection(connection: Connection): void;
 }

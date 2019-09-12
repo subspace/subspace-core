@@ -91,9 +91,6 @@ export class Network extends EventEmitter implements INetwork {
   // In bytes
   private readonly WS_MESSAGE_SIZE_LIMIT = this.TCP_MESSAGE_SIZE_LIMIT;
 
-  // Will 2**32 be enough?
-  private requestId: number = 0;
-
   private readonly udp4Socket: dgram.Socket | undefined;
   private readonly tcp4Server: net.Server | undefined;
   private readonly wsServer: websocket.server | undefined;
@@ -207,17 +204,17 @@ export class Network extends EventEmitter implements INetwork {
     const wsConnection = this.wsManager.nodeIdToConnectionMap.get(nodeId);
     if (wsConnection) {
       // Node likely doesn't have any other way to communicate besides WebSocket
-      return this.wsManager.sendMessage(wsConnection, command, 0, payload);
+      return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
     }
     const socket = await this.nodeIdToTcpSocket(nodeId);
     if (socket) {
-      return this.tcpManager.sendMessage(socket, command, 0, payload);
+      return this.tcpManager.sendMessageOneWay(socket, command, payload);
     }
 
     {
       const wsConnection = await this.nodeIdToWsConnection(nodeId);
       if (wsConnection) {
-        return this.wsManager.sendMessage(wsConnection, command, 0, payload);
+        return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
       }
 
       throw new Error(`Node ${nodeIdToHex(nodeId)} unreachable`);
@@ -235,13 +232,12 @@ export class Network extends EventEmitter implements INetwork {
 
     const address = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
-    return this.udpManager.sendMessage(
+    return this.udpManager.sendMessageOneWay(
       [
         (this.udp4Socket as dgram.Socket),
         address,
       ],
       command,
-      0,
       payload,
     );
   }
@@ -251,76 +247,20 @@ export class Network extends EventEmitter implements INetwork {
     command: ICommandsKeys,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
-    ++this.requestId;
-    const requestId = this.requestId;
     const wsConnection = this.wsManager.nodeIdToConnectionMap.get(nodeId);
     if (wsConnection) {
       // Node likely doesn't have any other way to communicate besides WebSocket
-      return new Promise((resolve, reject) => {
-        this.wsManager.requestCallbacks.set(requestId, resolve);
-        const timeout = setTimeout(
-          () => {
-            this.wsManager.requestCallbacks.delete(requestId);
-            reject(new Error(`Request ${requestId} timeout out`));
-          },
-          this.DEFAULT_TIMEOUT * 1000,
-        );
-        if (timeout.unref) {
-          timeout.unref();
-        }
-        this.wsManager.sendMessage(wsConnection, command, requestId, payload)
-          .catch((error) => {
-            this.wsManager.requestCallbacks.delete(requestId);
-            clearTimeout(timeout);
-            reject(error);
-          });
-      });
+      return this.wsManager.sendMessage(wsConnection, command, payload);
     }
     const socket = await this.nodeIdToTcpSocket(nodeId);
     if (socket) {
-      return new Promise((resolve, reject) => {
-        this.tcpManager.requestCallbacks.set(requestId, resolve);
-        const timeout = setTimeout(
-          () => {
-            this.tcpManager.requestCallbacks.delete(requestId);
-            reject(new Error(`Request ${requestId} timeout out`));
-          },
-          this.DEFAULT_TIMEOUT * 1000,
-        );
-        if (timeout.unref) {
-          timeout.unref();
-        }
-        this.tcpManager.sendMessage(socket, command, requestId, payload)
-          .catch((error) => {
-            this.tcpManager.requestCallbacks.delete(requestId);
-            clearTimeout(timeout);
-            reject(error);
-          });
-      });
+      return this.tcpManager.sendMessage(socket, command, payload);
     }
 
     {
       const wsConnection = await this.nodeIdToWsConnection(nodeId);
       if (wsConnection) {
-        return new Promise((resolve, reject) => {
-          this.wsManager.requestCallbacks.set(requestId, resolve);
-          const timeout = setTimeout(
-            () => {
-              this.wsManager.requestCallbacks.delete(requestId);
-              reject(new Error(`Request ${requestId} timeout out`));
-            },
-            this.DEFAULT_TIMEOUT * 1000,
-          );
-          if (timeout.unref) {
-            timeout.unref();
-          }
-          this.wsManager.sendMessage(wsConnection, command, requestId, payload)
-            .catch((error) => {
-              this.wsManager.requestCallbacks.delete(requestId);
-              clearTimeout(timeout);
-              reject(error);
-            });
-        });
+        return this.wsManager.sendMessage(wsConnection, command, payload);
       }
 
       throw new Error(`Node ${nodeIdToHex(nodeId)} unreachable`);
@@ -335,39 +275,16 @@ export class Network extends EventEmitter implements INetwork {
     if (this.browserNode) {
       return this.sendRequest(nodeId, command, payload);
     }
-    ++this.requestId;
-    const requestId = this.requestId;
     const address = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
-    return new Promise((resolve, reject) => {
-      this.udpManager.requestCallbacks.set(requestId, resolve);
-      const timeout = setTimeout(
-        () => {
-          this.udpManager.requestCallbacks.delete(requestId);
-          reject(new Error(`Request ${requestId} timeout out`));
-        },
-        this.DEFAULT_TIMEOUT * 1000,
-      );
-      if (timeout.unref) {
-        timeout.unref();
-      }
-      this.udpManager.sendMessage(
-        [
-          (this.udp4Socket as dgram.Socket),
-          address,
-        ],
-        command,
-        requestId,
-        payload,
-      )
-        .catch((error) => {
-          if (error) {
-            this.udpManager.requestCallbacks.delete(requestId);
-            clearTimeout(timeout);
-            reject(error);
-          }
-        });
-    });
+    return this.udpManager.sendMessage(
+      [
+        (this.udp4Socket as dgram.Socket),
+        address,
+      ],
+      command,
+      payload,
+    );
   }
 
   public async gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {

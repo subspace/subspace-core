@@ -16,16 +16,6 @@ export class UdpManager extends AbstractProtocolManager<ISocket> {
     this.setMaxListeners(Infinity);
   }
 
-  public sendMessage(
-    socket: ISocket,
-    command: ICommandsKeys,
-    requestResponseId: number,
-    payload: Uint8Array,
-  ): Promise<void> {
-    const message = composeMessage(command, requestResponseId, payload);
-    return this.sendRawMessage(socket, message);
-  }
-
   public async sendRawMessage(socket: ISocket, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       throw new Error(
@@ -47,6 +37,16 @@ export class UdpManager extends AbstractProtocolManager<ISocket> {
         },
       );
     });
+  }
+
+  protected sendMessageImplementation(
+    socket: ISocket,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void> {
+    const message = composeMessage(command, requestResponseId, payload);
+    return this.sendRawMessage(socket, message);
   }
 
   protected destroyConnection(): void {

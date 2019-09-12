@@ -15,16 +15,6 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     this.setMaxListeners(Infinity);
   }
 
-  public sendMessage(
-    connection: WebSocketConnection,
-    command: ICommandsKeys,
-    requestResponseId: number,
-    payload: Uint8Array,
-  ): Promise<void> {
-    const message = composeMessage(command, requestResponseId, payload);
-    return this.sendRawMessage(connection, message);
-  }
-
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       throw new Error(
@@ -36,6 +26,16 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     } else {
       connection.send(message);
     }
+  }
+
+  protected sendMessageImplementation(
+    connection: WebSocketConnection,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void> {
+    const message = composeMessage(command, requestResponseId, payload);
+    return this.sendRawMessage(connection, message);
   }
 
   protected destroyConnection(connection: WebSocketConnection): void {

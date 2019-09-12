@@ -32,16 +32,6 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     this.setMaxListeners(Infinity);
   }
 
-  public sendMessage(
-    socket: net.Socket,
-    command: ICommandsKeys,
-    requestResponseId: number,
-    payload: Uint8Array,
-  ): Promise<void> {
-    const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
-    return this.sendRawMessage(socket, message);
-  }
-
   public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       throw new Error(
@@ -59,6 +49,16 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
         });
       });
     }
+  }
+
+  protected sendMessageImplementation(
+    socket: net.Socket,
+    command: ICommandsKeys,
+    requestResponseId: number,
+    payload: Uint8Array,
+  ): Promise<void> {
+    const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
+    return this.sendRawMessage(socket, message);
   }
 
   protected destroyConnection(socket: net.Socket): void {
