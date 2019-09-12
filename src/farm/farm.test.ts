@@ -11,6 +11,7 @@ import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { HASH_LENGTH } from '../main/constants';
 import { IPiece } from '../main/interfaces';
+import { Storage } from '../storage/storage';
 import { rmDirRecursiveSync } from '../utils/utils';
 import { Farm } from './farm';
 
@@ -32,7 +33,8 @@ test('mem-plot', async () => {
   for (let i = 0; i < numberOfPlots; ++i) {
     addresses.push(crypto.randomBytes(HASH_LENGTH));
   }
-  const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const metadataStore = new Storage('memory', storageDir, 'farm');
+  const farm = new Farm(plotMode, metadataStore, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
   const data = crypto.randomBytes(paddedDataSize);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
@@ -102,7 +104,8 @@ test('disk-plot', async () => {
   for (let i = 0; i < numberOfPlots; ++i) {
     addresses.push(crypto.randomBytes(HASH_LENGTH));
   }
-  const farm = new Farm(plotMode, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const metadataStore = new Storage('rocks', storageDir, 'farm');
+  const farm = new Farm(plotMode, metadataStore, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
   const data = crypto.randomBytes(paddedDataSize);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);

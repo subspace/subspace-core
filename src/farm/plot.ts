@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { PIECE_SIZE } from "../main/constants";
 import { num2Bin } from "../utils/utils";
+import IndexedDBStore from './IndexedDBStore';
 import IStore from "./IStore";
 import MemoryStore from './MemoryStore';
 import RocksStore from './RocksStore';
@@ -28,14 +29,17 @@ export class Plot {
     this.size = size;
     this.maxOffset = Math.floor(this.size / PIECE_SIZE);
     this.address = address;
+    const plotPath = `plot-${this.index}`;
     switch (type) {
       case 'mem-db':
         this.store = new MemoryStore();
         break;
       case 'disk-db':
-        const plotPath = `plot-${this.index}`;
         const storagePath = path.join(storageDir, plotPath);
         this.store = new RocksStore(path.normalize(storagePath));
+        break;
+      case 'indexed-db':
+        this.store = new IndexedDBStore(plotPath);
         break;
       default:
         this.store = new MemoryStore();

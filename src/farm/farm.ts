@@ -34,9 +34,10 @@ import { Plot } from './plot';
 export class Farm {
   public static readonly MODE_MEM_DB = 'mem-db';
   public static readonly MODE_DISK_DB = 'disk-db';
+  public static readonly MODE_INDEXED_DB = 'indexed-db';
 
   public readonly plots: Plot[];
-  private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB;
+  private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB;
   private readonly encodingRounds: number;
   private readonly metadataStore: Storage;
   private readonly pieceIndex: Tree<Uint8Array, number>;
@@ -52,7 +53,8 @@ export class Farm {
    * @param addresses the addresses that will be used for plotting (same as number of plots)
    */
   constructor(
-    mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB,
+    mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB,
+    metadataStore: Storage,
     storageDir: string,
     numberOfPlots: number,
     farmSize: number,
@@ -60,33 +62,34 @@ export class Farm {
     addresses: Uint8Array[],
   ) {
     this.mode = mode;
+    this.metadataStore = metadataStore;
     this.encodingRounds = encodingRounds;
     this.pieceOffset = 0;
     this.plots = [];
 
-    let storageAdapter: string;
     let plotAdapter: string;
     // let indexAdapter: string;
 
     switch (this.mode) {
       case Farm.MODE_MEM_DB:
-        storageAdapter = 'memory';
         plotAdapter = 'mem-db';
         // indexAdapter = 'memory';
         break;
       case Farm.MODE_DISK_DB:
-        storageAdapter = 'rocks';
         plotAdapter = 'disk-db';
         // indexAdapter = 'disk';
         break;
+      case Farm.MODE_INDEXED_DB:
+        plotAdapter = 'indexed-db';
+        // indexAdapter = 'disk';
+        break;
       default:
-        storageAdapter = 'memory';
         plotAdapter = 'mem-db';
         // indexAdapter = 'memory';
         break;
     }
 
-    this.metadataStore = new Storage(storageAdapter, storageDir, `farm-${mode}`);
+    // this.metadataStore = new Storage(storageAdapter, storageDir, `farm-${mode}`);
     const plotSize = Math.floor(farmSize / numberOfPlots);
 
     for (let i = 0; i < numberOfPlots; ++i) {

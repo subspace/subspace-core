@@ -10,6 +10,7 @@ import * as crypto from '../crypto/crypto';
 import { Block } from '../ledger/block';
 import { Tx } from '../ledger/tx';
 import { IPeerContactInfo } from '../main/interfaces';
+import { Storage } from '../storage/storage';
 import {allocatePort, parseContactInfo} from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { Network } from './Network';
@@ -54,7 +55,8 @@ beforeAll(async () => {
   const blsSignatures = await BlsSignatures.init();
   rpc1 = new RPC(network1, blsSignatures);
   rpc2 = new RPC(network2, blsSignatures);
-  wallet = await Wallet.open(blsSignatures, 'memory', 'rpc-test');
+  const storage = new Storage('memory', 'tests', 'rpc');
+  wallet = new Wallet(blsSignatures, storage);
   wallet.createAccount();
   const publicKey = wallet.getAccounts()[0].publicKey;
   tx = await wallet.createCoinBaseTx(1, publicKey);

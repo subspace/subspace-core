@@ -10,13 +10,13 @@ import * as crypto from '../crypto/crypto';
 import { rmDirRecursiveSync } from '../utils/utils';
 import { Storage } from './storage';
 
-const v0 = Buffer.from('hello subspace');
+const v0 = Uint8Array.from(Buffer.from('hello subspace'));
 const k0 = crypto.hash(Buffer.from(v0));
-const v1 = Buffer.from('value one');
+const v1 = Uint8Array.from(Buffer.from('value one'));
 const k1 = crypto.hash(Buffer.from(v1));
-const v2 = Buffer.from('value two');
+const v2 = Uint8Array.from(Buffer.from('value two'));
 const k2 = crypto.hash(Buffer.from(v2));
-const v3 = Buffer.from('value three');
+const v3 = Uint8Array.from(Buffer.from('value three'));
 const k3 = crypto.hash(Buffer.from(v3));
 
 const storageTest = (storage: Storage) => {
@@ -96,4 +96,4 @@ fs.mkdirSync(storageDir, { recursive: true });
 
 storageTest(new Storage('rocks', storageDir, 'rocks-test'));
 storageTest(new Storage('memory', storageDir, 'memory-test'));
-// storageTest(new Storage('browser', 'storage'));
+storageTest(new Storage('browser', storageDir, 'browser-test'));
