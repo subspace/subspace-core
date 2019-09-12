@@ -23,19 +23,6 @@ export interface INodeAddress {
   protocolVersion?: '4';
 }
 
-export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
-  const length = aKey.length;
-  for (let i = 0; i < length; ++i) {
-    const diff = aKey[i] - bKey[i];
-    if (diff < 0) {
-      return -1;
-    } else if (diff > 0) {
-      return 1;
-    }
-  }
-  return 0;
-}
-
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
