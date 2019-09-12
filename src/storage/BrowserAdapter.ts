@@ -54,7 +54,7 @@ export default class BrowserAdapter implements IAdapter {
     return new Promise<Uint8Array[]> (async (resolve) => {
       const keys: Uint8Array[] = [];
       this.db.createKeyStream()
-        .on('data', (key: Buffer) => {
+        .on('data', (key: Uint8Array) => {
           keys.push(new Uint8Array(key));
         })
         .on('end', () => {
