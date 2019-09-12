@@ -8,12 +8,11 @@ type ISocket = [dgram.Socket, IAddress];
 
 export class UdpManager extends AbstractProtocolManager<ISocket> {
   /**
-   * @param gossipCache
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    */
-  public constructor(gossipCache: Set<string>, messageSizeLimit: number, responseTimeout: number) {
-    super(gossipCache, messageSizeLimit, responseTimeout, false);
+  public constructor(messageSizeLimit: number, responseTimeout: number) {
+    super(messageSizeLimit, responseTimeout, false);
     this.setMaxListeners(Infinity);
   }
 

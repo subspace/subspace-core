@@ -7,12 +7,11 @@ type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
 export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   /**
-   * @param gossipCache
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    */
-  public constructor(gossipCache: Set<string>, messageSizeLimit: number, responseTimeout: number) {
-    super(gossipCache, messageSizeLimit, responseTimeout, true);
+  public constructor(messageSizeLimit: number, responseTimeout: number) {
+    super(messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
   }
 

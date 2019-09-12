@@ -1,3 +1,7 @@
+export function noopResponseCallback(): void {
+  // Do nothing
+}
+
 /**
  * @param command
  * @param requestResponseId `0` if no response is expected for request
