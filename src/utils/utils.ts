@@ -179,10 +179,8 @@ export function rmDirRecursiveSync(dirPath: string): void {
   }
 }
 
-let portOffset = 20000;
 export function allocatePort(): number {
-  ++portOffset;
-  return portOffset;
+  return 20000 + Math.round(Math.random() * 30000);
 }
 
 export function parseContactInfo(

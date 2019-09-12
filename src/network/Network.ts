@@ -1,5 +1,4 @@
 import {ArrayMap} from "array-map-set";
-import * as dgram from "dgram";
 import {EventEmitter} from "events";
 import * as http from "http";
 import * as net from "net";
@@ -82,7 +81,6 @@ export class Network extends EventEmitter implements INetwork {
   // In bytes
   private readonly WS_MESSAGE_SIZE_LIMIT = this.TCP_MESSAGE_SIZE_LIMIT;
 
-  private readonly udp4Socket: dgram.Socket | undefined;
   private readonly tcp4Server: net.Server | undefined;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
@@ -109,9 +107,6 @@ export class Network extends EventEmitter implements INetwork {
     super();
     this.setMaxListeners(Infinity);
 
-    if (ownUdpAddress) {
-      this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
-    }
     if (ownTcpAddress) {
       this.tcp4Server = this.createTcp4Server(ownTcpAddress);
     }
@@ -122,7 +117,7 @@ export class Network extends EventEmitter implements INetwork {
       this.httpServer = httpServer;
     }
 
-    const udpManager = new UdpManager(this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    const udpManager = new UdpManager(this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT, ownUdpAddress);
     this.udpManager = udpManager;
 
     const tcpManager = new TcpManager(this.TCP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
@@ -132,12 +127,12 @@ export class Network extends EventEmitter implements INetwork {
     this.wsManager = wsManager;
 
     const gossipManager = new GossipManager(
-      this.udp4Socket,
       this.nodeIdToUdpAddressMap,
       this.nodeIdToTcpAddressMap,
       this.nodeIdToWsAddressMap,
       this.nodeIdToTcpSocket.bind(this),
       this.nodeIdToWsConnection.bind(this),
+      browserNode,
       udpManager,
       tcpManager,
       wsManager,
@@ -222,14 +217,7 @@ export class Network extends EventEmitter implements INetwork {
 
     const address = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
-    return this.udpManager.sendMessageOneWay(
-      [
-        (this.udp4Socket as dgram.Socket),
-        address,
-      ],
-      command,
-      payload,
-    );
+    return this.udpManager.sendMessageOneWay(address, command, payload);
   }
 
   public async sendRequest(
@@ -267,14 +255,7 @@ export class Network extends EventEmitter implements INetwork {
     }
     const address = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
-    return this.udpManager.sendMessage(
-      [
-        (this.udp4Socket as dgram.Socket),
-        address,
-      ],
-      command,
-      payload,
-    );
+    return this.udpManager.sendMessage(address, command, payload);
   }
 
   public async gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
@@ -283,13 +264,7 @@ export class Network extends EventEmitter implements INetwork {
 
   public async destroy(): Promise<void> {
     await Promise.all([
-      new Promise((resolve) => {
-        if (this.udp4Socket) {
-          this.udp4Socket.close(resolve);
-        } else {
-          resolve();
-        }
-      }),
+      this.udpManager.destroy(),
       new Promise((resolve) => {
         for (const socket of this.tcpManager.nodeIdToConnectionMap.values()) {
           socket.destroy();
@@ -349,31 +324,6 @@ export class Network extends EventEmitter implements INetwork {
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
   ): boolean {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
-  }
-
-  private createUdp4Socket(ownUdpAddress: IAddress): dgram.Socket {
-    const udp4Socket = dgram.createSocket('udp4');
-    udp4Socket.on(
-      'message',
-      (message: Buffer, remote: dgram.RemoteInfo) => {
-        this.udpManager.handleIncomingMessage(
-          [
-            udp4Socket,
-            remote,
-          ],
-          message,
-        )
-          .catch((_) => {
-            // TODO: Handle errors
-          });
-      },
-    );
-    udp4Socket.on('error', () => {
-      // TODO: Handle errors
-    });
-    udp4Socket.bind(ownUdpAddress.port, ownUdpAddress.address);
-
-    return udp4Socket;
   }
 
   private createTcp4Server(ownTcpAddress: IAddress): net.Server {

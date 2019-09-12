@@ -1,5 +1,4 @@
 import {ArraySet} from "array-map-set";
-import * as dgram from "dgram";
 import {EventEmitter} from "events";
 import * as net from "net";
 import * as websocket from "websocket";
@@ -17,13 +16,13 @@ export class GossipManager extends EventEmitter {
   private readonly maxMessageSizeLimit: number;
 
   constructor(
-    private readonly udp4Socket: dgram.Socket | undefined,
     private readonly nodeIdToUdpAddressMap: Map<Uint8Array, IAddress>,
     private readonly nodeIdToTcpAddressMap: Map<Uint8Array, IAddress>,
     private readonly nodeIdToWsAddressMap: Map<Uint8Array, IAddress>,
     private readonly nodeIdToTcpSocket: (nodeId: Uint8Array) => Promise<net.Socket | null>,
     private readonly nodeIdToWsConnection: (nodeId: Uint8Array) => Promise<websocket.w3cwebsocket | websocket.connection | null>,
     // TODO: All of above arguments just for migration purpose and should be removed in the future
+    private readonly browserNode: boolean,
     private readonly udpManager: UdpManager,
     private readonly tcpManager: TcpManager,
     private readonly wsManager: WsManager,
@@ -141,17 +140,16 @@ export class GossipManager extends EventEmitter {
         continue;
       }
       const udpAddress = this.nodeIdToUdpAddressMap.get(nodeId);
-      if (this.udp4Socket && fitsInUdp && udpAddress) {
-        this.udp4Socket.send(
+      if (!this.browserNode && fitsInUdp && udpAddress) {
+        this.udpManager.sendRawMessage(
+          udpAddress,
           message,
-          udpAddress.port,
-          udpAddress.address,
-          (error) => {
+        )
+          .catch((error) => {
             if (error) {
               // TODO: Log in debug mode
             }
-          },
-        );
+          });
         continue;
       }
       const wsConnection = this.wsManager.nodeIdToConnectionMap.get(nodeId);

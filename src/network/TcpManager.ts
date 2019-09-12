@@ -51,6 +51,11 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     }
   }
 
+  public destroy(): Promise<void> {
+    // TODO
+    return Promise.resolve();
+  }
+
   protected sendMessageImplementation(
     socket: net.Socket,
     command: ICommandsKeys,

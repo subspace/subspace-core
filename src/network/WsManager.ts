@@ -28,6 +28,11 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     }
   }
 
+  public destroy(): Promise<void> {
+    // TODO
+    return Promise.resolve();
+  }
+
   protected sendMessageImplementation(
     connection: WebSocketConnection,
     command: ICommandsKeys,
