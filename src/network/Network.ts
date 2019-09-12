@@ -8,7 +8,8 @@ import {hash} from "../crypto/crypto";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
 import {INetwork} from "./INetwork";
 import {TcpManager} from "./TcpManager";
-import {composeMessage, parseMessage} from "./utils";
+import {UdpManager} from "./UdpManager";
+import {composeMessage} from "./utils";
 import {WsManager} from "./WsManager";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -92,22 +93,13 @@ export class Network extends EventEmitter implements INetwork {
 
   // Will 2**32 be enough?
   private requestId: number = 0;
-  // Will 2**32 be enough?
-  private responseId: number = 0;
-  /**
-   * Mapping from requestId to callback
-   */
-  private readonly requestCallbacks = new Map<number, (payload: Uint8Array) => any>();
-  /**
-   * Mapping from responseId to callback
-   */
-  private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => any>();
 
   private readonly udp4Socket: dgram.Socket | undefined;
   private readonly tcp4Server: net.Server | undefined;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
 
+  private readonly udpManager: UdpManager;
   private readonly tcpManager: TcpManager;
   private readonly wsManager: WsManager;
 
@@ -129,6 +121,16 @@ export class Network extends EventEmitter implements INetwork {
   ) {
     super();
     this.setMaxListeners(Infinity);
+
+    const udpManager = new UdpManager(this.UDP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
+    udpManager
+      .on('gossip', (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => {
+        this.handleIncomingGossip(gossipMessage, sourceNodeId);
+      })
+      .on('command', (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => {
+        this.emit(command, payload, responseCallback);
+      });
+    this.udpManager = udpManager;
 
     const tcpManager = new TcpManager(this.TCP_MESSAGE_SIZE_LIMIT, this.DEFAULT_TIMEOUT);
     tcpManager
@@ -230,23 +232,18 @@ export class Network extends EventEmitter implements INetwork {
     if (this.browserNode) {
       return this.sendOneWayRequest(nodeId, command, payload);
     }
-    const message = composeMessage(command, 0, payload);
-    const {address, port} = await this.nodeIdToUdpAddress(nodeId);
+
+    const address = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
-    return new Promise((resolve, reject) => {
-      (this.udp4Socket as dgram.Socket).send(
-        message,
-        port,
+    return this.udpManager.sendMessage(
+      [
+        (this.udp4Socket as dgram.Socket),
         address,
-        (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        },
-      );
-    });
+      ],
+      command,
+      0,
+      payload,
+    );
   }
 
   public async sendRequest(
@@ -340,20 +337,13 @@ export class Network extends EventEmitter implements INetwork {
     }
     ++this.requestId;
     const requestId = this.requestId;
-    const message = composeMessage(command, requestId, payload);
-    const UDP_MESSAGE_SIZE_LIMIT = this.UDP_MESSAGE_SIZE_LIMIT;
-    if (message.length > UDP_MESSAGE_SIZE_LIMIT) {
-      throw new Error(
-        `UDP message too big, ${message.length} bytes specified, but only ${UDP_MESSAGE_SIZE_LIMIT} bytes allowed}`,
-      );
-    }
-    const {address, port} = await this.nodeIdToUdpAddress(nodeId);
+    const address = await this.nodeIdToUdpAddress(nodeId);
     // TODO: Fallback to reliable if no UDP route?
     return new Promise((resolve, reject) => {
-      this.requestCallbacks.set(requestId, resolve);
+      this.udpManager.requestCallbacks.set(requestId, resolve);
       const timeout = setTimeout(
         () => {
-          this.requestCallbacks.delete(requestId);
+          this.udpManager.requestCallbacks.delete(requestId);
           reject(new Error(`Request ${requestId} timeout out`));
         },
         this.DEFAULT_TIMEOUT * 1000,
@@ -361,18 +351,22 @@ export class Network extends EventEmitter implements INetwork {
       if (timeout.unref) {
         timeout.unref();
       }
-      (this.udp4Socket as dgram.Socket).send(
-        message,
-        port,
-        address,
-        (error) => {
+      this.udpManager.sendMessage(
+        [
+          (this.udp4Socket as dgram.Socket),
+          address,
+        ],
+        command,
+        requestId,
+        payload,
+      )
+        .catch((error) => {
           if (error) {
-            this.requestCallbacks.delete(requestId);
+            this.udpManager.requestCallbacks.delete(requestId);
             clearTimeout(timeout);
             reject(error);
           }
-        },
-      );
+        });
     });
   }
 
@@ -461,60 +455,16 @@ export class Network extends EventEmitter implements INetwork {
     udp4Socket.on(
       'message',
       (message: Buffer, remote: dgram.RemoteInfo) => {
-        if (message.length > this.UDP_MESSAGE_SIZE_LIMIT) {
-          // TODO: Log too big message in debug mode
-          return;
-        }
-        try {
-          const [command, requestId, payload] = parseMessage(message);
-          // TODO: Almost no validation!
-          switch (command) {
-            case 'response':
-              const requestCallback = this.requestCallbacks.get(requestId);
-              if (requestCallback) {
-                requestCallback(payload);
-                // TODO: Should this really be done in case we receive response from random sender?
-                this.requestCallbacks.delete(requestId);
-              }
-              break;
-            case 'gossip':
-              this.handleIncomingGossip(payload);
-              break;
-            default:
-              if (requestId) {
-                ++this.responseId;
-                const responseId = this.responseId;
-                this.responseCallbacks.set(
-                  responseId,
-                  async (payload) => {
-                    this.responseCallbacks.delete(responseId);
-                    const message = composeMessage('response', requestId, payload);
-                    udp4Socket.send(message, remote.port, remote.address);
-                  },
-                );
-                setTimeout(
-                  () => {
-                    this.responseCallbacks.delete(responseId);
-                  },
-                  this.DEFAULT_TIMEOUT * 1000,
-                ).unref();
-                this.emit(
-                  command,
-                  payload,
-                  (responsePayload: Uint8Array) => {
-                    const responseCallback = this.responseCallbacks.get(responseId);
-                    if (responseCallback) {
-                      responseCallback(responsePayload);
-                    }
-                  },
-                );
-              } else {
-                this.emit(command, payload);
-              }
-          }
-        } catch (error) {
-          // TODO: Log error in debug mode
-        }
+        this.udpManager.handleIncomingMessage(
+          [
+            udp4Socket,
+            remote,
+          ],
+          message,
+        )
+          .catch((_) => {
+            // TODO: Handle errors
+          });
       },
     );
     udp4Socket.on('error', () => {
@@ -605,10 +555,7 @@ export class Network extends EventEmitter implements INetwork {
           return;
         }
         const buffer = message.binaryData as Buffer;
-        this.wsManager.handleIncomingMessage(
-          connection,
-          new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
-        )
+        this.wsManager.handleIncomingMessage(connection, new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength))
           .catch((_) => {
             // TODO: Handle errors
           });

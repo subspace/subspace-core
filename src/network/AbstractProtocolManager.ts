@@ -36,7 +36,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
-    private readonly messageSizeLimit: number,
+    protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
     private readonly connectionBased: boolean,
   ) {

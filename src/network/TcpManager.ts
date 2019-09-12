@@ -43,6 +43,11 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
   }
 
   public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
+    if (message.length > this.messageSizeLimit) {
+      throw new Error(
+        `TCP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+      );
+    }
     if (!socket.destroyed) {
       await new Promise((resolve, reject) => {
         socket.write(message, (error) => {

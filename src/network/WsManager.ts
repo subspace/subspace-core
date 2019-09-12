@@ -26,6 +26,11 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   }
 
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
+    if (message.length > this.messageSizeLimit) {
+      throw new Error(
+        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+      );
+    }
     if ('sendBytes' in connection) {
       connection.sendBytes(Buffer.from(message));
     } else {
