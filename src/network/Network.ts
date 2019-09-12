@@ -109,7 +109,6 @@ export class Network extends EventEmitter implements INetwork {
     bootstrapUdpNodes: INodeAddress[],
     bootstrapTcpNodes: INodeAddress[],
     bootstrapWsNodes: INodeAddress[],
-    // TODO: If `browserNode === true` then avoid running servers and establishing UDP/TCP connections
     private readonly browserNode: boolean,
     private readonly ownNodeId: Uint8Array,
     ownUdpAddress?: IAddress,
