@@ -65,6 +65,10 @@ export class Ledger extends EventEmitter {
 
   // persistent state
   public chainCount = 0;
+  public confirmedTxs = 0;
+  public confirmedBlocks = 0;
+  public confirmedLevels = 0;
+  public confirmedState = 0;
   public readonly lastConfirmedLevel = 0;
   public accounts: Account;
   public stateMap = ArrayMap<Uint8Array, Uint8Array>();
@@ -160,6 +164,7 @@ export class Ledger extends EventEmitter {
     const uniqueTxSet: Set<Uint8Array> = new Set();
     for (const chain of this.unconfirmedBlocksByChain) {
       for (const blockId of chain.values()) {
+        this.confirmedBlocks ++;
         const compactBlockData = this.compactBlockMap.get(blockId);
         if (!compactBlockData) {
           throw new Error('Cannot create level, cannot retrieve required compact block data');
@@ -186,6 +191,7 @@ export class Ledger extends EventEmitter {
     const confirmedTxs: Tx[] = [];
 
     for (const txId of uniqueTxSet) {
+      this.confirmedTxs ++;
       const txData = this.txMap.get(txId);
       if (!txData) {
         throw new Error('Cannot create new level, cannot fetch requisite transaction data');
@@ -222,6 +228,9 @@ export class Ledger extends EventEmitter {
     const pieceDataSet = paddedLevelData.length <= 4096 ?
       this.encodeSmallLevel(paddedLevelData, levelHash) :
       await this.encodeLargeLevel(paddedLevelData, levelHash);
+
+    this.confirmedLevels ++;
+    this.confirmedState ++;
 
     if (!this.isServing) {
       // clear the pending state from memory

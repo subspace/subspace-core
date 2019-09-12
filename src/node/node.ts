@@ -11,7 +11,7 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings } from '../main/interfaces';
 import { RPC } from '../network/rpc';
-import { bin2Hex, measureProximity } from '../utils/utils';
+import { bin2Hex, measureProximity, randomWait } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -93,14 +93,14 @@ export class Node extends EventEmitter {
       this.rpc.gossipTx(tx);
     });
 
-    // switch (this.type) {
-    //   case 'full':
-    //     this.createLedgerAndFarm(this.settings.numberOfChains);
-    //     break;
-    //   case 'validator':
-    //     this.syncLedgerAndValidate();
-    //     break;
-    // }
+    switch (this.type) {
+      case 'full':
+        this.createLedgerAndFarm(this.settings.numberOfChains);
+        break;
+      case 'validator':
+        this.syncLedgerAndValidate();
+        break;
+    }
   }
 
   /**
@@ -131,7 +131,7 @@ export class Node extends EventEmitter {
   }
 
   public async farmBlock(): Promise<void> {
-    // await wait(1000);
+    await randomWait(5000);
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }

@@ -60,17 +60,17 @@ export function measureProximity(a: Uint8Array, b: Uint8Array, reverse = false):
 }
 
 /**
- * Pauses execution synchronously for the specified time period.
+ * Generates exponentially distributed numbers that can be used for intervals between arrivals in Poisson process
  */
-export async function wait(delay: number): Promise<void> {
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    let now = startTime;
-    while ((now - startTime) < delay) {
-      now = Date.now();
-      resolve();
-    }
-  });
+export function sample(mean: number): number {
+  return -Math.log(Math.random()) * mean;
+}
+
+/**
+ * Pauses execution synchronously for a random time, exponentially distributed around a mean wait time.
+ */
+export function randomWait(meanWaitTime: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(() => resolve(), sample(meanWaitTime)));
 }
 
 /**

@@ -15,7 +15,7 @@ import {run} from "./run";
  * Storage Path (optional)
  */
 
-run(
+module.exports = run(
   'full',
   1,
   'memory',

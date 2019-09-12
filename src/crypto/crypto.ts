@@ -27,11 +27,12 @@ export function hash(data: Uint8Array, outputLength = 32, type = 'sha256'): Uint
 }
 
 function merkleHash(data: Uint8Array): Uint8Array {
-  return hash(data, 32, 'whirlpool');
+  return hash(data, 32, 'sha256');
 }
 
 /**
  * Builds a merkle tree from input hashes, returning the root hash and an array of inclusion proofs.
+ * Assumes trees are constant sized and known by verifier, else insecure without two hash functions
  */
 export function buildMerkleTree(items: Uint8Array[]): IMerkleData {
   const tree = new Tree(items, merkleHash);

@@ -39,7 +39,7 @@ const pingTest = async () => {
     0,
     true,
     3,
-    undefined,
+    '',
     true,
     gatewayContactInfo,
     [],
