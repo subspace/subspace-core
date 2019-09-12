@@ -37,7 +37,7 @@ All messages for all protocols are sent in binary.
 
 In general, single message consists of 3 parts going one after another like this:
 * command - 1 byte unsigned integer
-* requestId - 4 bytes unsigned integer in big-endian encoding, can be `0` if message doesn't foresee any response to be sent back
+* requestId - 4 bytes unsigned integer in big-endian encoding, can be `0` if message doesn't foresee any response to be sent back (one-way request)
 * payload - other bytes in a message
 
 Since TCP protocol looks more like a stream of bytes, rather stream of distinct messages, we need a way to delimit messages.
@@ -57,3 +57,8 @@ Gossip message has a special payload format, since despite gossiping, it carries
 For this reason `payload` for gossip command has following structure:
 * command - 1 byte unsigned integer
 * command_payload - other bytes in a payload are payload for `command`
+
+### Handling responses
+Every request sent results in `Promise` being returned to the calling code.
+In case of one-way request `Promise` will resolve as soon as message was successfully sent (not necessarily delivered though).
+In case of requests that expect response, `Promise` will resolve with response in case of success and will reject if sending fails or response doesn't arrive before configured timeout.
