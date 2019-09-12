@@ -15,7 +15,7 @@ import { Ledger } from '../ledger/ledger';
 import { Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { Node } from '../node/node';
-// import { Storage } from '../storage/storage';
+import { Storage } from '../storage/storage';
 import { parseContactInfo, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
@@ -66,7 +66,7 @@ export const run = async (
   // initialize empty config params
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
-  let plotAdapter: 'mem-db' | 'disk-db';
+  let plotAdapter: 'mem-db' | 'disk-db' | 'indexed-db';
   // let storage: Storage;
   let rpc: RPC;
   let ledger: Ledger;
@@ -231,23 +231,30 @@ export const run = async (
   }
 
   // set plot adapter for farming
-  config.farm && isPersistingStorage ? plotAdapter = 'disk-db' : plotAdapter = 'mem-db';
+  env === 'node' && config.farm && isPersistingStorage ? plotAdapter = 'disk-db' : plotAdapter = 'mem-db';
+  env === 'browser' && config.farm && isPersistingStorage ? plotAdapter = 'indexed-db' : plotAdapter = 'mem-db';
 
   // instantiate a single storage instance
   // storage = new Storage(storageAdapter, 'storage', 'storage');
 
   const blsSignatures = await BlsSignatures.init();
+  const storage = new Storage(storageAdapter, storagePath, 'storage');
+
+  // reset indexed db path if resetting browser storage
+  if (env === 'browser' && reset) {
+    await storage.clear();
+  }
 
   // instantiate a wallet
   if (config.wallet && !config.farm) {
-    wallet = await Wallet.open(blsSignatures, storageAdapter, storagePath, 'wallet');
+    wallet = new Wallet(blsSignatures, storage);
   }
 
   // instantiate a farm & wallet
   if (config.farm && config.wallet) {
 
     // create wallet and addresses
-    wallet = await Wallet.open(blsSignatures, storageAdapter, storagePath, 'wallet');
+    wallet = new  Wallet(blsSignatures, storage);
 
     const addresses: Uint8Array[] = [];
     for (let i = 0; i < numberOfPlots; ++i) {
@@ -256,16 +263,18 @@ export const run = async (
     }
 
     // create farm
-    farm = new Farm(plotAdapter, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
+    farm = new Farm(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
   }
 
   // instantiate a ledger
-  ledger = await Ledger.init(blsSignatures, storageAdapter, storagePath, validateRecords, encodingRounds);
+  ledger = new Ledger(blsSignatures, storage, validateRecords, encodingRounds);
 
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys
   contactInfo.nodeId = crypto.randomBytes(32);
-  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers);
+  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, env === 'browser' ? true : false);
+  // tslint:disable-next-line: no-console
+  console.log('Launching network');
   const network = new Network(...networkOptions);
   rpc = new RPC(network, blsSignatures);
 

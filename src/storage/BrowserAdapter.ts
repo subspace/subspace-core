@@ -7,19 +7,28 @@ import IAdapter from "./IAdapter";
 export default class BrowserAdapter implements IAdapter {
   public db: ReturnType<typeof levelup>;
 
+  /**
+   * ...
+   * To save future headache when dealing with nuances of node <-> browser <> index db for buffer <> Unit8array ...
+   * This library will accept keys and values as Uint8Arrays
+   * The value is retrievable from the Uint8Array key
+   * The value returned will be a buffer
+   * Uint8Array.from(buffer) will not convert it back to a Uint8Array
+   * Instead call new Uint8Array(buffer)
+   * ...
+   */
+
   public constructor(path: string) {
     this.db = levelup(leveljs(path));
   }
 
   public async put(key: Uint8Array, value: Uint8Array): Promise<void> {
-    console.log('Putting key: ', key);
     await this.db.put(key, value);
   }
 
   public async get(key: Uint8Array): Promise<Uint8Array | null> {
     try {
-      console.log('Deleting key: ', key);
-      return await this.db.get(key);
+      return new Uint8Array(await this.db.get((key)));
     } catch (error) {
       if (error.notFound) {
         return null;
@@ -46,7 +55,7 @@ export default class BrowserAdapter implements IAdapter {
       const keys: Uint8Array[] = [];
       this.db.createKeyStream()
         .on('data', (key: Uint8Array) => {
-          keys.push(key);
+          keys.push(new Uint8Array(key));
         })
         .on('end', () => {
           resolve(keys);

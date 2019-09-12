@@ -2,10 +2,9 @@ import * as path from 'path';
 import BrowserAdapter from './BrowserAdapter';
 import IAdapter from './IAdapter';
 import MemoryAdapter from './MemoryAdapter';
-import RocksAdapter from './RocksAdapter';
+// import RocksAdapter from './RocksAdapter';
 
 // ToDo
-  // handle JSON storage / type serialization
   // return boolean for del
   // mobile storage
 
@@ -28,6 +27,7 @@ export class Storage {
         this.adapter = new BrowserAdapter(storagePath);
         break;
       case 'rocks':
+        const RocksAdapter = require('./RocksAdapter').default;
         this.adapter = new RocksAdapter(storagePath);
         break;
       case 'memory':

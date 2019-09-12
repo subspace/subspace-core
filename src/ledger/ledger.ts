@@ -55,23 +55,6 @@ import { Tx } from './tx';
 
 export class Ledger extends EventEmitter {
 
-  public static async init(
-    blsSignatures: BlsSignatures,
-    storageAdapter: string,
-    storageDir: string,
-    validateRecords: boolean,
-    encodingRounds: number,
-  ): Promise<Ledger> {
-    const ledger = new Ledger(
-      blsSignatures,
-      storageAdapter,
-      storageDir,
-      validateRecords,
-      encodingRounds,
-    );
-    return ledger;
-  }
-
   public readonly encodingRounds: number;
   public isFarming = true;
   public isServing = true;
@@ -102,14 +85,13 @@ export class Ledger extends EventEmitter {
 
   constructor(
     blsSignatures: BlsSignatures,
-    storageAdapter: string,
-    storageDir: string,
+    storage: Storage,
     validateRecords: boolean,
     encodingRounds: number,
   ) {
     super();
     this.blsSignatures = blsSignatures;
-    this.storage = new Storage(storageAdapter, storageDir, 'farm');
+    this.storage = storage;
     this.accounts = new Account();
     this.isValidating = validateRecords;
     this.encodingRounds = encodingRounds;

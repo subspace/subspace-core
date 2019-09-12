@@ -18,8 +18,8 @@ import {run} from "./run";
 run(
   'full',
   1,
-  'disk',
-  100,
+  'memory',
+  1,
   1000000000,
   false,
   3,

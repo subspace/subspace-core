@@ -49,12 +49,12 @@ export class Wallet {
    *
    * @return A wallet instance with all accounts loaded
    */
-  public static async open(blsSignatures: BlsSignatures, storageAdapter: string, storageDir: string, namespace = 'wallet'): Promise<Wallet> {
-    const storage = new Storage(storageAdapter, storageDir, namespace);
-    const wallet = new Wallet(blsSignatures, storage);
-    await wallet.loadAccounts();
-    return wallet;
-  }
+  // public static async open(blsSignatures: BlsSignatures, storageAdapter: string, storageDir: string, namespace = 'wallet'): Promise<Wallet> {
+  //   const storage = new Storage(storageAdapter, storageDir, namespace);
+  //   const wallet = new Wallet(blsSignatures, storage);
+  //   // await wallet.loadAccounts();
+  //   return wallet;
+  // }
 
   public readonly addresses: Set<string> = new Set();
   private readonly accounts = ArrayMap<Uint8Array, IWalletAccount>();
@@ -344,7 +344,7 @@ export class Wallet {
   /**
    * Loads all stored accounts into memory when the Wallet is opened.
    */
-  private async loadAccounts(): Promise<void> {
+  public async loadAccounts(): Promise<void> {
     const addresses = await this.storage.getKeys();
     for (const address of addresses) {
       const binaryAccount = await this.storage.get(address);
@@ -356,6 +356,8 @@ export class Wallet {
       this.addresses.add(bin2Hex(account.address));
     }
   }
+
+  // tslint:disable: no-console
 
   /**
    * Serializes an account value to binary form for persisting on disk.
@@ -381,6 +383,8 @@ export class Wallet {
       debits: [...account.debits.values()].map((txId) => bin2Hex(txId)),
     };
 
+    // console.log('original safe account', safeAccount);
+
     return JSON2Bin(safeAccount);
   }
 
@@ -393,7 +397,7 @@ export class Wallet {
    */
   private fromBinary(data: Uint8Array): IWalletAccount {
     const safeAccount = bin2JSON(data);
-
+    // console.log('retrieved safe account', safeAccount);
     return {
       name: safeAccount.name,
       description: safeAccount.description,

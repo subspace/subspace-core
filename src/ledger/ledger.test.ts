@@ -17,6 +17,7 @@ import * as os from 'os';
 import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, HASH_LENGTH } from '../main/constants';
+import { Storage } from '../storage/storage';
 import { rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from '../wallet/wallet';
 // import { Account } from './accounts';
@@ -44,7 +45,8 @@ let blsSignatures: BlsSignatures;
 
 beforeAll(async () => {
   blsSignatures = await BlsSignatures.init();
-  ledgerWallet = await Wallet.open(blsSignatures, 'rocks', storageDir, 'ledger-test');
+  const storage = new Storage('rocks', storageDir, 'ledger-tests');
+  ledgerWallet = new Wallet(blsSignatures, storage);
   const senderSeed = crypto.randomBytes(32);
   senderAccount = await ledgerWallet.createAccount('ledger-test-sender', 'a sender account for ledger tests', senderSeed);
   receiverAccount = await ledgerWallet.createAccount('ledger-test-receiver', 'a receiver account for ledger tests');

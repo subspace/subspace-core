@@ -12,6 +12,7 @@ import * as os from 'os';
 import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Tx } from '../ledger/tx';
+import { Storage } from '../storage/storage';
 import { rmDirRecursiveSync } from '../utils/utils';
 import { IWalletAccount, Wallet } from './wallet';
 
@@ -37,7 +38,8 @@ let blsSignatures: BlsSignatures;
 
 beforeAll(async () => {
   blsSignatures = await BlsSignatures.init();
-  wallet = await Wallet.open(blsSignatures, 'rocks', storageDir, 'wallet-test');
+  const storage = new Storage('rocks', storageDir, 'wallet-test');
+  wallet = new Wallet(blsSignatures, storage);
   account1 = await wallet.createAccount(name, description, seed);
   account2 = await wallet.createAccount();
   account3 = await wallet.createAccount();
@@ -168,8 +170,9 @@ test('confirm-credit-tx', async () => {
 
 test('close-load-clear', async () => {
   await wallet.close();
-
-  const reopenedWallet = await Wallet.open(blsSignatures, 'rocks', storageDir, 'wallet-test');
+  const storage = new Storage('rocks', storageDir, 'wallet-test');
+  const reopenedWallet = new Wallet(blsSignatures, storage);
+  await reopenedWallet.loadAccounts();
   expect(reopenedWallet.getAccounts().length).toBe(2);
   expect(wallet.addresses.size).toBe(2);
 
