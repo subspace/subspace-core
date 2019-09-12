@@ -1,6 +1,4 @@
 import {EventEmitter} from "events";
-import * as http from "http";
-import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {ICommandsKeys} from "./commands";
 import {GossipManager} from "./GossipManager";
@@ -54,9 +52,6 @@ export class Network extends EventEmitter implements INetwork {
   // In bytes
   private readonly WS_MESSAGE_SIZE_LIMIT = this.TCP_MESSAGE_SIZE_LIMIT;
 
-  private readonly wsServer: websocket.server | undefined;
-  private readonly httpServer: http.Server | undefined;
-
   private readonly udpManager: UdpManager;
   private readonly tcpManager: TcpManager;
   private readonly wsManager: WsManager;
@@ -74,13 +69,6 @@ export class Network extends EventEmitter implements INetwork {
   ) {
     super();
     this.setMaxListeners(Infinity);
-
-    if (ownWsAddress) {
-      const httpServer = http.createServer();
-      this.wsServer = this.createWebSocketServer(httpServer);
-      httpServer.listen(ownWsAddress.port, ownWsAddress.address);
-      this.httpServer = httpServer;
-    }
 
     const udpManager = new UdpManager(
       bootstrapUdpNodes,
@@ -110,6 +98,7 @@ export class Network extends EventEmitter implements INetwork {
       this.WS_MESSAGE_SIZE_LIMIT,
       this.DEFAULT_TIMEOUT,
       this.DEFAULT_TIMEOUT,
+      ownWsAddress,
     );
     this.wsManager = wsManager;
 
@@ -223,19 +212,7 @@ export class Network extends EventEmitter implements INetwork {
     await Promise.all([
       this.udpManager.destroy(),
       this.tcpManager.destroy(),
-      new Promise((resolve) => {
-        for (const connection of this.wsManager.nodeIdToConnectionMap.values()) {
-          connection.close();
-        }
-        if (this.wsServer) {
-          this.wsServer.shutDown();
-        }
-        if (this.httpServer) {
-          this.httpServer.close(resolve);
-        } else {
-          resolve();
-        }
-      }),
+      this.wsManager.destroy(),
     ]);
   }
 
@@ -272,47 +249,5 @@ export class Network extends EventEmitter implements INetwork {
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
   ): boolean {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
-  }
-
-  private createWebSocketServer(httpServer: http.Server): websocket.server {
-    const wsServer = new websocket.server({
-      fragmentOutgoingMessages: false,
-      httpServer,
-      keepaliveGracePeriod: 5000,
-      keepaliveInterval: 2000,
-    });
-    wsServer
-      .on('request', (request: websocket.request) => {
-        const connection = request.accept();
-        this.registerServerWsConnection(connection);
-      })
-      .on('close', (connection: websocket.connection) => {
-        this.wsManager.connectionCloseHandler(connection);
-      });
-
-    return wsServer;
-  }
-
-  private registerServerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {
-    connection
-      .on('message', (message: websocket.IMessage) => {
-        if (message.type !== 'binary') {
-          connection.close();
-          // Because https://github.com/theturtle32/WebSocket-Node/issues/354
-          this.wsManager.connectionCloseHandler(connection);
-          // TODO: Log in debug mode that only binary messages are supported
-          return;
-        }
-        const buffer = message.binaryData as Buffer;
-        this.wsManager.handleIncomingMessage(connection, new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength))
-          .catch((_) => {
-            // TODO: Handle errors
-          });
-      });
-    // TODO: Connection expiration for cleanup
-    if (nodeId) {
-      this.wsManager.nodeIdToConnectionMap.set(nodeId, connection);
-      this.wsManager.connectionToNodeIdMap.set(connection, nodeId);
-    }
   }
 }
