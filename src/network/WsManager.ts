@@ -3,15 +3,26 @@ import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {IAddress, IBootstrapNodeContactInfo} from "./Network";
+import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {IAddress} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
-export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
+function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoWs[] {
+  const bootstrapNodesWs: INodeContactInfoWs[] = [];
+  for (const bootstrapNode of bootstrapNodes) {
+    if (bootstrapNode.wsPort !== undefined) {
+      bootstrapNodesWs.push(bootstrapNode as INodeContactInfoWs);
+    }
+  }
+  return bootstrapNodesWs;
+}
+
+export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
   public static init(
     identificationPayload: Uint8Array,
-    bootstrapWsNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -21,7 +32,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     return new Promise((resolve, reject) => {
       const instance = new WsManager(
         identificationPayload,
-        bootstrapWsNodes,
+        extractWsBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
@@ -42,7 +53,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
 
   /**
    * @param identificationPayload
-   * @param bootstrapWsNodes
+   * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
@@ -53,7 +64,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
    */
   public constructor(
     identificationPayload: Uint8Array,
-    bootstrapWsNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfoWs[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -62,7 +73,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapWsNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
     this.identificationPayload = identificationPayload;
@@ -123,7 +134,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
         resolve(null);
         return;
       }
-      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.port}`);
+      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.wsPort}`);
       connection.onopen = () => {
         clearTimeout(timeout);
         if (timedOut) {

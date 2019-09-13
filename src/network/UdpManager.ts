@@ -1,13 +1,24 @@
 import * as dgram from "dgram";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
-import {IAddress, IBootstrapNodeContactInfo} from "./Network";
-import {composeMessage} from "./utils";
+import {INodeContactInfo, INodeContactInfoUdp} from "./INetwork";
+import {IAddress} from "./Network";
+import {composeMessage, parseIdentificationPayload} from "./utils";
 
-export class UdpManager extends AbstractProtocolManager<IAddress> {
+function extractUdpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoUdp[] {
+  const bootstrapNodesUdp: INodeContactInfoUdp[] = [];
+  for (const bootstrapNode of bootstrapNodes) {
+    if (bootstrapNode.udp4Port !== undefined) {
+      bootstrapNodesUdp.push(bootstrapNode as INodeContactInfoUdp);
+    }
+  }
+  return bootstrapNodesUdp;
+}
+
+export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INodeContactInfoUdp> {
   public static init(
     identificationPayload: Uint8Array,
-    bootstrapUdpNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -16,7 +27,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     return new Promise((resolve, reject) => {
       const instance = new UdpManager(
         identificationPayload,
-        bootstrapUdpNodes,
+        extractUdpBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
@@ -34,7 +45,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
 
   /**
    * @param identificationPayload
-   * @param bootstrapUdpNodes
+   * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
@@ -44,7 +55,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
    */
   public constructor(
     identificationPayload: Uint8Array,
-    bootstrapUdpNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfoUdp[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -52,14 +63,14 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapUdpNodes, browserNode, messageSizeLimit, responseTimeout, false);
+    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, false);
     this.setMaxListeners(Infinity);
 
     this.identificationPayload = identificationPayload;
     this.udp4Socket = this.createUdp4Socket(ownUdpAddress, readyCallback, errorCallback);
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<IAddress | null> {
+  public async nodeIdToConnection(nodeId: Uint8Array): Promise<INodeContactInfoUdp | null> {
     if (this.browserNode) {
       return null;
     }
@@ -71,7 +82,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     throw new Error('Sending to arbitrary nodeId is not implemented yet');
   }
 
-  public async sendRawMessage(address: IAddress, message: Uint8Array): Promise<void> {
+  public async sendRawMessage(address: INodeContactInfoUdp, message: Uint8Array): Promise<void> {
     const udpMessage = new Uint8Array(IDENTIFICATION_PAYLOAD_LENGTH + message.length);
     udpMessage.set(this.identificationPayload);
     udpMessage.set(message, IDENTIFICATION_PAYLOAD_LENGTH);
@@ -83,7 +94,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(
         udpMessage,
-        address.port,
+        address.udp4Port,
         address.address,
         (error) => {
           if (error) {
@@ -103,7 +114,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   }
 
   protected sendMessageImplementation(
-    address: IAddress,
+    address: INodeContactInfoUdp,
     command: ICommandsKeys,
     requestResponseId: number,
     payload: Uint8Array,
@@ -131,8 +142,14 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
             // TODO: Log in debug mode
             return;
           }
-          // TODO: Make use of identification
-          this.handleIncomingMessage(remote, udpMessage.slice(IDENTIFICATION_PAYLOAD_LENGTH))
+          const {nodeId, nodeType} = parseIdentificationPayload(udpMessage.subarray(0, IDENTIFICATION_PAYLOAD_LENGTH));
+          const nodeContactInfo: INodeContactInfoUdp = {
+            address: remote.address,
+            nodeId: nodeId,
+            nodeType: nodeType,
+            udp4Port: remote.port,
+          };
+          this.handleIncomingMessage(nodeContactInfo, udpMessage.slice(IDENTIFICATION_PAYLOAD_LENGTH))
             .catch((_) => {
               // TODO: Handle errors
             });

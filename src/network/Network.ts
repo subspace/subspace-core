@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 import {bin2Hex} from "../utils/utils";
 import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {GossipManager} from "./GossipManager";
-import {INetwork} from "./INetwork";
+import {INetwork, INodeContactInfo} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {noopResponseCallback} from "./utils";
@@ -15,21 +15,11 @@ export interface IAddress {
   protocolVersion?: '4';
 }
 
-export interface IBootstrapNodeContactInfo {
-  address: string;
-  nodeId: Uint8Array;
-  port: number;
-  // TODO: Support IPv6
-  protocolVersion?: '4';
-}
-
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
   public static async init(
-    bootstrapUdpNodes: IBootstrapNodeContactInfo[],
-    bootstrapTcpNodes: IBootstrapNodeContactInfo[],
-    bootstrapWsNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfo[],
     nodeType: INodeTypesKeys,
     browserNode: boolean,
     ownNodeId: Uint8Array,
@@ -44,7 +34,7 @@ export class Network extends EventEmitter implements INetwork {
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
         identificationPayload,
-        bootstrapUdpNodes,
+        bootstrapNodes,
         browserNode,
         Network.UDP_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
@@ -52,7 +42,7 @@ export class Network extends EventEmitter implements INetwork {
       ),
       TcpManager.init(
         identificationPayload,
-        bootstrapTcpNodes,
+        bootstrapNodes,
         browserNode,
         Network.TCP_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
@@ -62,7 +52,7 @@ export class Network extends EventEmitter implements INetwork {
       ),
       WsManager.init(
         identificationPayload,
-        bootstrapWsNodes,
+        bootstrapNodes,
         browserNode,
         Network.WS_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,

@@ -10,7 +10,8 @@ import { inspect } from 'util';
 import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
 import {INodeTypesKeys} from "../network/constants";
-import {IAddress, IBootstrapNodeContactInfo, Network} from '../network/Network';
+import {INodeContactInfo} from "../network/INetwork";
+import {IAddress, Network} from '../network/Network';
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
   const length = aKey.length;
@@ -203,33 +204,26 @@ export function parseContactInfo(
   nodeType: INodeTypesKeys,
   browserNode: boolean = false,
 ): Parameters<typeof Network.init> {
-  const bootstrapUdpNodes: IBootstrapNodeContactInfo [] = [];
-  const bootstrapTcpNodes: IBootstrapNodeContactInfo [] = [];
-  const bootstrapWsNodes: IBootstrapNodeContactInfo [] = [];
+  const bootstrapNodes: INodeContactInfo[] = [];
 
   for (const peer of bootstrapPeerContactInfo) {
     if (!browserNode) {
-      bootstrapUdpNodes.push({
-        nodeId: peer.nodeId,
+      bootstrapNodes.push({
         address: peer.address,
-        port: peer.udpPort,
-        protocolVersion: peer.protocolVersion,
+        nodeId: peer.nodeId,
+        nodeType: nodeType,
+        tcp4Port: peer.tcpPort,
+        udp4Port: peer.udpPort,
+        wsPort: peer.wsPort,
       });
-
-      bootstrapTcpNodes.push({
-        nodeId: peer.nodeId,
+    } else {
+      bootstrapNodes.push({
         address: peer.address,
-        port: peer.tcpPort,
-        protocolVersion: peer.protocolVersion,
+        nodeId: peer.nodeId,
+        nodeType: nodeType,
+        wsPort: peer.wsPort,
       });
     }
-
-    bootstrapWsNodes.push({
-      nodeId: peer.nodeId,
-      address: peer.address,
-      port: peer.wsPort,
-      protocolVersion: peer.protocolVersion,
-    });
   }
 
   const ownNodeId = selfContactInfo.nodeId;
@@ -252,9 +246,7 @@ export function parseContactInfo(
   };
 
   return [
-    bootstrapUdpNodes,
-    bootstrapTcpNodes,
-    bootstrapWsNodes,
+    bootstrapNodes,
     nodeType,
     browserNode,
     ownNodeId,

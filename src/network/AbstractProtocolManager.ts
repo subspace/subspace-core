@@ -1,12 +1,12 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
-import {IAddress, IBootstrapNodeContactInfo} from "./Network";
+import {INodeContactInfo} from "./INetwork";
 import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
 
-export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
+export abstract class AbstractProtocolManager<Connection, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
-  protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, IAddress>();
+  protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, Address>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
@@ -29,7 +29,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
-    bootstrapNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: Address[],
     protected readonly browserNode: boolean,
     protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
@@ -39,14 +39,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
     this.setMaxListeners(Infinity);
 
     for (const bootstrapNode of bootstrapNodes) {
-      this.nodeIdToAddressMap.set(
-        bootstrapNode.nodeId,
-        {
-          address: bootstrapNode.address,
-          port: bootstrapNode.port,
-          protocolVersion: bootstrapNode.protocolVersion,
-        },
-      );
+      this.nodeIdToAddressMap.set(bootstrapNode.nodeId, bootstrapNode);
     }
   }
 

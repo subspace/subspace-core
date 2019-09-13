@@ -1,5 +1,26 @@
 import {EventEmitter} from "events";
-import {ICommandsKeys} from "./constants";
+import {ICommandsKeys, INodeTypesKeys} from "./constants";
+
+export interface INodeContactInfo {
+  address: string;
+  nodeId: Uint8Array;
+  nodeType: INodeTypesKeys;
+  tcp4Port?: number;
+  udp4Port?: number;
+  wsPort?: number;
+}
+
+export interface INodeContactInfoUdp extends INodeContactInfo {
+  udp4Port: number;
+}
+
+export interface INodeContactInfoTcp extends INodeContactInfo {
+  tcp4Port: number;
+}
+
+export interface INodeContactInfoWs extends INodeContactInfo {
+  wsPort: number;
+}
 
 export interface INetwork extends EventEmitter {
   /**

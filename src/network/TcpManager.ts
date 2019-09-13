@@ -2,7 +2,18 @@ import * as net from "net";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {COMMANDS, ICommandsKeys} from "./constants";
-import {IAddress, IBootstrapNodeContactInfo} from "./Network";
+import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
+import {IAddress} from "./Network";
+
+function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {
+  const bootstrapNodesTcp: INodeContactInfoTcp[] = [];
+  for (const bootstrapNode of bootstrapNodes) {
+    if (bootstrapNode.tcp4Port !== undefined) {
+      bootstrapNodesTcp.push(bootstrapNode as INodeContactInfoTcp);
+    }
+  }
+  return bootstrapNodesTcp;
+}
 
 /**
  * @param command
@@ -27,10 +38,10 @@ function composeMessageWithTcpHeader(
 // 4 bytes for message length, 1 byte for command, 4 bytes for request ID
 const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
-export class TcpManager extends AbstractProtocolManager<net.Socket> {
+export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
     identificationPayload: Uint8Array,
-    bootstrapTcpNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -41,7 +52,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
         identificationPayload,
-        bootstrapTcpNodes,
+        extractTcpBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
@@ -63,7 +74,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
 
   /**
    * @param identificationPayload
-   * @param bootstrapTcpNodes
+   * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
@@ -75,7 +86,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
    */
   public constructor(
     identificationPayload: Uint8Array,
-    bootstrapTcpNodes: IBootstrapNodeContactInfo[],
+    bootstrapNodes: INodeContactInfoTcp[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -85,7 +96,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapTcpNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
     this.identificationPayload = identificationPayload;
@@ -133,7 +144,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
         timeout.unref();
       }
       const socket = net.createConnection(
-        address.port,
+        address.tcp4Port,
         address.address,
         () => {
           clearTimeout(timeout);
