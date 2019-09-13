@@ -6,10 +6,10 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {random_int} from "random-bytes-numbers";
 import { inspect } from 'util';
 import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
-import {INodeTypesKeys} from "../network/constants";
 import {INodeContactInfo} from "../network/INetwork";
 import {IAddress, Network} from '../network/Network';
 
@@ -201,29 +201,19 @@ export function allocatePort(): number {
 export function parseContactInfo(
   selfContactInfo: IPeerContactInfo,
   bootstrapPeerContactInfo: IPeerContactInfo[],
-  nodeType: INodeTypesKeys,
   browserNode: boolean = false,
 ): Parameters<typeof Network.init> {
   const bootstrapNodes: INodeContactInfo[] = [];
 
   for (const peer of bootstrapPeerContactInfo) {
-    if (!browserNode) {
-      bootstrapNodes.push({
-        address: peer.address,
-        nodeId: peer.nodeId,
-        nodeType: nodeType,
-        tcp4Port: peer.tcpPort,
-        udp4Port: peer.udpPort,
-        wsPort: peer.wsPort,
-      });
-    } else {
-      bootstrapNodes.push({
-        address: peer.address,
-        nodeId: peer.nodeId,
-        nodeType: nodeType,
-        wsPort: peer.wsPort,
-      });
-    }
+    bootstrapNodes.push({
+      address: peer.address,
+      nodeId: peer.nodeId,
+      nodeType: peer.nodeType,
+      tcp4Port: peer.tcpPort,
+      udp4Port: peer.udpPort,
+      wsPort: peer.wsPort,
+    });
   }
 
   const ownNodeId = selfContactInfo.nodeId;
@@ -247,7 +237,7 @@ export function parseContactInfo(
 
   return [
     bootstrapNodes,
-    nodeType,
+    selfContactInfo.nodeType,
     browserNode,
     ownNodeId,
     browserNode ? undefined : ownUdpAddress,
@@ -287,4 +277,12 @@ export function createLogger(logLevel: 'error' | 'warn' | 'info' | 'debug' | 've
       new winston.transports.Console(),
     ],
   });
+}
+
+export function randomElement<E>(elements: E[]): E {
+  if (elements.length === 1) {
+    return elements[0];
+  }
+
+  return elements[random_int(0, elements.length - 1)];
 }

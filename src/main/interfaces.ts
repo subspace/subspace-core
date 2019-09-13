@@ -1,6 +1,7 @@
 import { Content } from "../ledger/content";
 import { Proof } from "../ledger/proof";
 import { Tx } from '../ledger/tx';
+import {INodeTypesKeys} from "../network/constants";
 
 /**
  * Summary of all Blocks in a Level, compressed into a State Block that is tracked within a single State Chain by light clients.
@@ -145,6 +146,7 @@ export interface IPlotData {
 
 export interface IPeerContactInfo {
   nodeId: Uint8Array;
+  nodeType: INodeTypesKeys;
   address: string;
   udpPort: number;
   tcpPort: number;

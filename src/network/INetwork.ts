@@ -26,38 +26,38 @@ export interface INetwork extends EventEmitter {
   /**
    * One-way sending
    *
-   * @param nodeId
+   * @param nodeTypes
    * @param command
    * @param payload
    */
-  sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<void>;
+  sendRequestOneWay(nodeTypes: INodeTypesKeys[], command: ICommandsKeysForSending, payload?: Uint8Array): Promise<void>;
 
   /**
    * One-way sending (unreliable with UDP)
    *
-   * @param nodeId
+   * @param nodeTypes
    * @param command
    * @param payload
    */
-  sendOneWayRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<void>;
+  sendRequestOneWayUnreliable(nodeTypes: INodeTypesKeys[], command: ICommandsKeysForSending, payload?: Uint8Array): Promise<void>;
 
   /**
    * Make request that implies response
    *
-   * @param nodeId
+   * @param nodeTypes
    * @param command
    * @param payload
    */
-  sendRequest(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<Uint8Array>;
+  sendRequest(nodeTypes: INodeTypesKeys[], command: ICommandsKeysForSending, payload?: Uint8Array): Promise<Uint8Array>;
 
   /**
    * Make request that implies response (unreliable with UDP)
    *
-   * @param nodeId
+   * @param nodeTypes
    * @param command
    * @param payload
    */
-  sendRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<Uint8Array>;
+  sendRequestUnreliable(nodeTypes: INodeTypesKeys[], command: ICommandsKeysForSending, payload?: Uint8Array): Promise<Uint8Array>;
 
   /**
    * Start gossiping command across the network

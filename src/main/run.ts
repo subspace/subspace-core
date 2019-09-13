@@ -22,6 +22,7 @@ import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
 const defaultContactInfo: IPeerContactInfo = {
   nodeId: new Uint8Array(),
+  nodeType: 'full',
   address: 'localhost',
   udpPort: 10888,
   tcpPort: 10889,
@@ -273,7 +274,7 @@ export const run = async (
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys
   contactInfo.nodeId = crypto.randomBytes(32);
-  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, 'full', env === 'browser');
+  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, env === 'browser');
   // tslint:disable-next-line: no-console
   console.log('Launching network');
   const network = await Network.init(...networkOptions);

@@ -1,6 +1,6 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {ICommandsKeys, ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
+import {ICommandsKeys, ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
 import {INodeContactInfo} from "./INetwork";
 import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
 
@@ -120,6 +120,44 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
    */
   public getMessageSizeLimit(): number {
     return this.messageSizeLimit;
+  }
+
+  /**
+   * @param nodeTypes
+   *
+   * @return Active connections
+   */
+  public getActiveConnectionsOfNodeTypes(nodeTypes: INodeTypesKeys[]): Connection[] {
+    const nodeTypesSet = new Set(nodeTypes);
+    const connections: Connection[] = [];
+    this.nodeIdToAddressMap.forEach((address: Address, nodeId: Uint8Array) => {
+      if (!nodeTypesSet.has(address.nodeType)) {
+        return;
+      }
+      const connection = this.nodeIdToConnectionMap.get(nodeId);
+      if (connection) {
+        connections.push(connection);
+      }
+    });
+
+    return connections;
+  }
+
+  /**
+   * @param nodeTypes
+   *
+   * @return
+   */
+  public getNodeIdsOfNodeTypes(nodeTypes: INodeTypesKeys[]): Uint8Array[] {
+    const nodeTypesSet = new Set(nodeTypes);
+    const nodeIds: Uint8Array[] = [];
+    this.nodeIdToAddressMap.forEach((address: Address, nodeId: Uint8Array) => {
+      if (nodeTypesSet.has(address.nodeType)) {
+        nodeIds.push(nodeId);
+      }
+    });
+
+    return nodeIds;
   }
 
   /**

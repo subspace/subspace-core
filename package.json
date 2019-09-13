@@ -69,6 +69,7 @@
     "level-rocksdb": "^4.0.0",
     "levelup": "^4.2.0",
     "merkle-tree-binary": "^2.0.1",
+    "random-bytes-numbers": "^1.0.0",
     "websocket": "^1.0.29",
     "winston": "^3.2.1"
   }
