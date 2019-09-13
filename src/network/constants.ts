@@ -1,4 +1,6 @@
 // tslint:disable:object-literal-sort-keys
+import {NODE_ID_LENGTH} from "../main/constants";
+
 export const COMMANDS = {
   'response': 0,
   'identification': 1,
@@ -36,3 +38,13 @@ export const NODE_TYPES = {
 // tslint:enable:object-literal-sort-keys
 
 export type INodeTypesKeys = keyof typeof NODE_TYPES;
+
+export const NODE_TYPES_INVERSE: { [nodeTypeNumber: number]: INodeTypesKeys } = {};
+
+// tslint:disable-next-line:forin
+for (const nodeType in NODE_TYPES) {
+  NODE_TYPES_INVERSE[NODE_TYPES[nodeType as INodeTypesKeys]] = nodeType as INodeTypesKeys;
+}
+
+// Node type + node ID
+export const IDENTIFICATION_PAYLOAD_LENGTH = 1 + NODE_ID_LENGTH;

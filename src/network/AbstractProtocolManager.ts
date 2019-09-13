@@ -1,9 +1,8 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {NODE_ID_LENGTH} from "../main/constants";
-import {ICommandsKeys} from "./constants";
+import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
 import {IAddress, IBootstrapNodeContactInfo} from "./Network";
-import {noopResponseCallback, parseMessage} from "./utils";
+import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
@@ -202,16 +201,21 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
     // TODO: Almost no validation!
     if (command === 'identification') {
       if (!this.connectionBased) {
+        this.destroyConnection(connection);
         throw new Error('Identification is not supported by protocol');
       }
-      if (payload.length !== NODE_ID_LENGTH) {
-        // TODO: Log in debug mode that payload length is incorrect
+      if (payload.length !== IDENTIFICATION_PAYLOAD_LENGTH) {
         this.destroyConnection(connection);
-      } else if (this.nodeIdToConnectionMap.has(payload)) {
+        throw new Error(
+          `Identification payload length is incorrect, expected ${IDENTIFICATION_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
+        );
+      }
+      // TODO: nodeType is not used
+      const {nodeId} = parseIdentificationPayload(payload);
+      if (this.nodeIdToConnectionMap.has(nodeId)) {
         // TODO: Log in debug mode that node mapping is already present
         this.destroyConnection(connection);
       } else {
-        const nodeId = payload.slice();
         this.nodeIdToConnectionMap.set(nodeId, connection);
         this.connectionToNodeIdMap.set(connection, nodeId);
       }

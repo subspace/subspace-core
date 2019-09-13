@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {bin2Hex} from "../utils/utils";
-import {ICommandsKeys, INodeTypesKeys} from "./constants";
+import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {GossipManager} from "./GossipManager";
 import {INetwork} from "./INetwork";
 import {TcpManager} from "./TcpManager";
@@ -37,10 +37,13 @@ export class Network extends EventEmitter implements INetwork {
     ownTcpAddress?: IAddress,
     ownWsAddress?: IAddress,
   ): Promise<Network> {
+    const identificationPayload = new Uint8Array(IDENTIFICATION_PAYLOAD_LENGTH);
+    identificationPayload.set([NODE_TYPES[nodeType]]);
+    identificationPayload.set(ownNodeId, 1);
+
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
-        ownNodeId,
-        nodeType,
+        identificationPayload,
         bootstrapUdpNodes,
         browserNode,
         Network.UDP_MESSAGE_SIZE_LIMIT,
@@ -48,7 +51,7 @@ export class Network extends EventEmitter implements INetwork {
         ownUdpAddress,
       ),
       TcpManager.init(
-        ownNodeId,
+        identificationPayload,
         bootstrapTcpNodes,
         browserNode,
         Network.TCP_MESSAGE_SIZE_LIMIT,
@@ -58,7 +61,7 @@ export class Network extends EventEmitter implements INetwork {
         ownTcpAddress,
       ),
       WsManager.init(
-        ownNodeId,
+        identificationPayload,
         bootstrapWsNodes,
         browserNode,
         Network.WS_MESSAGE_SIZE_LIMIT,

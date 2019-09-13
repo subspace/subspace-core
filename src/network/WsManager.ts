@@ -10,7 +10,7 @@ type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
 export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   public static init(
-    ownNodeId: Uint8Array,
+    identificationPayload: Uint8Array,
     bootstrapWsNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -20,7 +20,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   ): Promise<WsManager> {
     return new Promise((resolve, reject) => {
       const instance = new WsManager(
-        ownNodeId,
+        identificationPayload,
         bootstrapWsNodes,
         browserNode,
         messageSizeLimit,
@@ -35,13 +35,13 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     });
   }
 
-  private readonly ownNodeId: Uint8Array;
+  private readonly identificationPayload: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
 
   /**
-   * @param ownNodeId
+   * @param identificationPayload
    * @param bootstrapWsNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -52,7 +52,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
    * @param errorCallback
    */
   public constructor(
-    ownNodeId: Uint8Array,
+    identificationPayload: Uint8Array,
     bootstrapWsNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -65,7 +65,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     super(bootstrapWsNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.ownNodeId = ownNodeId;
+    this.identificationPayload = identificationPayload;
     this.connectionTimeout = connectionTimeout;
 
     if (ownWsAddress) {
@@ -132,7 +132,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
           const identificationMessage = composeMessage(
             'identification',
             0,
-            this.ownNodeId,
+            this.identificationPayload,
           );
           connection.send(identificationMessage);
           this.registerBrowserWsConnection(connection, nodeId);

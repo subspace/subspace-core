@@ -1,3 +1,5 @@
+import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys, INodeTypesKeys, NODE_TYPES_INVERSE} from "./constants";
+
 export function noopResponseCallback(): void {
   // Do nothing
 }
@@ -7,8 +9,6 @@ export function noopResponseCallback(): void {
  * @param requestResponseId `0` if no response is expected for request
  * @param payload
  */
-import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys} from "./constants";
-
 export function composeMessage(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
   // 1 byte for command, 4 bytes for requestResponseId
   const message = new Uint8Array(1 + 4 + payload.length);
@@ -43,4 +43,11 @@ export function parseMessage(message: Uint8Array): [ICommandsKeys, number, Uint8
   );
 
   return [command, requestId, payload];
+}
+
+export function parseIdentificationPayload(identificationPayload: Uint8Array): { nodeType: INodeTypesKeys; nodeId: Uint8Array } {
+  return {
+    nodeId: identificationPayload.slice(1),
+    nodeType: NODE_TYPES_INVERSE[identificationPayload[0]],
+  };
 }

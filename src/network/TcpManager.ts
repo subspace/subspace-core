@@ -29,7 +29,7 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
 export class TcpManager extends AbstractProtocolManager<net.Socket> {
   public static init(
-    ownNodeId: Uint8Array,
+    identificationPayload: Uint8Array,
     bootstrapTcpNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -40,7 +40,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
   ): Promise<TcpManager> {
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
-        ownNodeId,
+        identificationPayload,
         bootstrapTcpNodes,
         browserNode,
         messageSizeLimit,
@@ -57,12 +57,12 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
   }
 
   private readonly tcp4Server: net.Server | undefined;
-  private readonly ownNodeId: Uint8Array;
+  private readonly identificationPayload: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly connectionExpiration: number;
 
   /**
-   * @param ownNodeId
+   * @param identificationPayload
    * @param bootstrapTcpNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -74,7 +74,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
    * @param errorCallback
    */
   public constructor(
-    ownNodeId: Uint8Array,
+    identificationPayload: Uint8Array,
     bootstrapTcpNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -88,7 +88,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     super(bootstrapTcpNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.ownNodeId = ownNodeId;
+    this.identificationPayload = identificationPayload;
     this.connectionTimeout = connectionTimeout;
     this.connectionExpiration = connectionExpiration;
 
@@ -143,7 +143,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
             const identificationMessage = composeMessageWithTcpHeader(
               'identification',
               0,
-              this.ownNodeId,
+              this.identificationPayload,
             );
             socket.write(identificationMessage);
             this.registerTcpConnection(socket, nodeId);
