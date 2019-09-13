@@ -14,16 +14,7 @@ export class RPC extends EventEmitter {
         // TODO
           // how do we know who the ping is from?
         // tslint:disable: no-console
-        console.log('rpc heard a ping from network');
         this.emit('ping', payload, responseCallback);
-      });
-
-      // received a pong response from another node
-      this.network.on('pong', (payload: Uint8Array) => {
-        // TODO
-          // how do we know who the ping is from?
-        console.log('rpc heard a pong from network');
-        this.emit('pong', payload);
       });
 
       // received a new tx via gossip

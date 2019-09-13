@@ -1,6 +1,7 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
 
+import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
 import { Node } from '../../node/node';
 import { IPeerContactInfo } from "../interfaces";
@@ -47,13 +48,13 @@ const testValidatorNode = async () => {
     0,
     true,
     3,
-    '~/node2/',
+    `${os.tmpdir()}/validator`,
     true,
     validatorContactInfo,
     [gatewayContactInfo],
   );
 
-  validatorNode.ping(gatewayNodeId);
+  validatorNode.syncLedgerAndValidate();
 };
 
 testValidatorNode();

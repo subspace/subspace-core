@@ -31,14 +31,7 @@ export class Node extends EventEmitter {
   ) {
 
     super();
-    this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => {
-      console.log('Received a ping request');
-      responseCallback(payload);
-    });
-    this.rpc.on('pong', () => {
-      console.log('received a pong response');
-      this.emit('pong');
-    });
+    this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
     this.rpc.on('tx-gossip', (tx: Tx) => this.onTx(tx));
     this.rpc.on('block-gossip', (block: Block, encoding: Uint8Array) => this.onBlock(block, encoding));
     this.rpc.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onTxRequest(txId, responseCallback));
@@ -93,14 +86,14 @@ export class Node extends EventEmitter {
       this.rpc.gossipTx(tx);
     });
 
-    switch (this.type) {
-      case 'full':
-        this.createLedgerAndFarm(this.settings.numberOfChains);
-        break;
-      case 'validator':
-        this.syncLedgerAndValidate();
-        break;
-    }
+    // switch (this.type) {
+    //   case 'full':
+    //     this.createLedgerAndFarm(this.settings.numberOfChains);
+    //     break;
+    //   case 'validator':
+    //     this.syncLedgerAndValidate();
+    //     break;
+    // }
   }
 
   /**
@@ -131,7 +124,7 @@ export class Node extends EventEmitter {
   }
 
   public async farmBlock(): Promise<void> {
-    await randomWait(5000);
+    await randomWait(300);
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }

@@ -1,8 +1,9 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
 
+import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
-// import { Node } from '../../node/node';
+import { Node } from '../../node/node';
 import { IPeerContactInfo } from "../interfaces";
 import { run } from '../run';
 
@@ -15,7 +16,7 @@ import { run } from '../run';
 const startGatewayNode = async () => {
 
   const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
-  // const chainCount = 1;
+  const chainCount = 1;
 
   // spin up the gateway node
   const gatewayContactInfo: IPeerContactInfo = {
@@ -39,24 +40,23 @@ const startGatewayNode = async () => {
     protocolVersion: '4',
   };
 
-  // const gatewayNode: Node = await
-  run(
+  const gatewayNode: Node = await run(
     'full',
     1,
-    'disk',
+    'memory',
     1,
     100000000,
     true,
     3,
-    '~/node1/',
+    `${os.tmpdir()}/gateway`,
     true,
     gatewayContactInfo,
     [validatorContactInfo],
   );
 
-  // setTimeout(() => {
-  //   gatewayNode.createLedgerAndFarm(chainCount);
-  // }, 10000);
+  setTimeout(() => {
+    gatewayNode.createLedgerAndFarm(chainCount);
+  }, 10000);
 
 };
 

@@ -1,8 +1,9 @@
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
 
+import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
-import { Node } from '../../node/node';
+// import { Node } from '../../node/node';
 import { IPeerContactInfo } from "../interfaces";
 import { run } from '../run';
 
@@ -35,17 +36,18 @@ const pingTest = async () => {
     'full',
     1,
     'disk',
-    0,
-    0,
+    1,
+    10000000,
     true,
     3,
-    '',
+    `${os.tmpdir()}/gateway`,
     true,
     gatewayContactInfo,
-    [],
+    [validatorContactInfo],
   );
 
-  const validatorNode: Node = await run(
+  // const validatorNode: Node = await
+  run(
     'validator',
     1,
     'disk',
@@ -53,15 +55,17 @@ const pingTest = async () => {
     0,
     true,
     3,
-    undefined,
+    `${os.tmpdir()}/validator`,
     true,
     validatorContactInfo,
     [gatewayContactInfo],
   );
 
   // await gatewayNode.ping(validatorNodeId);
-  const payload = crypto.randomBytes(32);
-  await validatorNode.ping(gatewayNodeId, payload);
+  // const payload = crypto.randomBytes(32);
+  // console.log('sending ping request to gateway', payload);
+  // await validatorNode.ping(gatewayNodeId, payload);
+  // console.log('pong reply received by validator', payload);
 
 };
 
