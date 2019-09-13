@@ -11,6 +11,19 @@ import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
 import { IAddress, INodeAddress } from '../network/Network';
 
+export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
+  const length = aKey.length;
+  for (let i = 0; i < length; ++i) {
+    const diff = aKey[i] - bKey[i];
+    if (diff < 0) {
+      return -1;
+    } else if (diff > 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 /**
  * Returns the exclusive-or (XOR) of two byte arrays.
  */
@@ -179,10 +192,8 @@ export function rmDirRecursiveSync(dirPath: string): void {
   }
 }
 
-let portOffset = 20000;
 export function allocatePort(): number {
-  ++portOffset;
-  return portOffset;
+  return 20000 + Math.round(Math.random() * 30000);
 }
 
 export function parseContactInfo(
