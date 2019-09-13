@@ -121,7 +121,7 @@ export class Ledger extends EventEmitter {
       const chain = new Chain(i);
       const block = Block.createGenesisBlock(previousProofHash, parentContentHash);
       console.log(`Created new genesis block for chain ${i}`);
-      const encoding = new Uint8Array();
+      const encoding = new Uint8Array(4096);
       this.emit('block', block, encoding);
       // print(block.print());
       previousProofHash = block.value.proof.key;
@@ -412,7 +412,7 @@ export class Ledger extends EventEmitter {
       }
 
       // encoding should be null
-      if (encoding.length > 0) {
+      if (!areArraysEqual(encoding, new Uint8Array(4096))) {
         throw new Error('Invalid genesis block, should not have an attached encoding');
       }
 

@@ -50,6 +50,7 @@ let tx: Tx;
 let wallet: Wallet;
 
 const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomBytes(32));
+const encoding = crypto.randomBytes(4096);
 
 beforeAll(async () => {
   const blsSignatures = await BlsSignatures.init();
@@ -80,10 +81,11 @@ test('gossip-tx', async () => {
 
 test('gossip-block', async () => {
   rpc2.on('block-gossip', (payload: Uint8Array) => {
-    expect(payload.join(',')).toEqual(block.toBytes().join(','));
+    const sentPayload = Buffer.concat([encoding, block.toFullBytes()]);
+    expect(payload.join(',')).toEqual(sentPayload.join(','));
   });
 
-  rpc1.gossipBlock(block);
+  rpc1.gossipBlock(block, encoding);
 });
 
 test('request-tx', async () => {

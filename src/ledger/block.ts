@@ -55,7 +55,6 @@ export class Block {
 
     // Parse a block received as binary
     // proof and content size is variable so we read their lengths (2 byte integer)
-
     const proofLength = smallBin2Num(data.subarray(0, 2));
     const proof = Proof.fromBytes(data.subarray(2, proofLength + 2));
     const contentLength = smallBin2Num(data.subarray(2 + proofLength, 2 + proofLength + 2));
@@ -128,13 +127,13 @@ export class Block {
     const contentData = this._value.content.toBytes();
     const contentLength = smallNum2Bin(contentData.length);
     const coinbaseData = this._value.coinbase ? this._value.coinbase.toBytes() : new Uint8Array();
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
       proofLength,
       proofData,
       contentLength,
       contentData,
       coinbaseData,
-    ]));
+    ]);
   }
 
   /**

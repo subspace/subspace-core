@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import {BlsSignatures} from "../crypto/BlsSignatures";
+// import * as crypto from '../crypto/crypto';
 import { Block } from "../ledger/block";
 import { Tx } from "../ledger/tx";
 import { Network } from './Network';
@@ -31,16 +32,16 @@ export class RPC extends EventEmitter {
 
       // received a new block and encoding via gossip
       this.network.on('block-gossip', (payload: Uint8Array) => {
-        // tslint:disable-next-line: no-console
-        console.log('Received a block via gossip over the network');
         const encoding = payload.subarray(0, 4096);
-        const block = Block.fromFullBytes(payload.subarray(4096));
+        const blockData = payload.subarray(4096);
+        const block = Block.fromFullBytes(blockData);
         if (!block.isValid(blsSignatures)) {
           // TODO
             // Drop the node who sent response from peer table
             // Add to blacklisted nodes
-          throw new Error('Receive an invalid block via gossip');
+          throw new Error('Received an invalid block via gossip');
         }
+        console.log('RPC has validated block');
         this.emit('block-gossip', block, encoding);
       });
 
@@ -88,9 +89,10 @@ export class RPC extends EventEmitter {
    * @param block   block instance to be gossiped
    *
    */
-  public async gossipBlock(block: Block): Promise<void> {
-    const binaryBlock = block.toBytes();
-    await this.network.gossip('block-gossip', binaryBlock);
+  public async gossipBlock(block: Block, encoding: Uint8Array): Promise<void> {
+    const blockData = block.toFullBytes();
+    const payload = Buffer.concat([encoding, blockData]);
+    await this.network.gossip('block-gossip', payload);
   }
 
   /**

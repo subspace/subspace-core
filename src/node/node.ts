@@ -69,13 +69,11 @@ export class Node extends EventEmitter {
      * Encode the block as binary and gossip over the network.
      */
     this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
-      console.log('New block received by Node.');
+      console.log('New block created by this Node.');
       if (this.ledger.isValidating) {
         await this.ledger.isValidBlock(block, encoding);
-        console.log('New block validated by node');
       }
-
-      this.rpc.gossipBlock(block);
+      this.rpc.gossipBlock(block, encoding);
     });
 
     /**
@@ -254,9 +252,10 @@ export class Node extends EventEmitter {
    * Apply the block to the ledger and gossip to all other peers.
    */
   public async onBlock(block: Block, encoding: Uint8Array): Promise<void> {
-    if (this.ledger.isValidBlock(block, encoding)) {
+    console.log('New block received by node');
+    if (await this.ledger.isValidBlock(block, encoding)) {
       this.ledger.applyBlock(block);
-      this.rpc.gossipBlock(block);
+      this.rpc.gossipBlock(block, encoding);
     }
 
     // ToDo
