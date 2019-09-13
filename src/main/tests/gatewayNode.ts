@@ -56,7 +56,7 @@ const startGatewayNode = async () => {
 
   setTimeout(() => {
     gatewayNode.createLedgerAndFarm(chainCount);
-  }, 5000);
+  }, 3000);
 
 };
 

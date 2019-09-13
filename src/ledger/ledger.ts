@@ -1,6 +1,7 @@
 // tslint:disable: max-classes-per-file
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
+// tslint:disable: member-ordering
 
 import { ArrayMap, ArraySet } from "array-map-set";
 import { EventEmitter } from 'events';
@@ -8,9 +9,9 @@ import * as codes from '../codes/codes';
 import {BlsSignatures} from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
-import { IPiece } from '../main/interfaces';
+import { IFullBlockValue, IPiece} from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { areArraysEqual, bin2Hex, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, print, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
@@ -69,7 +70,7 @@ export class Ledger extends EventEmitter {
   public confirmedBlocks = 0;
   public confirmedLevels = 0;
   public confirmedState = 0;
-  public readonly lastConfirmedLevel = 0;
+  public lastConfirmedLevel = 0;
   public accounts: Account;
   public stateMap = ArrayMap<Uint8Array, Uint8Array>();
 
@@ -80,16 +81,18 @@ export class Ledger extends EventEmitter {
   private readonly blsSignatures: BlsSignatures;
   // @ts-ignore TODO: Use it for something
   private storage: Storage;
-  private proofMap = ArrayMap<Uint8Array, Uint8Array>();
+  public proofMap = ArrayMap<Uint8Array, Uint8Array>();
   private contentMap = ArrayMap<Uint8Array, Uint8Array>();
   private txMap = ArrayMap<Uint8Array, Uint8Array>();
   private unconfirmedTxs: Set<Uint8Array> = ArraySet(); // has not been included in a block
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
+  public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
 
   constructor(
     blsSignatures: BlsSignatures,
     storage: Storage,
+    chainCount: number,
     validateRecords: boolean,
     encodingRounds: number,
   ) {
@@ -99,16 +102,25 @@ export class Ledger extends EventEmitter {
     this.accounts = new Account();
     this.isValidating = validateRecords;
     this.encodingRounds = encodingRounds;
+
+    // initialize chains
+    this.chainCount = chainCount;
+    for (let i = 0; i < this.chainCount; ++i) {
+      // create each chain
+      const chain = new Chain(i);
+      this.chains.push(chain);
+
+      // init each chain as unconfirmed
+      this.unconfirmedBlocksByChain.push(ArraySet());
+      this.unconfirmedChains.add(i);
+    }
   }
 
   /**
    * Creates a new genesis level.
    * Returns the initial erasure coded piece set with metadata.
    */
-  public async createGenesisLevel(chainCount: number): Promise<[Uint8Array[], Uint8Array]> {
-
-    // init the chains
-    this.chainCount = chainCount;
+  public async createGenesisLevel(): Promise<[Uint8Array[], Uint8Array]> {
 
     // init level data
     let previousProofHash = new Uint8Array(32);
@@ -118,7 +130,7 @@ export class Ledger extends EventEmitter {
 
     // init each chain with a genesis block
     for (let i = 0; i < this.chainCount; ++i) {
-      const chain = new Chain(i);
+      const chain =  this.chains[i];
       const block = Block.createGenesisBlock(previousProofHash, parentContentHash);
       console.log(`Created new genesis block for chain ${i}`);
       const encoding = new Uint8Array(4096);
@@ -138,19 +150,16 @@ export class Ledger extends EventEmitter {
 
       // extend the chain and to ledger
       chain.addBlock(block.key);
-      this.chains.push(chain);
+      this.chains[i] = chain;
 
       // add compact block
       this.compactBlockMap.set(block.key, block.toCompactBytes());
-
-      // init each chain as unconfirmed
-      this.unconfirmedChains.add(i);
-      this.unconfirmedBlocksByChain.push(ArraySet());
     }
 
     const levelProofHashData = Buffer.concat(levelProofHashes);
     const levelHash = crypto.hash(levelProofHashData);
     this.parentProofHash = previousProofHash;
+    this.lastConfirmedLevel ++;
     return [levelRecords, levelHash];
   }
 
@@ -337,20 +346,6 @@ export class Ledger extends EventEmitter {
   }
 
   /**
-   * Takes any minimal subset of the erasure coded level and returns the original records (blocks, proofs, contents, and txs).
-   */
-  // public async decodeLevel(levelData: Uint8Array): Promise<void> {
-  //   // parse record length value
-  //   // parse record
-  //   // load and validate all proofs
-  //   // load and validate all content
-  //   // load and validate all txs
-  //   // ensure all txs described in content are included
-  //   // reconstruct each block
-  //   return;
-  // }
-
-  /**
    * Called when a new Block solution is generated locally.
    * Emits a fully formed Block for gossip by Node.
    * Passes the Block on to be applied to Ledger
@@ -423,6 +418,7 @@ export class Ledger extends EventEmitter {
 
     // previous level hash is last seen level
     if (!areArraysEqual(block.value.proof.value.previousLevelHash, this.previousLevelHash)) {
+      print(block.print());
       throw new Error('Invalid block proof, points to incorrect previous level');
     }
 
@@ -526,14 +522,16 @@ export class Ledger extends EventEmitter {
       // add content to content map
       this.contentMap.set(block.value.content.key, block.value.content.toBytes());
 
-      if (!block.value.coinbase) {
-        throw new Error('Cannot apply block without a coinbase tx');
+      if (block.value.coinbase) {
+        // apply the coinbase tx (skip unconfirmed)
+        const coinbase = block.value.coinbase;
+        this.txMap.set(coinbase.key, coinbase.toBytes());
+        this.applyTx(coinbase);
       }
 
-      // apply the coinbase tx (skip unconfirmed)
-      const coinbase = block.value.coinbase;
-      this.txMap.set(coinbase.key, coinbase.toBytes());
-      this.applyTx(coinbase);
+      if (!this.lastConfirmedLevel && block.value.coinbase) {
+        throw new Error('Invalid genesis block, genesis level has already been confirmed');
+      }
 
       // for each credit tx, apply and remove from unconfirmed set, skipping the coinbase tx
       const txIds = block.value.content.value.payload;
@@ -555,6 +553,7 @@ export class Ledger extends EventEmitter {
       if (!this.unconfirmedChains.size) {
         const [levelRecords, levelHash, confirmedTxs] = this.createLevel();
         this.emit('confirmed-level', levelRecords, levelHash, confirmedTxs);
+        this.lastConfirmedLevel ++;
         console.log('New level has been confirmed.');
         console.log('Chain lengths:');
         console.log('--------------');

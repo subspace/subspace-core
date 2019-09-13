@@ -41,7 +41,6 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           throw new Error('Received an invalid block via gossip');
         }
-        console.log('RPC has validated block');
         this.emit('block-gossip', block, encoding);
       });
 

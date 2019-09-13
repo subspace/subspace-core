@@ -264,7 +264,7 @@ export const run = async (
   }
 
   // instantiate a ledger
-  ledger = new Ledger(blsSignatures, storage, validateRecords, encodingRounds);
+  ledger = new Ledger(blsSignatures, storage, numberOfChains, validateRecords, encodingRounds);
 
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys

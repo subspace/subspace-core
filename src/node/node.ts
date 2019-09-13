@@ -11,7 +11,7 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings } from '../main/interfaces';
 import { RPC } from '../network/rpc';
-import { bin2Hex, measureProximity, randomWait } from '../utils/utils';
+import { bin2Hex, measureProximity, print, randomWait } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -70,6 +70,7 @@ export class Node extends EventEmitter {
      */
     this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
       console.log('New block created by this Node.');
+      print(block.print());
       if (this.ledger.isValidating) {
         await this.ledger.isValidBlock(block, encoding);
       }
@@ -107,7 +108,7 @@ export class Node extends EventEmitter {
     console.log('-----------------------------------\n');
     console.log(`Created a new node identity with address ${bin2Hex(account.address)}`);
     console.log(`Starting a new ledger from genesis with ${chainCount} chains.`);
-    const [levelRecords, levelHash] = await this.ledger.createGenesisLevel(chainCount);
+    const [levelRecords, levelHash] = await this.ledger.createGenesisLevel();
     const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
     console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
     for (const piece of pieceSet) {
@@ -252,7 +253,14 @@ export class Node extends EventEmitter {
    * Apply the block to the ledger and gossip to all other peers.
    */
   public async onBlock(block: Block, encoding: Uint8Array): Promise<void> {
-    console.log('New block received by node');
+    console.log('New block received by node via gossip');
+    if (!this.ledger.proofMap.has(block.key)) {
+      // we have received an early block who arrived before its parent
+      this.ledger.earlyBlocks.set(block.key, block.value);
+      this.rpc.requestBlock()
+      // request the block from network while waiting to possibly receive via gossip
+      // once a new block is received and applied, check to see if it is parent of an orphan
+    }
     if (await this.ledger.isValidBlock(block, encoding)) {
       this.ledger.applyBlock(block);
       this.rpc.gossipBlock(block, encoding);

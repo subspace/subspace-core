@@ -20,15 +20,17 @@ export interface IStateValue {
  */
 
 export interface IFullBlockValue {
-   proof: Proof;
-   content: Content;
-   coinbase?: Tx;
- }
+  previousBlockHash: Uint8Array;
+  proof: Proof;
+  content: Content;
+  coinbase?: Tx;
+}
 
 /**
  * An even smaller representation of a Block as pointers to store within Chain objects held in memory.
  */
 export interface ICompactBlockValue {
+  previousBlockHash: Uint8Array;
   proofHash: Uint8Array;
   contentHash: Uint8Array;
 }
