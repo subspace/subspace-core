@@ -2,7 +2,7 @@ import * as dgram from "dgram";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys, INodeTypesKeys, NODE_TYPES} from "./constants";
-import {IAddress, INodeAddress} from "./Network";
+import {IAddress, IBootstrapNodeContactInfo} from "./Network";
 import {composeMessage} from "./utils";
 
 // Node type + node ID
@@ -12,7 +12,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   public static init(
     ownNodeId: Uint8Array,
     nodeType: INodeTypesKeys,
-    bootstrapUdpNodes: INodeAddress[],
+    bootstrapUdpNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -52,7 +52,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   public constructor(
     ownNodeId: Uint8Array,
     nodeType: INodeTypesKeys,
-    bootstrapUdpNodes: INodeAddress[],
+    bootstrapUdpNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,

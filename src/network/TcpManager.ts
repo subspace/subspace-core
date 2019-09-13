@@ -2,7 +2,7 @@ import * as net from "net";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {COMMANDS, ICommandsKeys} from "./constants";
-import {IAddress, INodeAddress} from "./Network";
+import {IAddress, IBootstrapNodeContactInfo} from "./Network";
 
 /**
  * @param command
@@ -30,7 +30,7 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 export class TcpManager extends AbstractProtocolManager<net.Socket> {
   public static init(
     ownNodeId: Uint8Array,
-    bootstrapTcpNodes: INodeAddress[],
+    bootstrapTcpNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -75,7 +75,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
    */
   public constructor(
     ownNodeId: Uint8Array,
-    bootstrapTcpNodes: INodeAddress[],
+    bootstrapTcpNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,

@@ -3,7 +3,7 @@ import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {IAddress, INodeAddress} from "./Network";
+import {IAddress, IBootstrapNodeContactInfo} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -11,7 +11,7 @@ type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   public static init(
     ownNodeId: Uint8Array,
-    bootstrapWsNodes: INodeAddress[],
+    bootstrapWsNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -53,7 +53,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
    */
   public constructor(
     ownNodeId: Uint8Array,
-    bootstrapWsNodes: INodeAddress[],
+    bootstrapWsNodes: IBootstrapNodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,

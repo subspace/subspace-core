@@ -10,7 +10,7 @@ import { inspect } from 'util';
 import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
 import {INodeTypesKeys} from "../network/constants";
-import {IAddress, INodeAddress, Network} from '../network/Network';
+import {IAddress, IBootstrapNodeContactInfo, Network} from '../network/Network';
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
   const length = aKey.length;
@@ -203,9 +203,9 @@ export function parseContactInfo(
   nodeType: INodeTypesKeys,
   browserNode: boolean = false,
 ): Parameters<typeof Network.init> {
-  const bootstrapUdpNodes: INodeAddress [] = [];
-  const bootstrapTcpNodes: INodeAddress [] = [];
-  const bootstrapWsNodes: INodeAddress [] = [];
+  const bootstrapUdpNodes: IBootstrapNodeContactInfo [] = [];
+  const bootstrapTcpNodes: IBootstrapNodeContactInfo [] = [];
+  const bootstrapWsNodes: IBootstrapNodeContactInfo [] = [];
 
   for (const peer of bootstrapPeerContactInfo) {
     if (!browserNode) {

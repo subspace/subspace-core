@@ -15,7 +15,7 @@ export interface IAddress {
   protocolVersion?: '4';
 }
 
-export interface INodeAddress {
+export interface IBootstrapNodeContactInfo {
   address: string;
   nodeId: Uint8Array;
   port: number;
@@ -27,9 +27,9 @@ const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
   public static async init(
-    bootstrapUdpNodes: INodeAddress[],
-    bootstrapTcpNodes: INodeAddress[],
-    bootstrapWsNodes: INodeAddress[],
+    bootstrapUdpNodes: IBootstrapNodeContactInfo[],
+    bootstrapTcpNodes: IBootstrapNodeContactInfo[],
+    bootstrapWsNodes: IBootstrapNodeContactInfo[],
     nodeType: INodeTypesKeys,
     browserNode: boolean,
     ownNodeId: Uint8Array,

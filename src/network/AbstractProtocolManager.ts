@@ -2,7 +2,7 @@ import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {ICommandsKeys} from "./constants";
-import {IAddress, INodeAddress} from "./Network";
+import {IAddress, IBootstrapNodeContactInfo} from "./Network";
 import {noopResponseCallback, parseMessage} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
@@ -30,7 +30,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
-    bootstrapNodes: INodeAddress[],
+    bootstrapNodes: IBootstrapNodeContactInfo[],
     protected readonly browserNode: boolean,
     protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
