@@ -1,11 +1,17 @@
 import * as dgram from "dgram";
+import {NODE_ID_LENGTH} from "../main/constants";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeys} from "./commands";
+import {ICommandsKeys, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {IAddress, INodeAddress} from "./Network";
 import {composeMessage} from "./utils";
 
+// Node type + node ID
+const UDP_HEADER_LENGTH = 1 + NODE_ID_LENGTH;
+
 export class UdpManager extends AbstractProtocolManager<IAddress> {
   public static init(
+    ownNodeId: Uint8Array,
+    nodeType: INodeTypesKeys,
     bootstrapUdpNodes: INodeAddress[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -14,6 +20,8 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   ): Promise<UdpManager> {
     return new Promise((resolve, reject) => {
       const instance = new UdpManager(
+        ownNodeId,
+        nodeType,
         bootstrapUdpNodes,
         browserNode,
         messageSizeLimit,
@@ -27,9 +35,12 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     });
   }
 
+  private readonly udpMessageHeader: Uint8Array;
   private readonly udp4Socket: dgram.Socket;
 
   /**
+   * @param ownNodeId
+   * @param nodeType
    * @param bootstrapUdpNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -39,6 +50,8 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
    * @param errorCallback
    */
   public constructor(
+    ownNodeId: Uint8Array,
+    nodeType: INodeTypesKeys,
     bootstrapUdpNodes: INodeAddress[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -50,6 +63,10 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     super(bootstrapUdpNodes, browserNode, messageSizeLimit, responseTimeout, false);
     this.setMaxListeners(Infinity);
 
+    const udpMessageHeader = new Uint8Array(UDP_HEADER_LENGTH);
+    udpMessageHeader.set([NODE_TYPES[nodeType]]);
+    udpMessageHeader.set(ownNodeId, 1);
+    this.udpMessageHeader = udpMessageHeader;
     this.udp4Socket = this.createUdp4Socket(ownUdpAddress, readyCallback, errorCallback);
   }
 
@@ -66,14 +83,17 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   }
 
   public async sendRawMessage(address: IAddress, message: Uint8Array): Promise<void> {
-    if (message.length > this.messageSizeLimit) {
+    const udpMessage = new Uint8Array(UDP_HEADER_LENGTH + message.length);
+    udpMessage.set(this.udpMessageHeader);
+    udpMessage.set(message, UDP_HEADER_LENGTH);
+    if (udpMessage.length > this.messageSizeLimit) {
       throw new Error(
-        `UDP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+        `UDP message too big, ${udpMessage.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
       );
     }
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(
-        message,
+        udpMessage,
         address.port,
         address.address,
         (error) => {
@@ -116,8 +136,9 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     udp4Socket
       .on(
         'message',
-        (message: Buffer, remote: dgram.RemoteInfo) => {
-          this.handleIncomingMessage(remote, message)
+        (udpMessage: Buffer, remote: dgram.RemoteInfo) => {
+          // TODO: Make use of UDP header
+          this.handleIncomingMessage(remote, udpMessage.slice(UDP_HEADER_LENGTH))
             .catch((_) => {
               // TODO: Handle errors
             });

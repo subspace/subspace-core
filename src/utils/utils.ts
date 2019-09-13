@@ -9,7 +9,8 @@ import * as path from 'path';
 import { inspect } from 'util';
 import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
-import { IAddress, INodeAddress } from '../network/Network';
+import {INodeTypesKeys} from "../network/constants";
+import {IAddress, INodeAddress, Network} from '../network/Network';
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
   const length = aKey.length;
@@ -199,17 +200,9 @@ export function allocatePort(): number {
 export function parseContactInfo(
   selfContactInfo: IPeerContactInfo,
   bootstrapPeerContactInfo: IPeerContactInfo[],
+  nodeType: INodeTypesKeys,
   browserNode: boolean = false,
-): [
-  INodeAddress[],
-  INodeAddress[],
-  INodeAddress[],
-  boolean,
-  Uint8Array,
-  IAddress | undefined,
-  IAddress | undefined,
-  IAddress | undefined,
- ] {
+): Parameters<typeof Network.init> {
   const bootstrapUdpNodes: INodeAddress [] = [];
   const bootstrapTcpNodes: INodeAddress [] = [];
   const bootstrapWsNodes: INodeAddress [] = [];
@@ -262,6 +255,7 @@ export function parseContactInfo(
     bootstrapUdpNodes,
     bootstrapTcpNodes,
     bootstrapWsNodes,
+    nodeType,
     browserNode,
     ownNodeId,
     browserNode ? undefined : ownUdpAddress,

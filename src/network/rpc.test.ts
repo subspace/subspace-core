@@ -37,8 +37,8 @@ const peer2: IPeerContactInfo = {
   protocolVersion: '4',
 };
 
-const networkOptions1 = parseContactInfo(peer1, [peer2]);
-const networkOptions2 = parseContactInfo(peer2, [peer1]);
+const networkOptions1 = parseContactInfo(peer1, [peer2], 'full');
+const networkOptions2 = parseContactInfo(peer2, [peer1], 'validator');
 
 let network1: Network;
 let network2: Network;

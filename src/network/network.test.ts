@@ -39,10 +39,10 @@ const peer4: IPeerContactInfo = {
   wsPort: allocatePort(),
 };
 
-const networkOptions1 = parseContactInfo(peer1, [peer2, peer3]);
-const networkOptions2 = parseContactInfo(peer2, [peer1]);
-const networkOptions3 = parseContactInfo(peer3, [peer1]);
-const networkOptions4 = parseContactInfo(peer4, [peer1], true);
+const networkOptions1 = parseContactInfo(peer1, [peer2, peer3], 'full');
+const networkOptions2 = parseContactInfo(peer2, [peer1], 'full');
+const networkOptions3 = parseContactInfo(peer3, [peer1], 'full');
+const networkOptions4 = parseContactInfo(peer4, [peer1], 'client', true);
 
 let networkClient1: Network;
 let networkClient2: Network;

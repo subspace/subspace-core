@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {bin2Hex} from "../utils/utils";
-import {ICommandsKeys} from "./commands";
+import {ICommandsKeys, INodeTypesKeys} from "./constants";
 import {GossipManager} from "./GossipManager";
 import {INetwork} from "./INetwork";
 import {TcpManager} from "./TcpManager";
@@ -30,6 +30,7 @@ export class Network extends EventEmitter implements INetwork {
     bootstrapUdpNodes: INodeAddress[],
     bootstrapTcpNodes: INodeAddress[],
     bootstrapWsNodes: INodeAddress[],
+    nodeType: INodeTypesKeys,
     browserNode: boolean,
     ownNodeId: Uint8Array,
     ownUdpAddress?: IAddress,
@@ -38,6 +39,8 @@ export class Network extends EventEmitter implements INetwork {
   ): Promise<Network> {
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
+        ownNodeId,
+        nodeType,
         bootstrapUdpNodes,
         browserNode,
         Network.UDP_MESSAGE_SIZE_LIMIT,

@@ -2,7 +2,7 @@ import {ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
 import {hash} from "../crypto/crypto";
 import {bin2Hex, compareUint8Array} from "../utils/utils";
-import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
+import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./constants";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {composeMessage, noopResponseCallback} from "./utils";

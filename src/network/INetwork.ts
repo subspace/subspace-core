@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {ICommandsKeys} from "./commands";
+import {ICommandsKeys} from "./constants";
 
 export interface INetwork extends EventEmitter {
   /**

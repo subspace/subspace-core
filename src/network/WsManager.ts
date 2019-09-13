@@ -2,7 +2,7 @@ import * as http from "http";
 import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeys} from "./commands";
+import {ICommandsKeys} from "./constants";
 import {IAddress, INodeAddress} from "./Network";
 import {composeMessage} from "./utils";
 
@@ -148,7 +148,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       throw new Error(
-        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
       );
     }
     if ('sendBytes' in connection) {

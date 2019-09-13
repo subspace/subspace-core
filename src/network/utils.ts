@@ -7,7 +7,7 @@ export function noopResponseCallback(): void {
  * @param requestResponseId `0` if no response is expected for request
  * @param payload
  */
-import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys} from "./commands";
+import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys} from "./constants";
 
 export function composeMessage(command: ICommandsKeys, requestResponseId: number, payload: Uint8Array): Uint8Array {
   // 1 byte for command, 4 bytes for requestResponseId

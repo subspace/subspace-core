@@ -24,3 +24,15 @@ export const GOSSIP_COMMANDS = new Set<ICommandsKeys>([
   'tx-gossip',
   'block-gossip',
 ]);
+
+// tslint:disable:object-literal-sort-keys
+export const NODE_TYPES = {
+  full: 0,
+  validator: 1,
+  farmer: 2,
+  gateway: 3,
+  client: 4,
+};
+// tslint:enable:object-literal-sort-keys
+
+export type INodeTypesKeys = keyof typeof NODE_TYPES;

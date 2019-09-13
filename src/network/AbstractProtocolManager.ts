@@ -1,7 +1,7 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import {NODE_ID_LENGTH} from "../main/constants";
-import {ICommandsKeys} from "./commands";
+import {ICommandsKeys} from "./constants";
 import {IAddress, INodeAddress} from "./Network";
 import {noopResponseCallback, parseMessage} from "./utils";
 
