@@ -26,68 +26,44 @@ export interface INodeAddress {
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
-  // In seconds
-  private readonly DEFAULT_TIMEOUT = 10;
-  // In seconds
-  private readonly DEFAULT_CONNECTION_EXPIRATION = 60;
-  // In seconds
-  private readonly GOSSIP_CACHE_TIMEOUT = 60;
-  // In bytes
-  private readonly UDP_MESSAGE_SIZE_LIMIT = 508;
-  // In bytes, excluding 4-bytes header with message length
-  private readonly TCP_MESSAGE_SIZE_LIMIT = 2 * 1024 * 1024; // 2 MiB
-  // In bytes
-  private readonly WS_MESSAGE_SIZE_LIMIT = this.TCP_MESSAGE_SIZE_LIMIT;
-
-  private readonly udpManager: UdpManager;
-  private readonly tcpManager: TcpManager;
-  private readonly wsManager: WsManager;
-  private readonly gossipManager: GossipManager;
-
-  constructor(
+  public static async init(
     bootstrapUdpNodes: INodeAddress[],
     bootstrapTcpNodes: INodeAddress[],
     bootstrapWsNodes: INodeAddress[],
-    private readonly browserNode: boolean,
+    browserNode: boolean,
     ownNodeId: Uint8Array,
     ownUdpAddress?: IAddress,
     ownTcpAddress?: IAddress,
     ownWsAddress?: IAddress,
-  ) {
-    super();
-    this.setMaxListeners(Infinity);
-
-    const udpManager = new UdpManager(
-      bootstrapUdpNodes,
-      browserNode,
-      this.UDP_MESSAGE_SIZE_LIMIT,
-      this.DEFAULT_TIMEOUT,
-      ownUdpAddress,
-    );
-    this.udpManager = udpManager;
-
-    const tcpManager = new TcpManager(
-      ownNodeId,
-      bootstrapTcpNodes,
-      browserNode,
-      this.TCP_MESSAGE_SIZE_LIMIT,
-      this.DEFAULT_TIMEOUT,
-      this.DEFAULT_TIMEOUT,
-      this.DEFAULT_CONNECTION_EXPIRATION,
-      ownTcpAddress,
-    );
-    this.tcpManager = tcpManager;
-
-    const wsManager = new WsManager(
-      ownNodeId,
-      bootstrapWsNodes,
-      browserNode,
-      this.WS_MESSAGE_SIZE_LIMIT,
-      this.DEFAULT_TIMEOUT,
-      this.DEFAULT_TIMEOUT,
-      ownWsAddress,
-    );
-    this.wsManager = wsManager;
+  ): Promise<Network> {
+    const [udpManager, tcpManager, wsManager] = await Promise.all([
+      UdpManager.init(
+        bootstrapUdpNodes,
+        browserNode,
+        Network.UDP_MESSAGE_SIZE_LIMIT,
+        Network.DEFAULT_TIMEOUT,
+        ownUdpAddress,
+      ),
+      TcpManager.init(
+        ownNodeId,
+        bootstrapTcpNodes,
+        browserNode,
+        Network.TCP_MESSAGE_SIZE_LIMIT,
+        Network.DEFAULT_TIMEOUT,
+        Network.DEFAULT_TIMEOUT,
+        Network.DEFAULT_CONNECTION_EXPIRATION,
+        ownTcpAddress,
+      ),
+      WsManager.init(
+        ownNodeId,
+        bootstrapWsNodes,
+        browserNode,
+        Network.WS_MESSAGE_SIZE_LIMIT,
+        Network.DEFAULT_TIMEOUT,
+        Network.DEFAULT_TIMEOUT,
+        ownWsAddress,
+      ),
+    ]);
 
     const gossipManager = new GossipManager(
       browserNode,
@@ -96,6 +72,41 @@ export class Network extends EventEmitter implements INetwork {
       wsManager,
       this.GOSSIP_CACHE_TIMEOUT,
     );
+
+    return new Network(udpManager, tcpManager, wsManager, gossipManager, browserNode);
+  }
+
+  // In seconds
+  private static readonly DEFAULT_TIMEOUT = 10;
+  // In seconds
+  private static readonly DEFAULT_CONNECTION_EXPIRATION = 60;
+  // In seconds
+  private static readonly GOSSIP_CACHE_TIMEOUT = 60;
+  // In bytes
+  private static readonly UDP_MESSAGE_SIZE_LIMIT = 508;
+  // In bytes, excluding 4-bytes header with message length
+  private static readonly TCP_MESSAGE_SIZE_LIMIT = 2 * 1024 * 1024; // 2 MiB
+  // In bytes
+  private static readonly WS_MESSAGE_SIZE_LIMIT = Network.TCP_MESSAGE_SIZE_LIMIT;
+
+  private readonly udpManager: UdpManager;
+  private readonly tcpManager: TcpManager;
+  private readonly wsManager: WsManager;
+  private readonly gossipManager: GossipManager;
+
+  constructor(
+    udpManager: UdpManager,
+    tcpManager: TcpManager,
+    wsManager: WsManager,
+    gossipManager: GossipManager,
+    private readonly browserNode: boolean,
+  ) {
+    super();
+    this.setMaxListeners(Infinity);
+
+    this.udpManager = udpManager;
+    this.tcpManager = tcpManager;
+    this.wsManager = wsManager;
     this.gossipManager = gossipManager;
 
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {

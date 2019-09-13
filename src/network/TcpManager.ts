@@ -28,6 +28,34 @@ function composeMessageWithTcpHeader(
 const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
 export class TcpManager extends AbstractProtocolManager<net.Socket> {
+  public static init(
+    ownNodeId: Uint8Array,
+    bootstrapTcpNodes: INodeAddress[],
+    browserNode: boolean,
+    messageSizeLimit: number,
+    responseTimeout: number,
+    connectionTimeout: number,
+    connectionExpiration: number,
+    ownTcpAddress?: IAddress,
+  ): Promise<TcpManager> {
+    return new Promise((resolve, reject) => {
+      const instance = new TcpManager(
+        ownNodeId,
+        bootstrapTcpNodes,
+        browserNode,
+        messageSizeLimit,
+        responseTimeout,
+        connectionTimeout,
+        connectionExpiration,
+        ownTcpAddress,
+        () => {
+          resolve(instance);
+        },
+        reject,
+      );
+    });
+  }
+
   private readonly tcp4Server: net.Server | undefined;
   private readonly ownNodeId: Uint8Array;
   private readonly connectionTimeout: number;
@@ -42,6 +70,8 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
    * @param connectionTimeout In seconds
    * @param connectionExpiration In seconds
    * @param ownTcpAddress
+   * @param readyCallback
+   * @param errorCallback
    */
   public constructor(
     ownNodeId: Uint8Array,
@@ -52,6 +82,8 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     connectionTimeout: number,
     connectionExpiration: number,
     ownTcpAddress?: IAddress,
+    readyCallback?: () => void,
+    errorCallback?: (error: Error) => void,
   ) {
     super(bootstrapTcpNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
@@ -61,7 +93,18 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
     this.connectionExpiration = connectionExpiration;
 
     if (ownTcpAddress) {
-      this.tcp4Server = this.createTcp4Server(ownTcpAddress);
+      this.tcp4Server = net.createServer()
+        .on('connection', (socket: net.Socket) => {
+          this.registerTcpConnection(socket);
+        })
+        .on('error', (error: Error) => {
+          if (errorCallback) {
+            errorCallback(error);
+          }
+        })
+        .listen(ownTcpAddress.port, ownTcpAddress.address, readyCallback);
+    } else if (readyCallback) {
+      setTimeout(readyCallback);
     }
   }
 
@@ -161,19 +204,6 @@ export class TcpManager extends AbstractProtocolManager<net.Socket> {
 
   protected destroyConnection(socket: net.Socket): void {
     socket.destroy();
-  }
-
-  private createTcp4Server(ownTcpAddress: IAddress): net.Server {
-    const tcp4Server = net.createServer();
-    tcp4Server.on('connection', (socket: net.Socket) => {
-      this.registerTcpConnection(socket);
-    });
-    tcp4Server.on('error', () => {
-      // TODO: Handle errors
-    });
-    tcp4Server.listen(ownTcpAddress.port, ownTcpAddress.address);
-
-    return tcp4Server;
   }
 
   private registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
