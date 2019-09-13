@@ -45,7 +45,8 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * @param sizeOfFarm        How much space will be allocated to the plot in bytes (1 GB to 16 TB)
  * @param validateRecords If new records are validated (set to false for testing)
  * @param encodingRounds  How many rounds of encoding are applied when plotting (1 to 512)
- * @param storagePath      The path on disk for where to store all persistent data, defaults to homedir
+ * @param storageDir      The path on disk for where to store all persistent data, defaults to homedir
+ * @param reset
  * @param contactInfo     IP and ports to expose for this node, defaults provided.
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
  */
@@ -268,11 +269,11 @@ export const run = async (
 
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys
-  if (!contactInfo.nodeId) {
-    contactInfo.nodeId = crypto.randomBytes(32);
-  }
-  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, env === 'browser' ? true : false);
-  const network = new Network(...networkOptions);
+  contactInfo.nodeId = crypto.randomBytes(32);
+  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, env === 'browser');
+  // tslint:disable-next-line: no-console
+  console.log('Launching network');
+  const network = await Network.init(...networkOptions);
   rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {

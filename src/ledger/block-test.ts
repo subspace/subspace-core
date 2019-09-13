@@ -48,7 +48,8 @@ const test = async () => {
   // create coinbase tx and add to tx set
   const reward = 1;
   const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, receiverAccount.publicKey);
-  const block = Block.create(signedProof, parentContentHash, [coinbaseTx.key], coinbaseTx);
+  const previousBlockHash = crypto.randomBytes(32);
+  const block = Block.create(previousBlockHash, signedProof, parentContentHash, [coinbaseTx.key], coinbaseTx);
 
   const blockData = block.toFullBytes();
   const payload = Buffer.concat([encoding, blockData]);

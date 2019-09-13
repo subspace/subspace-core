@@ -49,11 +49,11 @@ let networkClient2: Network;
 let networkClient3: Network;
 let networkClient4: Network;
 
-beforeEach(() => {
-  networkClient1 = new Network(...networkOptions1);
-  networkClient2 = new Network(...networkOptions2);
-  networkClient3 = new Network(...networkOptions3);
-  networkClient4 = new Network(...networkOptions4);
+beforeEach(async () => {
+  networkClient1 = await Network.init(...networkOptions1);
+  networkClient2 = await Network.init(...networkOptions2);
+  networkClient3 = await Network.init(...networkOptions3);
+  networkClient4 = await Network.init(...networkOptions4);
 });
 
 describe('UDP', () => {

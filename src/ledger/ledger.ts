@@ -63,6 +63,7 @@ export class Ledger extends EventEmitter {
 
   public previousLevelHash = new Uint8Array(32);
   public parentProofHash = new Uint8Array(32);
+  public previousBlockHash = new Uint8Array(32);
 
   // persistent state
   public chainCount = 0;
@@ -362,7 +363,8 @@ export class Ledger extends EventEmitter {
     const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
     const parentContentHash = compactParentBlock.contentHash;
     const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
-    const block = Block.create(proof, parentContentHash, txIds, coinbaseTx);
+    // how do we know the parent block?
+    const block = Block.create(this.previousBlockHash, proof, parentContentHash, txIds, coinbaseTx);
     console.log(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
 
     // pass up to node for gossip across the network
@@ -514,6 +516,7 @@ export class Ledger extends EventEmitter {
       this.chains[chainIndex].addBlock(block.key);
       this.compactBlockMap.set(block.key, block.toCompactBytes());
       this.unconfirmedBlocksByChain[chainIndex].add(block.key);
+      this.previousBlockHash = block.key;
 
       // add proof to proof map and update last proof seen
       this.proofMap.set(block.value.proof.key, block.value.proof.toBytes());

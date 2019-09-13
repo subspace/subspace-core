@@ -40,8 +40,8 @@ const peer2: IPeerContactInfo = {
 const networkOptions1 = parseContactInfo(peer1, [peer2]);
 const networkOptions2 = parseContactInfo(peer2, [peer1]);
 
-const network1 = new Network(...networkOptions1);
-const network2 = new Network(...networkOptions2);
+let network1: Network;
+let network2: Network;
 
 let rpc1: RPC;
 let rpc2: RPC;
@@ -53,7 +53,8 @@ const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomByte
 const encoding = crypto.randomBytes(4096);
 
 beforeAll(async () => {
-  const blsSignatures = await BlsSignatures.init();
+  network1 = await Network.init(...networkOptions1);
+  network2 = await Network.init(...networkOptions2);  const blsSignatures = await BlsSignatures.init();
   rpc1 = new RPC(network1, blsSignatures);
   rpc2 = new RPC(network2, blsSignatures);
   const storage = new Storage('memory', 'tests', 'rpc');

@@ -257,7 +257,7 @@ export class Node extends EventEmitter {
     if (!this.ledger.proofMap.has(block.key)) {
       // we have received an early block who arrived before its parent
       this.ledger.earlyBlocks.set(block.key, block.value);
-      this.rpc.requestBlock()
+      // this.rpc.requestBlock()
       // request the block from network while waiting to possibly receive via gossip
       // once a new block is received and applied, check to see if it is parent of an orphan
     }

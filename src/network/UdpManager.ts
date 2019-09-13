@@ -5,8 +5,28 @@ import {IAddress, INodeAddress} from "./Network";
 import {composeMessage} from "./utils";
 
 export class UdpManager extends AbstractProtocolManager<IAddress> {
-  private ready: boolean = true;
-  private readyPromise: Promise<any> = Promise.resolve();
+  public static init(
+    bootstrapUdpNodes: INodeAddress[],
+    browserNode: boolean,
+    messageSizeLimit: number,
+    responseTimeout: number,
+    ownUdpAddress?: IAddress,
+  ): Promise<UdpManager> {
+    return new Promise((resolve, reject) => {
+      const instance = new UdpManager(
+        bootstrapUdpNodes,
+        browserNode,
+        messageSizeLimit,
+        responseTimeout,
+        ownUdpAddress,
+        () => {
+          resolve(instance);
+        },
+        reject,
+      );
+    });
+  }
+
   private readonly udp4Socket: dgram.Socket;
 
   /**
@@ -15,6 +35,8 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param ownUdpAddress
+   * @param readyCallback
+   * @param errorCallback
    */
   public constructor(
     bootstrapUdpNodes: INodeAddress[],
@@ -22,11 +44,13 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     messageSizeLimit: number,
     responseTimeout: number,
     ownUdpAddress?: IAddress,
+    readyCallback?: () => void,
+    errorCallback?: (error: Error) => void,
   ) {
     super(bootstrapUdpNodes, browserNode, messageSizeLimit, responseTimeout, false);
     this.setMaxListeners(Infinity);
 
-    this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
+    this.udp4Socket = this.createUdp4Socket(ownUdpAddress, readyCallback, errorCallback);
   }
 
   public async nodeIdToConnection(nodeId: Uint8Array): Promise<IAddress | null> {
@@ -46,14 +70,6 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
       throw new Error(
         `UDP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
       );
-    }
-    if (!this.ready) {
-      try {
-        await this.readyPromise;
-      } catch {
-        // Just to avoid unhandled Promise exception
-        return;
-      }
     }
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(
@@ -91,7 +107,11 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     // Not used by non-connection-based manager
   }
 
-  private createUdp4Socket(ownUdpAddress?: IAddress): dgram.Socket {
+  private createUdp4Socket(
+    ownUdpAddress?: IAddress,
+    readyCallback?: () => void,
+    errorCallback?: (error: Error) => void,
+  ): dgram.Socket {
     const udp4Socket = dgram.createSocket('udp4');
     udp4Socket
       .on(
@@ -107,16 +127,20 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
         // TODO: Handle errors
       });
     if (ownUdpAddress) {
-      this.ready = false;
-      this.readyPromise = new Promise((resolve, reject) => {
-        udp4Socket
-          .once('listening', () => {
-            this.ready = true;
-            resolve();
-          })
-          .once('error', reject);
-      });
+      udp4Socket
+        .once('listening', () => {
+          if (readyCallback) {
+            readyCallback();
+          }
+        })
+        .once('error', (error: Error) => {
+          if (errorCallback) {
+            errorCallback(error);
+          }
+        });
       udp4Socket.bind(ownUdpAddress.port, ownUdpAddress.address);
+    } else if (readyCallback) {
+      setTimeout(readyCallback);
     }
 
     return udp4Socket;
