@@ -1,5 +1,5 @@
 import {EventEmitter} from "events";
-import {ICommandsKeys, INodeTypesKeys} from "./constants";
+import {ICommandsKeysForSending, INodeTypesKeys} from "./constants";
 
 export interface INodeContactInfo {
   address: string;
@@ -30,7 +30,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<void>;
+  sendOneWayRequest(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<void>;
 
   /**
    * One-way sending (unreliable with UDP)
@@ -39,7 +39,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  sendOneWayRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<void>;
+  sendOneWayRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<void>;
 
   /**
    * Make request that implies response
@@ -48,7 +48,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  sendRequest(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<Uint8Array>;
+  sendRequest(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<Uint8Array>;
 
   /**
    * Make request that implies response (unreliable with UDP)
@@ -57,7 +57,7 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  sendRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeys, payload?: Uint8Array): Promise<Uint8Array>;
+  sendRequestUnreliable(nodeId: Uint8Array, command: ICommandsKeysForSending, payload?: Uint8Array): Promise<Uint8Array>;
 
   /**
    * Start gossiping command across the network
@@ -65,27 +65,27 @@ export interface INetwork extends EventEmitter {
    * @param command
    * @param payload
    */
-  gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void>;
+  gossip(command: ICommandsKeysForSending, payload: Uint8Array): Promise<void>;
 
   destroy(): Promise<void>;
 
   on(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
 
   once(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
 
   off(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
 
   emit(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void,
   ): boolean;
 }

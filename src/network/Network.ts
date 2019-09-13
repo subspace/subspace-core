@@ -1,6 +1,6 @@
 import {EventEmitter} from "events";
 import {bin2Hex} from "../utils/utils";
-import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
+import {ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {GossipManager} from "./GossipManager";
 import {INetwork, INodeContactInfo} from "./INetwork";
 import {TcpManager} from "./TcpManager";
@@ -115,7 +115,7 @@ export class Network extends EventEmitter implements INetwork {
 
   public async sendOneWayRequest(
     nodeId: Uint8Array,
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
     const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
@@ -140,7 +140,7 @@ export class Network extends EventEmitter implements INetwork {
 
   public async sendOneWayRequestUnreliable(
     nodeId: Uint8Array,
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
     if (this.browserNode) {
@@ -158,7 +158,7 @@ export class Network extends EventEmitter implements INetwork {
 
   public async sendRequest(
     nodeId: Uint8Array,
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
     const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
@@ -183,7 +183,7 @@ export class Network extends EventEmitter implements INetwork {
 
   public async sendRequestUnreliable(
     nodeId: Uint8Array,
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
     if (this.browserNode) {
@@ -198,7 +198,7 @@ export class Network extends EventEmitter implements INetwork {
     }
   }
 
-  public async gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
+  public async gossip(command: ICommandsKeysForSending, payload: Uint8Array): Promise<void> {
     return this.gossipManager.gossip(command, payload);
   }
 
@@ -214,7 +214,7 @@ export class Network extends EventEmitter implements INetwork {
   // TODO: Achieve the same without re-implementing methods
 
   public on(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.on.call(this, event, listener);
@@ -222,7 +222,7 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public once(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.once.call(this, event, listener);
@@ -230,7 +230,7 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public off(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.off.call(this, event, listener);
@@ -238,7 +238,7 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public emit(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
   ): boolean {

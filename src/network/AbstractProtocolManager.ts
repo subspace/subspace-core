@@ -1,6 +1,6 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
+import {ICommandsKeys, ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
 import {INodeContactInfo} from "./INetwork";
 import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
 
@@ -52,7 +52,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   ): this;
   public on(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
   public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
     EventEmitter.prototype.on.call(this, event, listener);
@@ -65,7 +65,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   ): this;
   public once(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
   public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
     EventEmitter.prototype.once.call(this, event, listener);
@@ -78,7 +78,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   ): this;
   public off(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
   public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
     EventEmitter.prototype.off.call(this, event, listener);
@@ -92,7 +92,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   ): boolean;
   public emit(
     event: 'command',
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void,
   ): boolean;
