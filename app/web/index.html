@@ -294,6 +294,7 @@
     async mounted() {
       const subspace = await Subspace;
       subspace.syncLedgerAndValidate();
+      subspace.ping();
       this.subspace = subspace;
       // console.log(subspace);
     }

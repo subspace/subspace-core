@@ -11,6 +11,11 @@ export const COMMANDS = {
   'pong': 6,
   'tx-request': 7,
   'block-request': 8,
+  'block-request-by-index': 9,
+  'piece-request': 10,
+  'proof-request': 11,
+  'content-request': 12,
+  'state-request': 13,
 };
 // tslint:enable:object-literal-sort-keys
 

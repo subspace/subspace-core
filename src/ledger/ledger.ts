@@ -92,6 +92,7 @@ export class Ledger extends EventEmitter {
   private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
   public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
+  public blockIndex: Map<number, Uint8Array> = new Map();
 
   constructor(
     blsSignatures: BlsSignatures,
@@ -126,51 +127,16 @@ export class Ledger extends EventEmitter {
    */
   public async createGenesisLevel(): Promise<void> {
     return new Promise(async (resolve) => {
-      // init level data
-      // let previousProofHash = new Uint8Array(32);
-      // const parentContentHash = new Uint8Array(32);
-      // const levelRecords: Uint8Array[] = [];
-      // const levelProofHashes: Uint8Array[] = [];
-
-      // init each chain with a genesis block
       for (let i = 0; i < this.chainCount; ++i) {
-        // const chain =  this.chains[i];
         const block = Block.createGenesisBlock(this.parentProofHash, new Uint8Array(32));
         const encoding = new Uint8Array(4096);
         console.log(`Created new genesis block for chain ${i}`);
         this.emit('block', block, encoding);
-        // print(block.print());
-        // previousProofHash = block.value.proof.key;
-
-        // save the proof, append to level data
-        // this.proofMap.set(block.value.proof.key, block.value.proof.toBytes());
-        // const binProof = block.value.proof.toBytes();
-        // levelRecords.push(binProof);
-        // levelProofHashes.push(binProof);
-
-        // save the content, append to level data
-        // this.contentMap.set(block.value.content.key, block.value.content.toBytes());
-        // levelRecords.push(block.value.content.toBytes());
-
-        // extend the chain and to ledger
-        // chain.addBlock(block.key);
-        // this.chains[i] = chain;
-
-        // add compact block
-        // this.compactBlockMap.set(block.key, block.toCompactBytes());
-
         await this.applyBlock(block);
       }
-
       this.once('completed-plotting', () => {
         resolve();
       });
-
-      // const levelProofHashData = Buffer.concat(levelProofHashes);
-      // const levelHash = crypto.hash(levelProofHashData);
-      // this.parentProofHash = previousProofHash;
-      // this.lastConfirmedLevel ++;
-      // return [levelRecords, levelHash];
     });
   }
 
@@ -550,6 +516,7 @@ export class Ledger extends EventEmitter {
         chainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
       }
 
+      this.blockIndex.set(this.blockIndex.size, block.key);
       this.chains[chainIndex].addBlock(block.key);
       this.compactBlockMap.set(block.key, block.toCompactBytes());
       this.unconfirmedBlocksByChain[chainIndex].add(block.key);
@@ -792,5 +759,13 @@ export class Ledger extends EventEmitter {
       stateData = await this.storage.get(stateId);
     }
     return stateData;
+  }
+
+  public async getBlockByIndex(index: number): Promise <Uint8Array | null | undefined> {
+    const blockId = this.blockIndex.get(index);
+    if (blockId) {
+      return this.getBlock(blockId);
+    }
+    return;
   }
 }

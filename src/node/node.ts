@@ -2,6 +2,7 @@
 // tslint:disable: member-ordering
 
 import { EventEmitter } from 'events';
+// import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
@@ -9,9 +10,9 @@ import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
-import { INodeConfig, INodeSettings } from '../main/interfaces';
+import { INodeConfig, INodeSettings, IPiece } from '../main/interfaces';
 import { RPC } from '../network/rpc';
-import { bin2Hex, measureProximity, randomWait } from '../utils/utils';
+import { bin2Hex, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -19,6 +20,8 @@ import { Wallet } from '../wallet/wallet';
   // sync an existing ledger
 
 export class Node extends EventEmitter {
+
+  public isGossiping = false;
 
   constructor(
     public readonly type: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
@@ -36,6 +39,8 @@ export class Node extends EventEmitter {
     this.rpc.on('block-gossip', (block: Block, encoding: Uint8Array) => this.onBlock(block, encoding));
     this.rpc.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onTxRequest(txId, responseCallback));
     this.rpc.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onBlockRequest(blockId, responseCallback));
+    this.rpc.on('block-request-by-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onBlockRequestByIndex(index, responseCallback));
+    this.rpc.on('piece-request', (pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onPieceRequest(pieceId, responseCallback));
 
     /**
      * A new level has been confirmed and encoded into a piece set.
@@ -73,7 +78,9 @@ export class Node extends EventEmitter {
       if (this.ledger.isValidating) {
         await this.ledger.isValidBlock(block, encoding);
       }
-      this.rpc.gossipBlock(block, encoding);
+      if (this.isGossiping) {
+        this.rpc.gossipBlock(block, encoding);
+      }
     });
 
     /**
@@ -81,7 +88,9 @@ export class Node extends EventEmitter {
      * Encode the tx as binary and gossip over the network.
      */
     this.ledger.on('tx', (tx: Tx) => {
-      this.rpc.gossipTx(tx);
+      if (this.isGossiping) {
+        this.rpc.gossipTx(tx);
+      }
     });
 
     if (this.settings.autostart) {
@@ -104,6 +113,7 @@ export class Node extends EventEmitter {
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
+    this.isGossiping = true;
     const account = this.wallet.getAccounts()[0];
     console.log('\nLaunching a new Subspace Full Node!');
     console.log('-----------------------------------\n');
@@ -206,6 +216,31 @@ export class Node extends EventEmitter {
   public async syncLedgerAndValidate(): Promise<void> {
     console.log('\nLaunching a new Subspace Validator Node!');
     console.log('-----------------------------------\n');
+
+    this.isGossiping = true;
+
+    // console.log('Syncing ledger state......');
+    // let blockIndex = 0;
+    // let hasChild = true;
+    // while (hasChild) {
+    //   console.log(`Requesting block at index: ${blockIndex}`);
+    //   const block = await this.requestBlockByIndex(blockIndex);
+    //   console.log('Received block', block);
+    //   console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
+    //   const piece = await this.requestPiece(block.value.proof.value.pieceHash);
+    //   console.log('Received piece', piece);
+    //   const encoding = codes.encodePiece(piece.piece, block.value.proof.value.publicKey, this.settings.encodingRounds);
+    //   console.log('Completing encoding piece');
+    //   if (block && encoding) {
+    //     console.log('Validating block and encoding...');
+    //     await this.onBlock(block, encoding);
+    //     ++ blockIndex;
+    //   } else {
+    //     console.log('Completed syncing the ledger');
+    //     hasChild = false;
+    //     // this.isGossiping = true;
+    //   }
+    // }
   }
 
   /**
@@ -228,23 +263,28 @@ export class Node extends EventEmitter {
     await this.rpc.ping();
   }
 
+  public async joinGossipNetwork(): Promise<void> {
+    this.isGossiping = true;
+  }
+
   /**
    * A new tx is received over the network from another node.
    * Filter the tx for duplicates or spam. Validate the tx.
    * Apply the tx to the ledger and gossip to all other peers.
    */
   public async onTx(tx: Tx): Promise<void> {
-    if (this.ledger.isValidTx(tx)) {
-      this.ledger.applyTx(tx);
-      this.rpc.gossipTx(tx);
-      if (this.wallet) {
-        const addresses = this.wallet.addresses;
-        if (addresses.has(bin2Hex(tx.receiverAddress))) {
-          this.wallet.onTxReceived(tx);
+    if (this.isGossiping) {
+      if (this.ledger.isValidTx(tx)) {
+        this.ledger.applyTx(tx);
+        this.rpc.gossipTx(tx);
+        if (this.wallet) {
+          const addresses = this.wallet.addresses;
+          if (addresses.has(bin2Hex(tx.receiverAddress))) {
+            this.wallet.onTxReceived(tx);
+          }
         }
       }
     }
-
     // ToDo
       // filter duplicates and prevent re-gossip to sender
   }
@@ -272,7 +312,9 @@ export class Node extends EventEmitter {
       // console.log(block.key);
       if (await this.ledger.isValidBlock(block, encoding)) {
         this.ledger.applyBlock(block);
-        this.rpc.gossipBlock(block, encoding);
+        if (this.isGossiping) {
+          this.rpc.gossipBlock(block, encoding);
+        }
       }
     }
   }
@@ -325,5 +367,63 @@ export class Node extends EventEmitter {
   private async onBlockRequest(blockId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlock(blockId);
     blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
+  }
+
+  /**
+   * Request a block by index from an existing peer, used to sync the chain (from 0)
+   *
+   * @param index the sequence number the block appears in the ledger
+   *
+   * @return block instance or not found
+   */
+  public async requestBlockByIndex(index: number): Promise<Block> {
+    return this.rpc.requestBlockByIndex(index);
+  }
+
+  /**
+   * Received a block request over the network, reply with block or not found.
+   *
+   * @param blockIndex
+   * @param responseCallback
+   *
+   */
+  private async onBlockRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const blockData = await this.ledger.getBlockByIndex(index);
+    blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
+  }
+
+  /**
+   * Request a piece and metadata over the network from an existing peer.
+   *
+   * @param pieceId
+   *
+   * @return piece instance or not found
+   */
+  public async requestPiece(pieceId: Uint8Array): Promise<IPiece> {
+    return this.rpc.requestPiece(pieceId);
+  }
+
+  /**
+   * Received a piece request over the network, reply with piece or not found.
+   *
+   * @param pieceId
+   * @param responseCallback
+   *
+   */
+  private async onPieceRequest(pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    if (this.farm) {
+      const piece = await this.farm.getExactPiece(pieceId);
+      if (piece) {
+        const pieceData = Buffer.concat([
+          piece.piece,
+          piece.data.pieceHash,
+          piece.data.stateHash,
+          smallNum2Bin(piece.data.pieceIndex),
+          piece.data.proof,
+        ]);
+        responseCallback(pieceData);
+      }
+      responseCallback(new Uint8Array());
+    }
   }
 }

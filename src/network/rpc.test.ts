@@ -9,9 +9,9 @@ if (!globalThis.indexedDB) {
 import * as crypto from '../crypto/crypto';
 import { Block } from '../ledger/block';
 import { Tx } from '../ledger/tx';
-import { IPeerContactInfo } from '../main/interfaces';
+import { IPeerContactInfo, IPiece } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import {allocatePort} from '../utils/utils';
+import { allocatePort, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { Network } from './Network';
 import { RPC } from './rpc';
@@ -50,16 +50,15 @@ const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomByte
 const encoding = crypto.randomBytes(4096);
 
 beforeAll(async () => {
-  network1 = await Network.init(peer1, [peer2], false);
-  network2 = await Network.init(peer2, [peer1], false);
   const blsSignatures = await BlsSignatures.init();
-  rpc1 = new RPC(network1, blsSignatures);
-  rpc2 = new RPC(network2, blsSignatures);
   const storage = new Storage('memory', 'tests', 'rpc');
   wallet = new Wallet(blsSignatures, storage);
-  wallet.createAccount();
-  const publicKey = wallet.getAccounts()[0].publicKey;
-  tx = await wallet.createCoinBaseTx(1, publicKey);
+  const account = await wallet.createAccount();
+  tx = await wallet.createCoinBaseTx(1, account.publicKey);
+  network1 = await Network.init(peer1, [peer2], false);
+  network2 = await Network.init(peer2, [peer1], false);
+  rpc1 = new RPC(network1, blsSignatures);
+  rpc2 = new RPC(network2, blsSignatures);
 });
 
 // test('ping-pong', async () => {
@@ -104,6 +103,51 @@ test('request-block', async () => {
   });
   const payload = await rpc2.requestBlock(block.key);
   expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
+});
+
+test('request-block-by-index', async () => {
+  rpc1.on('block-request-by-index', (blockIndex: number, responseCallback: (response: Uint8Array) => void) => {
+    expect(blockIndex).toEqual(0);
+    responseCallback(block.toFullBytes());
+  });
+  const payload = await rpc2.requestBlockByIndex(0);
+  expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
+});
+
+test('request-piece', async () => {
+  const binaryPiece = crypto.randomBytes(4096);
+  const piece: IPiece = {
+    piece: binaryPiece,
+    data: {
+      pieceHash: crypto.hash(binaryPiece),
+      stateHash: crypto.randomBytes(32),
+      pieceIndex: 128,
+      proof: crypto.randomBytes(256),
+    },
+  };
+
+  const pieceData = Buffer.concat([
+    piece.piece,
+    piece.data.pieceHash,
+    piece.data.stateHash,
+    smallNum2Bin(piece.data.pieceIndex),
+    piece.data.proof,
+  ]);
+
+  rpc1.on('piece-request', (pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+    expect(pieceId.join(',')).toEqual(piece.data.pieceHash.join(','));
+    responseCallback(pieceData);
+  });
+
+  const pieceResponse = await rpc2.requestPiece(piece.data.pieceHash);
+  const pieceResponseData = Buffer.concat([
+    pieceResponse.piece,
+    pieceResponse.data.pieceHash,
+    pieceResponse.data.stateHash,
+    smallNum2Bin(pieceResponse.data.pieceIndex),
+    pieceResponse.data.proof,
+  ]);
+  expect(pieceResponseData.join(',')).toEqual(pieceData.join(','));
 });
 
 afterAll(async () => {

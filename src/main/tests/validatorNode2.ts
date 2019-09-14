@@ -27,19 +27,19 @@ const testValidatorNode = async () => {
     wsPort: 10890,
   };
 
-  const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  const validator2NodeId = crypto.hash(Buffer.from('validator2'));
 
   // spin up the validator node
-  const validatorContactInfo: INodeContactInfo = {
-    nodeId: validatorNodeId,
+  const validator2ContactInfo: INodeContactInfo = {
+    nodeId: validator2NodeId,
     nodeType: 'validator',
     address: 'localhost',
-    udp4Port: 11888,
-    tcp4Port: 11889,
-    wsPort: 11890,
+    udp4Port: 13888,
+    tcp4Port: 13889,
+    wsPort: 13890,
   };
 
-  const validatorNode: Node = await run(
+  const validatorNode2: Node = await run(
     'validator',
     16,
     'memory',
@@ -51,11 +51,11 @@ const testValidatorNode = async () => {
     0,
     false,
     true,
-    validatorContactInfo,
+    validator2ContactInfo,
     [gatewayContactInfo],
   );
 
-  validatorNode.syncLedgerAndValidate();
+  validatorNode2.syncLedgerAndValidate();
 };
 
 testValidatorNode();

@@ -56,6 +56,9 @@ export class Block {
    */
   public static fromFullBytes(data: Uint8Array): Block {
 
+    // tslint:disable: no-console
+    console.log(data.length);
+
     // Parse a block received as binary
     // proof and content size is variable so we read their lengths (2 byte integer)
     const previousBlockHash = data.subarray(0, 32);
