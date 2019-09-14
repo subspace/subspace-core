@@ -1,15 +1,14 @@
 import {randomBytes} from "crypto";
 import {IPeerContactInfo} from "../main/interfaces";
-import {allocatePort, parseContactInfo} from "../utils/utils";
+import {allocatePort} from "../utils/utils";
 import {Network} from "./Network";
 
 const peer1: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('1'.repeat(64), 'hex'),
   nodeType: 'full',
-  protocolVersion: '4',
-  tcpPort: allocatePort(),
-  udpPort: allocatePort(),
+  tcp4Port: allocatePort(),
+  udp4Port: allocatePort(),
   wsPort: allocatePort(),
 };
 
@@ -17,9 +16,8 @@ const peer2: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('2'.repeat(64), 'hex'),
   nodeType: 'full',
-  protocolVersion: '4',
-  tcpPort: allocatePort(),
-  udpPort: allocatePort(),
+  tcp4Port: allocatePort(),
+  udp4Port: allocatePort(),
   wsPort: allocatePort(),
 };
 
@@ -27,9 +25,8 @@ const peer3: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('3'.repeat(64), 'hex'),
   nodeType: 'full',
-  protocolVersion: '4',
-  tcpPort: allocatePort(),
-  udpPort: allocatePort(),
+  tcp4Port: allocatePort(),
+  udp4Port: allocatePort(),
   wsPort: allocatePort(),
 };
 
@@ -37,16 +34,10 @@ const peer4: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('4'.repeat(64), 'hex'),
   nodeType: 'client',
-  protocolVersion: '4',
-  tcpPort: allocatePort(),
-  udpPort: allocatePort(),
+  tcp4Port: allocatePort(),
+  udp4Port: allocatePort(),
   wsPort: allocatePort(),
 };
-
-const networkOptions1 = parseContactInfo(peer1, [peer2, peer3]);
-const networkOptions2 = parseContactInfo(peer2, [peer1]);
-const networkOptions3 = parseContactInfo(peer3, [peer1]);
-const networkOptions4 = parseContactInfo(peer4, [peer1], true);
 
 let networkClient1: Network;
 let networkClient2: Network;
@@ -54,18 +45,20 @@ let networkClient3: Network;
 let networkClient4: Network;
 
 beforeEach(async () => {
-  networkClient1 = await Network.init(...networkOptions1);
-  networkClient2 = await Network.init(...networkOptions2);
-  networkClient3 = await Network.init(...networkOptions3);
-  networkClient4 = await Network.init(...networkOptions4);
+  networkClient1 = await Network.init(peer1, [peer2, peer3], false);
+  networkClient2 = await Network.init(peer2, [peer1], false);
+  networkClient3 = await Network.init(peer3, [peer1], false);
+  networkClient4 = await Network.init(peer4, [peer1], true);
 });
 
 describe('UDP', () => {
   test('Send one-way unreliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient2.on('ping', (payload) => {
+      networkClient2.on('ping', (payload, _, clientIdentification) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
       networkClient1.sendRequestOneWayUnreliable(['full'], 'ping', randomPayload);
@@ -76,8 +69,10 @@ describe('UDP', () => {
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
-        networkClient2.on('ping', async (payload, responseCallback) => {
+        networkClient2.on('ping', async (payload, responseCallback, clientIdentification) => {
           expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+          expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+          expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
           responseCallback(randomPayload);
           resolve();
         });
@@ -92,8 +87,10 @@ describe('TCP', () => {
   test('Send one-way reliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient2.on('ping', (payload) => {
+      networkClient2.on('ping', (payload, _, clientIdentification) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
       networkClient1.sendRequestOneWay(['full'], 'ping', randomPayload);
@@ -104,8 +101,10 @@ describe('TCP', () => {
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
-        networkClient2.on('ping', async (payload, responseCallback) => {
+        networkClient2.on('ping', async (payload, responseCallback, clientIdentification) => {
           expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+          expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+          expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
           responseCallback(randomPayload);
           resolve();
         });
@@ -120,8 +119,10 @@ describe('WebSocket', () => {
   test('Send one-way reliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient1.on('ping', (payload) => {
+      networkClient1.on('ping', (payload, _, clientIdentification) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer4.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer4.nodeType);
         resolve();
       });
       networkClient4.sendRequestOneWay(['full'], 'ping', randomPayload);
@@ -132,8 +133,10 @@ describe('WebSocket', () => {
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
-        networkClient1.on('ping', async (payload, responseCallback) => {
+        networkClient1.on('ping', async (payload, responseCallback, clientIdentification) => {
           expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+          expect(clientIdentification.nodeId.join(', ')).toEqual(peer4.nodeId.join(', '));
+          expect(clientIdentification.nodeType).toEqual(peer4.nodeType);
           responseCallback(randomPayload);
           resolve();
         });
@@ -149,8 +152,10 @@ describe('Gossip', () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       let waitingFor = 3;
-      networkClient1.once('tx-gossip', (payload) => {
+      networkClient1.once('tx-gossip', (payload, _, clientIdentification) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer4.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer4.nodeType);
         --waitingFor;
         if (!waitingFor) {
           resolve();

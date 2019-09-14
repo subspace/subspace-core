@@ -2,8 +2,7 @@ import * as net from "net";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {COMMANDS, ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
-import {IAddress} from "./Network";
+import {INodeContactIdentification, INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
 
 function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {
   const bootstrapNodesTcp: INodeContactInfoTcp[] = [];
@@ -40,6 +39,7 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
 export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
+    ownNodeContactInfo: INodeContactInfo,
     identificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
@@ -47,10 +47,10 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     responseTimeout: number,
     connectionTimeout: number,
     connectionExpiration: number,
-    ownTcpAddress?: IAddress,
   ): Promise<TcpManager> {
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
+        ownNodeContactInfo,
         identificationPayload,
         extractTcpBootstrapNodes(bootstrapNodes),
         browserNode,
@@ -58,7 +58,6 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         responseTimeout,
         connectionTimeout,
         connectionExpiration,
-        ownTcpAddress,
         () => {
           resolve(instance);
         },
@@ -73,6 +72,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   private readonly connectionExpiration: number;
 
   /**
+   * @param ownNodeContactInfo
    * @param identificationPayload
    * @param bootstrapNodes
    * @param browserNode
@@ -80,11 +80,11 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
    * @param responseTimeout In seconds
    * @param connectionTimeout In seconds
    * @param connectionExpiration In seconds
-   * @param ownTcpAddress
    * @param readyCallback
    * @param errorCallback
    */
   public constructor(
+    ownNodeContactInfo: INodeContactInfo,
     identificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoTcp[],
     browserNode: boolean,
@@ -92,7 +92,6 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     responseTimeout: number,
     connectionTimeout: number,
     connectionExpiration: number,
-    ownTcpAddress?: IAddress,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
@@ -103,7 +102,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     this.connectionTimeout = connectionTimeout;
     this.connectionExpiration = connectionExpiration;
 
-    if (ownTcpAddress) {
+    if (!browserNode && ownNodeContactInfo.tcp4Port) {
       this.tcp4Server = net.createServer()
         .on('connection', (socket: net.Socket) => {
           this.registerTcpConnection(socket);
@@ -113,7 +112,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
             errorCallback(error);
           }
         })
-        .listen(ownTcpAddress.port, ownTcpAddress.address, readyCallback);
+        .listen(ownNodeContactInfo.tcp4Port, ownNodeContactInfo.address, readyCallback);
     } else if (readyCallback) {
       setTimeout(readyCallback);
     }
@@ -157,7 +156,13 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
               this.identificationPayload,
             );
             socket.write(identificationMessage);
-            this.registerTcpConnection(socket, nodeId);
+            this.registerTcpConnection(
+              socket,
+              {
+                nodeId: nodeId,
+                nodeType: address.nodeType,
+              },
+            );
             resolve(socket);
           }
         },
@@ -217,7 +222,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     socket.destroy();
   }
 
-  private registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
+  private registerTcpConnection(socket: net.Socket, contactIdentification?: INodeContactIdentification): void {
     let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
     socket
       .on('data', (buffer: Buffer) => {
@@ -241,6 +246,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         if (nodeId) {
           this.connectionToNodeIdMap.delete(socket);
           this.nodeIdToConnectionMap.delete(nodeId);
+          this.nodeIdToIdentificationMap.delete(nodeId);
         }
       })
       .setTimeout(this.connectionExpiration * 1000)
@@ -248,7 +254,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         socket.destroy();
       });
 
-    if (nodeId) {
+    if (contactIdentification) {
+      const nodeId = contactIdentification.nodeId;
+      this.nodeIdToIdentificationMap.set(nodeId, contactIdentification);
       this.nodeIdToConnectionMap.set(nodeId, socket);
       this.connectionToNodeIdMap.set(socket, nodeId);
     }

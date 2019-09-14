@@ -4,45 +4,35 @@ import {randomElement} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {GossipManager} from "./GossipManager";
-import {INetwork, INodeContactInfo} from "./INetwork";
+import {INetwork, INodeContactIdentification, INodeContactInfo} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {noopResponseCallback} from "./utils";
 import {WsManager} from "./WsManager";
 
-export interface IAddress {
-  address: string;
-  port: number;
-  // TODO: Support IPv6
-  protocolVersion?: '4';
-}
-
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
   public static async init(
+    ownNodeContactInfo: INodeContactInfo,
     bootstrapNodes: INodeContactInfo[],
-    nodeType: INodeTypesKeys,
     browserNode: boolean,
-    ownNodeId: Uint8Array,
-    ownUdpAddress?: IAddress,
-    ownTcpAddress?: IAddress,
-    ownWsAddress?: IAddress,
   ): Promise<Network> {
     const identificationPayload = new Uint8Array(IDENTIFICATION_PAYLOAD_LENGTH);
-    identificationPayload.set([NODE_TYPES[nodeType]]);
-    identificationPayload.set(ownNodeId, 1);
+    identificationPayload.set([NODE_TYPES[ownNodeContactInfo.nodeType]]);
+    identificationPayload.set(ownNodeContactInfo.nodeId, 1);
 
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
+        ownNodeContactInfo,
         identificationPayload,
         bootstrapNodes,
         browserNode,
         Network.UDP_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
-        ownUdpAddress,
       ),
       TcpManager.init(
+        ownNodeContactInfo,
         identificationPayload,
         bootstrapNodes,
         browserNode,
@@ -50,20 +40,20 @@ export class Network extends EventEmitter implements INetwork {
         Network.DEFAULT_TIMEOUT,
         Network.DEFAULT_TIMEOUT,
         Network.DEFAULT_CONNECTION_EXPIRATION,
-        ownTcpAddress,
       ),
       WsManager.init(
+        ownNodeContactInfo,
         identificationPayload,
         bootstrapNodes,
         browserNode,
         Network.WS_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
         Network.DEFAULT_TIMEOUT,
-        ownWsAddress,
       ),
     ]);
 
     const gossipManager = new GossipManager(
+      ownNodeContactInfo.nodeId,
       browserNode,
       udpManager,
       tcpManager,
@@ -108,10 +98,7 @@ export class Network extends EventEmitter implements INetwork {
     this.gossipManager = gossipManager;
 
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {
-      manager.on(
-        'command',
-        this.emit.bind(this),
-      );
+      manager.on('command', this.emit.bind(this));
     }
   }
 
@@ -186,7 +173,11 @@ export class Network extends EventEmitter implements INetwork {
 
   public on(
     event: ICommandsKeysForSending,
-    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this {
     EventEmitter.prototype.on.call(this, event, listener);
     return this;
@@ -194,7 +185,11 @@ export class Network extends EventEmitter implements INetwork {
 
   public once(
     event: ICommandsKeysForSending,
-    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this {
     EventEmitter.prototype.once.call(this, event, listener);
     return this;
@@ -202,7 +197,11 @@ export class Network extends EventEmitter implements INetwork {
 
   public off(
     event: ICommandsKeysForSending,
-    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this {
     EventEmitter.prototype.off.call(this, event, listener);
     return this;
@@ -212,8 +211,9 @@ export class Network extends EventEmitter implements INetwork {
     event: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
+    extra: INodeContactIdentification,
   ): boolean {
-    return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
+    return EventEmitter.prototype.emit.call(this, event, payload, responseCallback, extra);
   }
 
   // TODO: There should be a smart way to infer type instead of `any`

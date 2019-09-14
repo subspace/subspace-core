@@ -11,7 +11,7 @@ import { Block } from '../ledger/block';
 import { Tx } from '../ledger/tx';
 import { IPeerContactInfo } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import {allocatePort, parseContactInfo} from '../utils/utils';
+import {allocatePort} from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { Network } from './Network';
 import { RPC } from './rpc';
@@ -23,24 +23,19 @@ const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
   nodeType: 'full',
   address: 'localhost',
-  udpPort: allocatePort(),
-  tcpPort: allocatePort(),
+  udp4Port: allocatePort(),
+  tcp4Port: allocatePort(),
   wsPort: allocatePort(),
-  protocolVersion: '4',
 };
 
 const peer2: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
   nodeType: 'validator',
   address: 'localhost',
-  udpPort: allocatePort(),
-  tcpPort: allocatePort(),
+  udp4Port: allocatePort(),
+  tcp4Port: allocatePort(),
   wsPort: allocatePort(),
-  protocolVersion: '4',
 };
-
-const networkOptions1 = parseContactInfo(peer1, [peer2]);
-const networkOptions2 = parseContactInfo(peer2, [peer1]);
 
 let network1: Network;
 let network2: Network;
@@ -55,8 +50,9 @@ const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomByte
 const encoding = crypto.randomBytes(4096);
 
 beforeAll(async () => {
-  network1 = await Network.init(...networkOptions1);
-  network2 = await Network.init(...networkOptions2);  const blsSignatures = await BlsSignatures.init();
+  network1 = await Network.init(peer1, [peer2], false);
+  network2 = await Network.init(peer2, [peer1], false);
+  const blsSignatures = await BlsSignatures.init();
   rpc1 = new RPC(network1, blsSignatures);
   rpc2 = new RPC(network2, blsSignatures);
   const storage = new Storage('memory', 'tests', 'rpc');

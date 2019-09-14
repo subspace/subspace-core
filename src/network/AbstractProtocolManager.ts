@@ -1,12 +1,13 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import {ICommandsKeys, ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
-import {INodeContactInfo} from "./INetwork";
+import {INodeContactIdentification, INodeContactInfo} from "./INetwork";
 import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
   protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, Address>();
+  protected readonly nodeIdToIdentificationMap = ArrayMap<Uint8Array, INodeContactIdentification>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
@@ -48,39 +49,54 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
 
   public on(
     event: 'gossip',
-    listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
+    listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public on(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this;
-  public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
+  public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
     EventEmitter.prototype.on.call(this, event, listener);
     return this;
   }
 
   public once(
     event: 'gossip',
-    listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
+    listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public once(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this;
-  public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
+  public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
     EventEmitter.prototype.once.call(this, event, listener);
     return this;
   }
 
   public off(
     event: 'gossip',
-    listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
+    listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public off(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this;
-  public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
+  public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
     EventEmitter.prototype.off.call(this, event, listener);
     return this;
   }
@@ -88,21 +104,23 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   public emit(
     event: 'gossip',
     gossipMessage: Uint8Array,
-    sourceNodeId?: Uint8Array,
+    contactIdentification: INodeContactIdentification,
   ): boolean;
   public emit(
     event: 'command',
     command: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void,
+    extra: INodeContactIdentification,
   ): boolean;
   public emit(
     event: string,
     arg1: any,
-    arg2?: any,
+    arg2: any,
     arg3?: any,
+    arg4?: any,
   ): boolean {
-    return EventEmitter.prototype.emit.call(this, event, arg1, arg2, arg3);
+    return EventEmitter.prototype.emit.call(this, event, arg1, arg2, arg3, arg4);
   }
 
   /**
@@ -223,7 +241,11 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
 
   public abstract destroy(): Promise<void>;
 
-  protected async handleIncomingMessage(connection: Connection, message: Uint8Array): Promise<void> {
+  protected async handleIncomingMessage(
+    connection: Connection,
+    message: Uint8Array,
+    contactIdentification?: INodeContactIdentification,
+  ): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       // TODO: Log too big message in debug mode
       return;
@@ -242,19 +264,30 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
         );
       }
       // TODO: nodeType is not used
-      const {nodeId} = parseIdentificationPayload(payload);
+      const {nodeId, nodeType} = parseIdentificationPayload(payload);
       if (this.nodeIdToConnectionMap.has(nodeId)) {
         // TODO: Log in debug mode that node mapping is already present
         this.destroyConnection(connection);
       } else {
         this.nodeIdToConnectionMap.set(nodeId, connection);
         this.connectionToNodeIdMap.set(connection, nodeId);
+        this.nodeIdToIdentificationMap.set(nodeId, {nodeId, nodeType});
       }
       return;
     }
-    if (this.connectionBased && !this.connectionToNodeIdMap.has(connection)) {
+    const nodeId = this.connectionToNodeIdMap.get(connection);
+    if (this.connectionBased && !nodeId) {
       // TODO: Log in debug mode that non-identified node tried to send message
       return;
+    }
+    if (!contactIdentification) {
+      if (!nodeId) {
+        throw new Error('There is no contact identification, but also no nodeId, this should never happen');
+      }
+      contactIdentification = this.nodeIdToIdentificationMap.get(nodeId);
+      if (!contactIdentification) {
+        throw new Error('There is no contact identification, this should never happen');
+      }
     }
     switch (command) {
       case 'response':
@@ -269,7 +302,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
         this.emit(
           'gossip',
           payload,
-          this.connectionToNodeIdMap.get(connection) as Uint8Array,
+          contactIdentification,
         );
         break;
       default:
@@ -303,9 +336,10 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
                 responseCallback(responsePayload);
               }
             },
+            contactIdentification,
           );
         } else {
-          this.emit('command', command, payload, noopResponseCallback);
+          this.emit('command', command, payload, noopResponseCallback, contactIdentification);
         }
         break;
     }
