@@ -3,7 +3,7 @@ import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {INodeContactIdentification, INodeContactInfo, INodeContactInfoWs} from "./INetwork";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -145,7 +145,13 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
             this.identificationPayload,
           );
           connection.send(identificationMessage);
-          this.registerBrowserWsConnection(connection, nodeId);
+          this.registerBrowserWsConnection(
+            connection,
+            {
+              nodeId: nodeId,
+              nodeType: address.nodeType,
+            },
+          );
           resolve(connection);
         }
       };
@@ -212,7 +218,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     }
   }
 
-  private registerServerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {
+  private registerServerWsConnection(connection: websocket.connection): void {
     connection
       .on('message', (message: websocket.IMessage) => {
         if (message.type !== 'binary') {
@@ -228,14 +234,12 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
             // TODO: Handle errors
           });
       });
-    // TODO: Connection expiration for cleanup
-    if (nodeId) {
-      this.nodeIdToConnectionMap.set(nodeId, connection);
-      this.connectionToNodeIdMap.set(connection, nodeId);
-    }
   }
 
-  private registerBrowserWsConnection(connection: websocket.w3cwebsocket, nodeId?: Uint8Array): void {
+  private registerBrowserWsConnection(
+    connection: websocket.w3cwebsocket,
+    contactIdentification?: INodeContactIdentification,
+  ): void {
     connection.onmessage = (event: MessageEvent) => {
       if (!(event.data instanceof ArrayBuffer)) {
         connection.close();
@@ -248,7 +252,9 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         });
     };
     // TODO: Connection expiration for cleanup
-    if (nodeId) {
+    if (contactIdentification) {
+      const nodeId = contactIdentification.nodeId;
+      this.nodeIdToIdentificationMap.set(nodeId, contactIdentification);
       this.nodeIdToConnectionMap.set(nodeId, connection);
       this.connectionToNodeIdMap.set(connection, nodeId);
     }

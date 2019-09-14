@@ -2,7 +2,7 @@ import * as net from "net";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {COMMANDS, ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
+import {INodeContactIdentification, INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
 
 function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {
   const bootstrapNodesTcp: INodeContactInfoTcp[] = [];
@@ -156,7 +156,13 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
               this.identificationPayload,
             );
             socket.write(identificationMessage);
-            this.registerTcpConnection(socket, nodeId);
+            this.registerTcpConnection(
+              socket,
+              {
+                nodeId: nodeId,
+                nodeType: address.nodeType,
+              },
+            );
             resolve(socket);
           }
         },
@@ -216,7 +222,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     socket.destroy();
   }
 
-  private registerTcpConnection(socket: net.Socket, nodeId?: Uint8Array): void {
+  private registerTcpConnection(socket: net.Socket, contactIdentification?: INodeContactIdentification): void {
     let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
     socket
       .on('data', (buffer: Buffer) => {
@@ -240,6 +246,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         if (nodeId) {
           this.connectionToNodeIdMap.delete(socket);
           this.nodeIdToConnectionMap.delete(nodeId);
+          this.nodeIdToIdentificationMap.delete(nodeId);
         }
       })
       .setTimeout(this.connectionExpiration * 1000)
@@ -247,7 +254,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         socket.destroy();
       });
 
-    if (nodeId) {
+    if (contactIdentification) {
+      const nodeId = contactIdentification.nodeId;
+      this.nodeIdToIdentificationMap.set(nodeId, contactIdentification);
       this.nodeIdToConnectionMap.set(nodeId, socket);
       this.connectionToNodeIdMap.set(socket, nodeId);
     }

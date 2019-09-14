@@ -4,7 +4,7 @@ import {randomElement} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {GossipManager} from "./GossipManager";
-import {INetwork, INodeContactInfo} from "./INetwork";
+import {INetwork, INodeContactIdentification, INodeContactInfo} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {noopResponseCallback} from "./utils";
@@ -98,10 +98,7 @@ export class Network extends EventEmitter implements INetwork {
     this.gossipManager = gossipManager;
 
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {
-      manager.on(
-        'command',
-        this.emit.bind(this),
-      );
+      manager.on('command', this.emit.bind(this));
     }
   }
 
@@ -179,10 +176,7 @@ export class Network extends EventEmitter implements INetwork {
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra?: {
-        nodeId: Uint8Array,
-        nodeType: INodeTypesKeys,
-      },
+      extra: INodeContactIdentification,
     ) => void,
   ): this {
     EventEmitter.prototype.on.call(this, event, listener);
@@ -194,10 +188,7 @@ export class Network extends EventEmitter implements INetwork {
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra?: {
-        nodeId: Uint8Array,
-        nodeType: INodeTypesKeys,
-      },
+      extra: INodeContactIdentification,
     ) => void,
   ): this {
     EventEmitter.prototype.once.call(this, event, listener);
@@ -209,10 +200,7 @@ export class Network extends EventEmitter implements INetwork {
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra?: {
-        nodeId: Uint8Array,
-        nodeType: INodeTypesKeys,
-      },
+      extra: INodeContactIdentification,
     ) => void,
   ): this {
     EventEmitter.prototype.off.call(this, event, listener);
@@ -223,10 +211,7 @@ export class Network extends EventEmitter implements INetwork {
     event: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
-    extra?: {
-      nodeId: Uint8Array,
-      nodeType: INodeTypesKeys,
-    },
+    extra: INodeContactIdentification,
   ): boolean {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback, extra);
   }

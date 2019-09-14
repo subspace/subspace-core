@@ -3,6 +3,7 @@ import {EventEmitter} from "events";
 import {hash} from "../crypto/crypto";
 import {bin2Hex, compareUint8Array} from "../utils/utils";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS_SET, ICommandsKeysForSending} from "./constants";
+import {INodeContactIdentification} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {composeMessage, noopResponseCallback} from "./utils";
@@ -25,8 +26,8 @@ export class GossipManager extends EventEmitter {
 
     let maxMessageSizeLimit = 0;
     for (const protocolManager of [udpManager, tcpManager, wsManager]) {
-      protocolManager.on('gossip', (gossipMessage: Uint8Array, sourceNodeId: Uint8Array): void => {
-        this.handleIncomingGossip(gossipMessage, sourceNodeId);
+      protocolManager.on('gossip', (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification): void => {
+        this.handleIncomingGossip(gossipMessage, contactIdentification);
       });
       maxMessageSizeLimit = Math.max(maxMessageSizeLimit, protocolManager.getMessageSizeLimit());
     }
@@ -39,7 +40,12 @@ export class GossipManager extends EventEmitter {
 
   public on(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this {
     EventEmitter.prototype.on.call(this, event, listener);
     return this;
@@ -47,7 +53,12 @@ export class GossipManager extends EventEmitter {
 
   public once(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this {
     EventEmitter.prototype.once.call(this, event, listener);
     return this;
@@ -55,7 +66,12 @@ export class GossipManager extends EventEmitter {
 
   public off(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this {
     EventEmitter.prototype.off.call(this, event, listener);
     return this;
@@ -65,9 +81,10 @@ export class GossipManager extends EventEmitter {
     event: 'command',
     command: ICommandsKeysForSending,
     payload: Uint8Array,
-    responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
+    responseCallback: (responsePayload: Uint8Array) => void,
+    extra: INodeContactIdentification,
   ): boolean {
-    return EventEmitter.prototype.emit.call(this, event, command, payload, responseCallback);
+    return EventEmitter.prototype.emit.call(this, event, command, payload, responseCallback, extra);
   }
 
   public gossip(command: ICommandsKeysForSending, payload: Uint8Array): Promise<void> {
@@ -169,7 +186,10 @@ export class GossipManager extends EventEmitter {
     }
   }
 
-  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId: Uint8Array): void {
+  private handleIncomingGossip(
+    gossipMessage: Uint8Array,
+    contactIdentification: INodeContactIdentification,
+  ): void {
     const command = COMMANDS_INVERSE[gossipMessage[0]];
     if (!GOSSIP_COMMANDS_SET.has(command)) {
       // TODO: Log in debug mode
@@ -183,8 +203,14 @@ export class GossipManager extends EventEmitter {
     this.gossipCache.add(messageHash);
 
     const payload = gossipMessage.subarray(1);
-    this.emit('command', command as ICommandsKeysForSending, payload);
-    this.gossipInternal(gossipMessage, sourceNodeId)
+    this.emit(
+      'command',
+      command as ICommandsKeysForSending,
+      payload,
+      noopResponseCallback,
+      contactIdentification,
+    );
+    this.gossipInternal(gossipMessage, contactIdentification.nodeId)
       .catch((_) => {
         // TODO: Log in debug mode
       });

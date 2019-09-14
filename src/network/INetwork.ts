@@ -79,10 +79,7 @@ export interface INetwork extends EventEmitter {
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra?: {
-        nodeId: Uint8Array,
-        nodeType: INodeTypesKeys,
-      },
+      extra: INodeContactIdentification,
     ) => void,
   ): this;
 
@@ -91,10 +88,7 @@ export interface INetwork extends EventEmitter {
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra?: {
-        nodeId: Uint8Array,
-        nodeType: INodeTypesKeys,
-      },
+      extra: INodeContactIdentification,
     ) => void,
   ): this;
 
@@ -103,19 +97,14 @@ export interface INetwork extends EventEmitter {
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra?: {
-        nodeId: Uint8Array,
-        nodeType: INodeTypesKeys,
-      },
+      extra: INodeContactIdentification,
     ) => void,
   ): this;
 
   emit(
     event: ICommandsKeysForSending,
-    payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void,
-    extra?: {
-      nodeId: Uint8Array,
-      nodeType: INodeTypesKeys,
-    },
+    payload: Uint8Array,
+    responseCallback: (responsePayload: Uint8Array) => void,
+    extra: INodeContactIdentification,
   ): boolean;
 }

@@ -159,7 +159,11 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
             nodeType: nodeType,
             udp4Port: remote.port,
           };
-          this.handleIncomingMessage(nodeContactInfo, udpMessage.slice(IDENTIFICATION_PAYLOAD_LENGTH))
+          this.handleIncomingMessage(
+            nodeContactInfo,
+            udpMessage.subarray(IDENTIFICATION_PAYLOAD_LENGTH),
+            {nodeId, nodeType},
+          )
             .catch((_) => {
               // TODO: Handle errors
             });
