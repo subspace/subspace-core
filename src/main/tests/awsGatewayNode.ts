@@ -27,17 +27,17 @@ const startGatewayNode = async () => {
     wsPort: 11890,
   };
 
-  const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  // const validatorNodeId = crypto.hash(Buffer.from('validator'));
 
-  // spin up the validator node
-  const validatorContactInfo: INodeContactInfo = {
-    nodeId: validatorNodeId,
-    address: 'localhost',
-    nodeType: 'validator',
-    udp4Port: 12888,
-    tcp4Port: 12889,
-    wsPort: 12890,
-  };
+  // // spin up the validator node
+  // const validatorContactInfo: INodeContactInfo = {
+  //   nodeId: validatorNodeId,
+  //   address: 'localhost',
+  //   nodeType: 'validator',
+  //   udp4Port: 12888,
+  //   tcp4Port: 12889,
+  //   wsPort: 12890,
+  // };
 
   // const validator2NodeId = crypto.hash(Buffer.from('validator2'));
   // // spin up the validator node
@@ -63,7 +63,7 @@ const startGatewayNode = async () => {
     false,
     false,
     awsGatewayContactInfo,
-    [validatorContactInfo],
+    [],
   );
 
   setTimeout(() => {
