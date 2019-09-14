@@ -29,6 +29,11 @@ export interface INodeContactInfoWs extends INodeContactInfo {
 
 export interface INetwork extends EventEmitter {
   /**
+   * Returns an array of peers known in network
+   */
+  getPeers(): INodeContactInfo[];
+
+  /**
    * One-way sending
    *
    * @param nodeTypes

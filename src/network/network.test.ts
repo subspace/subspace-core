@@ -1,6 +1,7 @@
 import {randomBytes} from "crypto";
 import {IPeerContactInfo} from "../main/interfaces";
-import {allocatePort} from "../utils/utils";
+import {allocatePort, bin2Hex} from "../utils/utils";
+import {INodeContactInfo} from "./INetwork";
 import {Network} from "./Network";
 
 const peer1: IPeerContactInfo = {
@@ -189,6 +190,32 @@ describe('Identification', () => {
       });
       setTimeout(() => {
         networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
+      });
+    });
+  });
+});
+
+describe('Peers', () => {
+  test('Get peers from network instance', async () => {
+    function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
+      return JSON.stringify({
+        address: nodeContactInfo.address,
+        nodeId: bin2Hex(nodeContactInfo.nodeId),
+        nodeType: nodeContactInfo.nodeType,
+        tcp4Port: nodeContactInfo.tcp4Port,
+        udp4Port: nodeContactInfo.udp4Port,
+        wsPort: nodeContactInfo.wsPort,
+      });
+    }
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const peer1Peers = networkClient1.getPeers().map(serializeNodeContactInfo);
+        expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer2));
+        expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer3));
+        // WebSocket peer will take time to show up, hence setTimeout, but it will be here even though not in bootstrap
+        // nodes list
+        expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer4));
+        resolve();
       });
     });
   });

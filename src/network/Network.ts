@@ -1,3 +1,4 @@
+import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
 import {randomElement} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
@@ -102,7 +103,7 @@ export class Network extends EventEmitter implements INetwork {
 
     await Promise.all(bootstrapPromises);
 
-    return new Network(udpManager, tcpManager, wsManager, gossipManager, browserNode);
+    return new Network(udpManager, tcpManager, wsManager, gossipManager, bootstrapNodes, browserNode);
   }
 
   // In seconds
@@ -122,12 +123,14 @@ export class Network extends EventEmitter implements INetwork {
   private readonly tcpManager: TcpManager;
   private readonly wsManager: WsManager;
   private readonly gossipManager: GossipManager;
+  private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
 
   constructor(
     udpManager: UdpManager,
     tcpManager: TcpManager,
     wsManager: WsManager,
     gossipManager: GossipManager,
+    bootstrapNodes: INodeContactInfo[],
     private readonly browserNode: boolean,
   ) {
     super();
@@ -144,6 +147,7 @@ export class Network extends EventEmitter implements INetwork {
 
     for (const manager of [udpManager, tcpManager, wsManager]) {
       manager.on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
+        this.peers.set(nodeContactInfo.nodeId, nodeContactInfo);
         if (nodeContactInfo.udp4Port) {
           udpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoUdp);
         }
@@ -155,6 +159,17 @@ export class Network extends EventEmitter implements INetwork {
         }
       });
     }
+
+    for (const bootstrapNode of bootstrapNodes) {
+      this.peers.set(bootstrapNode.nodeId, bootstrapNode);
+    }
+  }
+
+  /**
+   * Returns an array of peers known in network
+   */
+  public getPeers(): INodeContactInfo[] {
+    return Array.from(this.peers.values());
   }
 
   public async sendRequestOneWay(
