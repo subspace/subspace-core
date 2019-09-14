@@ -21,10 +21,10 @@ const startGatewayNode = async () => {
   const awsGatewayContactInfo: INodeContactInfo = {
     nodeId: awsGatewayNodeId,
     nodeType: 'gateway',
-    address: '54.191.145.133',
-    udp4Port: 10888,
-    tcp4Port: 10889,
-    wsPort: 10890,
+    address: 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com',
+    udp4Port: 11888,
+    tcp4Port: 11889,
+    wsPort: 11890,
   };
 
   // const validatorNodeId = crypto.hash(Buffer.from('validator'));
@@ -59,7 +59,7 @@ const startGatewayNode = async () => {
     true,
     3,
     `${os.tmpdir()}/gateway`,
-    100,
+    1000,
     false,
     false,
     awsGatewayContactInfo,
