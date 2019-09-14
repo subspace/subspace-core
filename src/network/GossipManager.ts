@@ -121,6 +121,7 @@ export class GossipManager extends EventEmitter {
       ...this.tcpManager.getKnownNodeIds(),
       ...this.wsManager.getKnownNodeIds(),
     ]);
+
     if (sourceNodeId) {
       allNodesSet.delete(sourceNodeId);
     }

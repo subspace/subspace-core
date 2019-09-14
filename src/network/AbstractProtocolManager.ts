@@ -11,10 +11,10 @@ import {
 import {INodeContactIdentification, INodeContactInfo} from "./INetwork";
 import {noopResponseCallback, parseAddressPayload, parseIdentificationPayload, parseMessage} from "./utils";
 
-export abstract class AbstractProtocolManager<Connection, Address extends INodeContactInfo> extends EventEmitter {
+export abstract class AbstractProtocolManager<Connection extends object, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
   protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, Address>();
-  protected readonly nodeIdToIdentificationMap = ArrayMap<Uint8Array, INodeContactIdentification>();
+  protected readonly nodeIdToIdentificationMap = new WeakMap<Connection, INodeContactIdentification>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
@@ -59,7 +59,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public on(
-    event: 'peer-contact-info',
+    event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
   public on(
@@ -81,7 +81,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public once(
-    event: 'peer-contact-info',
+    event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
   public once(
@@ -103,7 +103,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public off(
-    event: 'peer-contact-info',
+    event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
   public off(
@@ -126,7 +126,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     contactIdentification: INodeContactIdentification,
   ): boolean;
   public emit(
-    event: 'peer-contact-info',
+    event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     nodeContactInfo: INodeContactInfo,
   ): boolean;
   public emit(
@@ -196,8 +196,9 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
       }
     });
 
-    this.nodeIdToIdentificationMap.forEach((nodeContactIdentification: INodeContactIdentification) => {
-      if (nodeTypesSet.has(nodeContactIdentification.nodeType)) {
+    this.nodeIdToConnectionMap.forEach((connection: Connection) => {
+      const nodeContactIdentification = this.nodeIdToIdentificationMap.get(connection);
+      if (nodeContactIdentification && nodeTypesSet.has(nodeContactIdentification.nodeType)) {
         nodeIds.add(nodeContactIdentification.nodeId);
       }
     });
@@ -302,15 +303,16 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
           IDENTIFICATION_PAYLOAD_LENGTH + ADDRESS_PAYLOAD_LENGTH,
         ),
       );
-      const nodeContactInfo = {...nodeContactIdentification, ...nodeContactAddress};
+      const nodeContactInfo: INodeContactInfo = {...nodeContactIdentification, ...nodeContactAddress};
       if (this.nodeIdToConnectionMap.has(nodeContactIdentification.nodeId)) {
         // TODO: Log in debug mode that node mapping is already present
         this.destroyConnection(connection);
       } else {
         this.nodeIdToConnectionMap.set(nodeContactIdentification.nodeId, connection);
         this.connectionToNodeIdMap.set(connection, nodeContactIdentification.nodeId);
-        this.nodeIdToIdentificationMap.set(nodeContactIdentification.nodeId, nodeContactIdentification);
+        this.nodeIdToIdentificationMap.set(connection, nodeContactIdentification);
         this.emit('peer-contact-info', nodeContactInfo);
+        this.emit('peer-connected', nodeContactInfo);
       }
       return;
     }
@@ -323,9 +325,12 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
       if (!nodeId) {
         throw new Error('There is no contact identification, but also no nodeId, this should never happen');
       }
-      contactIdentification = this.nodeIdToIdentificationMap.get(nodeId);
+      contactIdentification = this.nodeIdToAddressMap.get(nodeId);
       if (!contactIdentification) {
-        throw new Error('There is no contact identification, this should never happen');
+        contactIdentification = this.nodeIdToIdentificationMap.get(connection);
+        if (!contactIdentification) {
+          throw new Error('There is no contact identification, this should never happen');
+        }
       }
     }
     switch (command) {
