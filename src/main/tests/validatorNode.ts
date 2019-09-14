@@ -3,8 +3,8 @@
 
 import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
+import { INodeContactInfo } from '../../network/INetwork';
 import { Node } from '../../node/node';
-import { IPeerContactInfo } from "../interfaces";
 import { run } from '../run';
 
 /**
@@ -15,11 +15,11 @@ import { run } from '../run';
  */
 const testValidatorNode = async () => {
 
-  // const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
+  const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
 
   // spin up the gateway node
-  const gatewayContactInfo: IPeerContactInfo = {
-    nodeId: new Uint8Array(),
+  const gatewayContactInfo: INodeContactInfo = {
+    nodeId: gatewayNodeId,
     nodeType: 'gateway',
     address: 'localhost',
     udp4Port: 10888,
@@ -27,11 +27,11 @@ const testValidatorNode = async () => {
     wsPort: 10890,
   };
 
-  // const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  const validatorNodeId = crypto.hash(Buffer.from('validator'));
 
   // spin up the validator node
-  const validatorContactInfo: IPeerContactInfo = {
-    nodeId: new Uint8Array(),
+  const validatorContactInfo: INodeContactInfo = {
+    nodeId: validatorNodeId,
     nodeType: 'validator',
     address: 'localhost',
     udp4Port: 11888,

@@ -1,5 +1,5 @@
 import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys, NODE_TYPES_INVERSE} from "./constants";
-import {INodeContactAddress, INodeContactIdentification} from "./INetwork";
+import {INodeContactIdentification} from "./INetwork";
 
 export function noopResponseCallback(): void {
   // Do nothing
