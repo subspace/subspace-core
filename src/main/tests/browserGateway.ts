@@ -13,7 +13,7 @@ import { run } from '../run';
  * Step three: test that a new farmer can join, sync the ledger manually, and start farming
  * Step four: test that a light client can join and sync state before validating new blocks
  */
-const testValidatorNode = async () => {
+const startGatewayNode = async () => {
 
   const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
 
@@ -27,35 +27,26 @@ const testValidatorNode = async () => {
     wsPort: 10890,
   };
 
-  const validatorNodeId = crypto.hash(Buffer.from('validator'));
-
-  // spin up the validator node
-  const validatorContactInfo: INodeContactInfo = {
-    nodeId: validatorNodeId,
-    nodeType: 'validator',
-    address: 'localhost',
-    udp4Port: 11888,
-    tcp4Port: 11889,
-    wsPort: 11890,
-  };
-
-  const validatorNode: Node = await run(
-    'validator',
+  const gatewayNode: Node = await run(
+    'full',
     1,
-    'memory',
-    0,
-    0,
+    'disk',
+    1,
+    100000000,
     true,
     3,
-    `${os.tmpdir()}/validator`,
-    0,
+    `${os.tmpdir()}/gateway`,
+    100,
     false,
-    true,
-    validatorContactInfo,
-    [gatewayContactInfo],
+    false,
+    gatewayContactInfo,
+    [],
   );
 
-  validatorNode.syncLedgerAndValidate();
+  setTimeout(() => {
+    gatewayNode.createLedgerAndFarm();
+  }, 10000);
+
 };
 
-testValidatorNode();
+startGatewayNode();

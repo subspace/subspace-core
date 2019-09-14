@@ -27,20 +27,19 @@ const startGatewayNode = async () => {
     wsPort: 10890,
   };
 
-  // const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  const validatorNodeId = crypto.hash(Buffer.from('validator'));
 
-  // // spin up the validator node
-  // const validatorContactInfo: INodeContactInfo = {
-  //   nodeId: validatorNodeId,
-  //   address: 'localhost',
-  //   nodeType: 'validator',
-  //   udp4Port: 11888,
-  //   tcp4Port: 11889,
-  //   wsPort: 11890,
-  // };
-  //
+  // spin up the validator node
+  const validatorContactInfo: INodeContactInfo = {
+    nodeId: validatorNodeId,
+    address: 'localhost',
+    nodeType: 'validator',
+    udp4Port: 11888,
+    tcp4Port: 11889,
+    wsPort: 11890,
+  };
+
   // const validator2NodeId = crypto.hash(Buffer.from('validator2'));
-  //
   // // spin up the validator node
   // const validator2ContactInfo: INodeContactInfo = {
   //   nodeId: validator2NodeId,
@@ -54,22 +53,22 @@ const startGatewayNode = async () => {
   const gatewayNode: Node = await run(
     'full',
     1,
-    'disk',
+    'memory',
     1,
     100000000,
     true,
     3,
     `${os.tmpdir()}/gateway`,
-    1000,
+    100,
     false,
     false,
     gatewayContactInfo,
-    [],
+    [validatorContactInfo],
   );
 
   setTimeout(() => {
     gatewayNode.createLedgerAndFarm();
-  }, 0);
+  }, 5000);
 
 };
 
