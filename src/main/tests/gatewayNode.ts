@@ -27,29 +27,29 @@ const startGatewayNode = async () => {
     wsPort: 10890,
   };
 
-  const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  // const validatorNodeId = crypto.hash(Buffer.from('validator'));
 
-  // spin up the validator node
-  const validatorContactInfo: INodeContactInfo = {
-    nodeId: validatorNodeId,
-    address: 'localhost',
-    nodeType: 'validator',
-    udp4Port: 11888,
-    tcp4Port: 11889,
-    wsPort: 11890,
-  };
-
-  const validator2NodeId = crypto.hash(Buffer.from('validator2'));
-
-  // spin up the validator node
-  const validator2ContactInfo: INodeContactInfo = {
-    nodeId: validator2NodeId,
-    nodeType: 'validator',
-    address: 'localhost',
-    udp4Port: 13888,
-    tcp4Port: 13889,
-    wsPort: 13890,
-  };
+  // // spin up the validator node
+  // const validatorContactInfo: INodeContactInfo = {
+  //   nodeId: validatorNodeId,
+  //   address: 'localhost',
+  //   nodeType: 'validator',
+  //   udp4Port: 11888,
+  //   tcp4Port: 11889,
+  //   wsPort: 11890,
+  // };
+  //
+  // const validator2NodeId = crypto.hash(Buffer.from('validator2'));
+  //
+  // // spin up the validator node
+  // const validator2ContactInfo: INodeContactInfo = {
+  //   nodeId: validator2NodeId,
+  //   nodeType: 'validator',
+  //   address: 'localhost',
+  //   udp4Port: 13888,
+  //   tcp4Port: 13889,
+  //   wsPort: 13890,
+  // };
 
   const gatewayNode: Node = await run(
     'full',
@@ -64,7 +64,7 @@ const startGatewayNode = async () => {
     false,
     false,
     gatewayContactInfo,
-    [validatorContactInfo, validator2ContactInfo],
+    [],
   );
 
   setTimeout(() => {
