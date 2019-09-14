@@ -1,14 +1,19 @@
 import {EventEmitter} from "events";
 import {ICommandsKeysForSending, INodeTypesKeys} from "./constants";
 
-export interface INodeContactInfo {
+export interface INodeContactAddress {
   address: string;
-  nodeId: Uint8Array;
-  nodeType: INodeTypesKeys;
   tcp4Port?: number;
   udp4Port?: number;
   wsPort?: number;
 }
+
+export interface INodeContactIdentification {
+  nodeId: Uint8Array;
+  nodeType: INodeTypesKeys;
+}
+
+export type INodeContactInfo = INodeContactAddress & INodeContactIdentification;
 
 export interface INodeContactInfoUdp extends INodeContactInfo {
   udp4Port: number;
@@ -71,21 +76,35 @@ export interface INetwork extends EventEmitter {
 
   on(
     event: ICommandsKeysForSending,
-    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this;
 
   once(
     event: ICommandsKeysForSending,
-    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this;
 
   off(
     event: ICommandsKeysForSending,
-    listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra: INodeContactIdentification,
+    ) => void,
   ): this;
 
   emit(
     event: ICommandsKeysForSending,
-    payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void,
+    payload: Uint8Array,
+    responseCallback: (responsePayload: Uint8Array) => void,
+    extra: INodeContactIdentification,
   ): boolean;
 }

@@ -1,7 +1,7 @@
 import { Content } from "../ledger/content";
 import { Proof } from "../ledger/proof";
 import { Tx } from '../ledger/tx';
-import {INodeTypesKeys} from "../network/constants";
+import {INodeContactInfo} from "../network/INetwork";
 
 /**
  * Summary of all Blocks in a Level, compressed into a State Block that is tracked within a single State Chain by light clients.
@@ -144,15 +144,8 @@ export interface IPlotData {
   path: string;
 }
 
-export interface IPeerContactInfo {
-  nodeId: Uint8Array;
-  nodeType: INodeTypesKeys;
-  address: string;
-  udpPort: number;
-  tcpPort: number;
-  wsPort: number;
-  protocolVersion?: '4';
-}
+// TODO: Switch to `INodeContactInfo` and remove this
+export type IPeerContactInfo = INodeContactInfo;
 
 export interface INodeConfig {
   storage: boolean;   // is storage being persisted to disk?

@@ -16,7 +16,7 @@ import { Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { Node } from '../node/node';
 import { Storage } from '../storage/storage';
-import { parseContactInfo, rmDirRecursiveSync } from '../utils/utils';
+import { rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
@@ -24,10 +24,9 @@ const defaultContactInfo: IPeerContactInfo = {
   nodeId: new Uint8Array(),
   nodeType: 'full',
   address: 'localhost',
-  udpPort: 10888,
-  tcpPort: 10889,
+  udp4Port: 10888,
+  tcp4Port: 10889,
   wsPort: 10890,
-  protocolVersion: '4',
 };
 
 const defaultBootstrapPeers: IPeerContactInfo[] = [];
@@ -274,10 +273,9 @@ export const run = async (
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys
   contactInfo.nodeId = crypto.randomBytes(32);
-  const networkOptions = parseContactInfo(contactInfo, bootstrapPeers, env === 'browser');
   // tslint:disable-next-line: no-console
   console.log('Launching network');
-  const network = await Network.init(...networkOptions);
+  const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
   rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {
