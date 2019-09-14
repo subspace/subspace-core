@@ -118,6 +118,8 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     return new Promise((resolve) => {
       if (this.udp4Socket) {
         this.udp4Socket.close(resolve);
+      } else {
+        resolve();
       }
     });
   }
