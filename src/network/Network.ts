@@ -78,29 +78,29 @@ export class Network extends EventEmitter implements INetwork {
       this.GOSSIP_CACHE_TIMEOUT,
     );
 
-    // // TODO: We wait for them since otherwise concurrent connections to the same peer will cause issues; this should be
-    // //  handled by protocol managers nicely
-    // const bootstrapPromises: Array<Promise<any>> = [];
-    // // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
-    // for (const bootstrapNode of bootstrapNodes) {
-    //   if (bootstrapNode.tcp4Port) {
-    //     bootstrapPromises.push(
-    //       tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
-    //         .catch((_) => {
-    //           // TODO: Log in debug mode
-    //         }),
-    //     );
-    //   } else if (bootstrapNode.wsPort) {
-    //     bootstrapPromises.push(
-    //       wsManager.nodeIdToConnection(bootstrapNode.nodeId)
-    //         .catch((_) => {
-    //           // TODO: Log in debug mode
-    //         }),
-    //     );
-    //   }
-    // }
-    //
-    // await Promise.all(bootstrapPromises);
+    // TODO: We wait for them since otherwise concurrent connections to the same peer will cause issues; this should be
+    //  handled by protocol managers nicely
+    const bootstrapPromises: Array<Promise<any>> = [];
+    // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
+    for (const bootstrapNode of bootstrapNodes) {
+      if (bootstrapNode.tcp4Port) {
+        bootstrapPromises.push(
+          tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
+            .catch((_) => {
+              // TODO: Log in debug mode
+            }),
+        );
+      } else if (bootstrapNode.wsPort) {
+        bootstrapPromises.push(
+          wsManager.nodeIdToConnection(bootstrapNode.nodeId)
+            .catch((_) => {
+              // TODO: Log in debug mode
+            }),
+        );
+      }
+    }
+
+    await Promise.all(bootstrapPromises);
 
     return new Network(udpManager, tcpManager, wsManager, gossipManager, browserNode);
   }

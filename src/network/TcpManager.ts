@@ -1,8 +1,9 @@
 import * as net from "net";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {COMMANDS, ICommandsKeys} from "./constants";
+import {ICommandsKeys} from "./constants";
 import {INodeContactIdentification, INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
+import {composeMessage} from "./utils";
 
 function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {
   const bootstrapNodesTcp: INodeContactInfoTcp[] = [];
@@ -15,23 +16,15 @@ function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeCont
 }
 
 /**
- * @param command
- * @param requestResponseId `0` if no response is expected for request
- * @param payload
+ * @param message
  */
-function composeMessageWithTcpHeader(
-  command: ICommandsKeys,
-  requestResponseId: number,
-  payload: Uint8Array,
-): Uint8Array {
-  // 4 bytes for message length, 1 byte for command, 4 bytes for requestResponseId
-  const message = new Uint8Array(4 + 1 + 4 + payload.length);
-  const view = new DataView(message.buffer);
-  view.setUint32(0, 1 + 4 + payload.length, false);
-  message.set([COMMANDS[command]], 4);
-  view.setUint32(4 + 1, requestResponseId, false);
-  message.set(payload, 4 + 1 + 4);
-  return message;
+function composeMessageWithTcpHeader(message: Uint8Array): Uint8Array {
+  // 4 bytes for message length and message itself
+  const messageWithTcpHeader = new Uint8Array(4 + message.length);
+  const view = new DataView(messageWithTcpHeader.buffer);
+  view.setUint32(0, message.length, false);
+  messageWithTcpHeader.set(message, 4);
+  return messageWithTcpHeader;
 }
 
 // 4 bytes for message length, 1 byte for command, 4 bytes for request ID
@@ -67,7 +60,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   }
 
   private readonly tcp4Server: net.Server | undefined;
-  private readonly extendedIdentificationPayload: Uint8Array;
+  private readonly identificationMessage: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly connectionExpiration: number;
 
@@ -98,7 +91,13 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.extendedIdentificationPayload = extendedIdentificationPayload;
+    this.identificationMessage = composeMessageWithTcpHeader(
+      composeMessage(
+        'identification',
+        0,
+        extendedIdentificationPayload,
+      ),
+    );
     this.connectionTimeout = connectionTimeout;
     this.connectionExpiration = connectionExpiration;
 
@@ -153,12 +152,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           if (timedOut) {
             socket.destroy();
           } else {
-            const identificationMessage = composeMessageWithTcpHeader(
-              'identification',
-              0,
-              this.extendedIdentificationPayload,
-            );
-            socket.write(identificationMessage);
+            socket.write(this.identificationMessage);
             this.registerTcpConnection(
               socket,
               {
@@ -184,7 +178,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     }
     if (!socket.destroyed) {
       await new Promise((resolve, reject) => {
-        socket.write(message, (error) => {
+        socket.write(composeMessageWithTcpHeader(message), (error) => {
           if (error) {
             reject(error);
           } else {
@@ -220,7 +214,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     requestResponseId: number,
     payload: Uint8Array,
   ): Promise<void> {
-    const message = composeMessageWithTcpHeader(command, requestResponseId, payload);
+    const message = composeMessage(command, requestResponseId, payload);
     return this.sendRawMessage(socket, message);
   }
 

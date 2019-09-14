@@ -71,6 +71,13 @@ export function parseAddressPayload(addressPayload: Uint8Array): INodeContactAdd
   const tcp4Port = view.getUint16(0, false) || undefined;
   const udp4Port = view.getUint16(2, false) || undefined;
   const wsPort = view.getUint16(4, false) || undefined;
-  const address = decoder.decode(addressPayload.subarray(6));
+  const address = decoder.decode(
+    Uint8Array.from(
+      addressPayload.subarray(6)
+        .filter((byte) => {
+          return byte !== 0;
+        }),
+    ),
+  );
   return {address, tcp4Port, udp4Port, wsPort};
 }
