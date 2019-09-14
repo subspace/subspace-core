@@ -4,7 +4,6 @@
 import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
 import { INodeContactInfo } from '../../network/INetwork';
-import { Node } from '../../node/node';
 import { run } from '../run';
 
 /**
@@ -39,18 +38,7 @@ const startValidatorNode = async () => {
     wsPort: 12890,
   };
 
-  // const validator2NodeId = crypto.hash(Buffer.from('validator2'));
-  // // spin up the validator node
-  // const validator2ContactInfo: INodeContactInfo = {
-  //   nodeId: validator2NodeId,
-  //   nodeType: 'validator',
-  //   address: 'localhost',
-  //   udp4Port: 13888,
-  //   tcp4Port: 13889,
-  //   wsPort: 13890,
-  // };
-
-  const validatorNode: Node = await run(
+  await run(
     'validator',
     1,
     'memory',
@@ -60,15 +48,11 @@ const startValidatorNode = async () => {
     3,
     `${os.tmpdir()}/validator`,
     1000,
-    false,
-    false,
+    true,
+    true,
     validatorContactInfo,
     [awsGatewayContactInfo],
   );
-
-  validatorNode.ping();
-  validatorNode.syncLedgerAndValidate();
-
 };
 
 startValidatorNode();

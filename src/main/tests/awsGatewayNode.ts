@@ -4,7 +4,6 @@
 import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
 import { INodeContactInfo } from '../../network/INetwork';
-import { Node } from '../../node/node';
 import { run } from '../run';
 
 /**
@@ -27,49 +26,21 @@ const startGatewayNode = async () => {
     wsPort: 11890,
   };
 
-  // const validatorNodeId = crypto.hash(Buffer.from('validator'));
-
-  // // spin up the validator node
-  // const validatorContactInfo: INodeContactInfo = {
-  //   nodeId: validatorNodeId,
-  //   address: 'localhost',
-  //   nodeType: 'validator',
-  //   udp4Port: 12888,
-  //   tcp4Port: 12889,
-  //   wsPort: 12890,
-  // };
-
-  // const validator2NodeId = crypto.hash(Buffer.from('validator2'));
-  // // spin up the validator node
-  // const validator2ContactInfo: INodeContactInfo = {
-  //   nodeId: validator2NodeId,
-  //   nodeType: 'validator',
-  //   address: 'localhost',
-  //   udp4Port: 13888,
-  //   tcp4Port: 13889,
-  //   wsPort: 13890,
-  // };
-
-  const gatewayNode: Node = await run(
+  await run(
     'full',
     1,
-    'memory',
+    'disk',
     1,
     100000000,
     true,
     3,
     `${os.tmpdir()}/gateway`,
     1000,
-    false,
-    false,
+    true,
+    true,
     awsGatewayContactInfo,
     [],
   );
-
-  setTimeout(() => {
-    gatewayNode.createLedgerAndFarm();
-  }, 10000);
-
 };
 
 startGatewayNode();
