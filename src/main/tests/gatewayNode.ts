@@ -20,6 +20,7 @@ const startGatewayNode = async () => {
   // spin up the gateway node
   const gatewayContactInfo: IPeerContactInfo = {
     nodeId: gatewayNodeId,
+    nodeType: 'gateway',
     address: 'localhost',
     udpPort: 10888,
     tcpPort: 10889,
@@ -33,6 +34,7 @@ const startGatewayNode = async () => {
   const validatorContactInfo: IPeerContactInfo = {
     nodeId: validatorNodeId,
     address: 'localhost',
+    nodeType: 'validator',
     udpPort: 11888,
     tcpPort: 11889,
     wsPort: 11890,

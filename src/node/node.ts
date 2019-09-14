@@ -222,10 +222,10 @@ export class Node extends EventEmitter {
     return;
   }
 
-  public async ping(nodeId: Uint8Array, payload?: Uint8Array): Promise<void> {
-    await this.rpc.ping(nodeId, payload);
-  }
-
+  // public async ping(nodeId: Uint8Array): Promise<void> {
+  //   await this.rpc.ping(nodeId);
+  // }
+  //
   /**
    * A new tx is received over the network from another node.
    * Filter the tx for duplicates or spam. Validate the tx.
@@ -283,7 +283,7 @@ export class Node extends EventEmitter {
    * @return tx instance or not found
    */
   public async requestTx(txId: Uint8Array): Promise<Tx> {
-    return this.rpc.requestTx(new Uint8Array(), txId);
+    return this.rpc.requestTx(txId);
     // TODO
       // apply tx, error specify error callback
   }
@@ -308,7 +308,7 @@ export class Node extends EventEmitter {
    * @return block instance or not found
    */
   public async requestBlock(blockId: Uint8Array): Promise<Block> {
-    return this.rpc.requestBlock(new Uint8Array(), blockId);
+    return this.rpc.requestBlock(blockId);
     // TODO
       // apply block, error specify error callback
   }

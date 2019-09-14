@@ -6,10 +6,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import {random_int} from "random-bytes-numbers";
 import { inspect } from 'util';
 import * as winston from 'winston';
 import { IPeerContactInfo } from '../main/interfaces';
-import { IAddress, INodeAddress } from '../network/Network';
+import {INodeContactInfo} from "../network/INetwork";
+import {IAddress, Network} from '../network/Network';
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
   const length = aKey.length;
@@ -202,42 +204,17 @@ export function parseContactInfo(
   selfContactInfo: IPeerContactInfo,
   bootstrapPeerContactInfo: IPeerContactInfo[],
   browserNode: boolean = false,
-): [
-  INodeAddress[],
-  INodeAddress[],
-  INodeAddress[],
-  boolean,
-  Uint8Array,
-  IAddress | undefined,
-  IAddress | undefined,
-  IAddress | undefined,
- ] {
-  const bootstrapUdpNodes: INodeAddress [] = [];
-  const bootstrapTcpNodes: INodeAddress [] = [];
-  const bootstrapWsNodes: INodeAddress [] = [];
+): Parameters<typeof Network.init> {
+  const bootstrapNodes: INodeContactInfo[] = [];
 
   for (const peer of bootstrapPeerContactInfo) {
-    if (!browserNode) {
-      bootstrapUdpNodes.push({
-        nodeId: peer.nodeId,
-        address: peer.address,
-        port: peer.udpPort,
-        protocolVersion: peer.protocolVersion,
-      });
-
-      bootstrapTcpNodes.push({
-        nodeId: peer.nodeId,
-        address: peer.address,
-        port: peer.tcpPort,
-        protocolVersion: peer.protocolVersion,
-      });
-    }
-
-    bootstrapWsNodes.push({
-      nodeId: peer.nodeId,
+    bootstrapNodes.push({
       address: peer.address,
-      port: peer.wsPort,
-      protocolVersion: peer.protocolVersion,
+      nodeId: peer.nodeId,
+      nodeType: peer.nodeType,
+      tcp4Port: peer.tcpPort,
+      udp4Port: peer.udpPort,
+      wsPort: peer.wsPort,
     });
   }
 
@@ -261,9 +238,8 @@ export function parseContactInfo(
   };
 
   return [
-    bootstrapUdpNodes,
-    bootstrapTcpNodes,
-    bootstrapWsNodes,
+    bootstrapNodes,
+    selfContactInfo.nodeType,
     browserNode,
     ownNodeId,
     browserNode ? undefined : ownUdpAddress,
@@ -303,4 +279,12 @@ export function createLogger(logLevel: 'error' | 'warn' | 'info' | 'debug' | 've
       new winston.transports.Console(),
     ],
   });
+}
+
+export function randomElement<E>(elements: E[]): E {
+  if (elements.length === 1) {
+    return elements[0];
+  }
+
+  return elements[random_int(0, elements.length - 1)];
 }

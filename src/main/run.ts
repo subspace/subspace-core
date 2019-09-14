@@ -22,6 +22,7 @@ import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
 const defaultContactInfo: IPeerContactInfo = {
   nodeId: new Uint8Array(),
+  nodeType: 'full',
   address: 'localhost',
   udpPort: 10888,
   tcpPort: 10889,

@@ -1,8 +1,10 @@
 import {EventEmitter} from "events";
-import {bin2Hex} from "../utils/utils";
-import {ICommandsKeys} from "./commands";
+import {random_int} from "random-bytes-numbers";
+import {randomElement} from "../utils/utils";
+import {AbstractProtocolManager} from "./AbstractProtocolManager";
+import {ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
 import {GossipManager} from "./GossipManager";
-import {INetwork} from "./INetwork";
+import {INetwork, INodeContactInfo} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {noopResponseCallback} from "./utils";
@@ -15,38 +17,34 @@ export interface IAddress {
   protocolVersion?: '4';
 }
 
-export interface INodeAddress {
-  address: string;
-  nodeId: Uint8Array;
-  port: number;
-  // TODO: Support IPv6
-  protocolVersion?: '4';
-}
-
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter implements INetwork {
   public static async init(
-    bootstrapUdpNodes: INodeAddress[],
-    bootstrapTcpNodes: INodeAddress[],
-    bootstrapWsNodes: INodeAddress[],
+    bootstrapNodes: INodeContactInfo[],
+    nodeType: INodeTypesKeys,
     browserNode: boolean,
     ownNodeId: Uint8Array,
     ownUdpAddress?: IAddress,
     ownTcpAddress?: IAddress,
     ownWsAddress?: IAddress,
   ): Promise<Network> {
+    const identificationPayload = new Uint8Array(IDENTIFICATION_PAYLOAD_LENGTH);
+    identificationPayload.set([NODE_TYPES[nodeType]]);
+    identificationPayload.set(ownNodeId, 1);
+
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
-        bootstrapUdpNodes,
+        identificationPayload,
+        bootstrapNodes,
         browserNode,
         Network.UDP_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
         ownUdpAddress,
       ),
       TcpManager.init(
-        ownNodeId,
-        bootstrapTcpNodes,
+        identificationPayload,
+        bootstrapNodes,
         browserNode,
         Network.TCP_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
@@ -55,8 +53,8 @@ export class Network extends EventEmitter implements INetwork {
         ownTcpAddress,
       ),
       WsManager.init(
-        ownNodeId,
-        bootstrapWsNodes,
+        identificationPayload,
+        bootstrapNodes,
         browserNode,
         Network.WS_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
@@ -117,92 +115,61 @@ export class Network extends EventEmitter implements INetwork {
     }
   }
 
-  public async sendOneWayRequest(
-    nodeId: Uint8Array,
-    command: ICommandsKeys,
+  public async sendRequestOneWay(
+    nodeTypes: INodeTypesKeys[],
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
-    const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
-    if (wsConnection) {
-      // Node likely doesn't have any other way to communicate besides WebSocket
-      return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
-    }
-    const socket = await this.tcpManager.nodeIdToConnection(nodeId);
-    if (socket) {
-      return this.tcpManager.sendMessageOneWay(socket, command, payload);
-    }
-
-    {
-      const wsConnection = await this.wsManager.nodeIdToConnection(nodeId);
-      if (wsConnection) {
-        return this.wsManager.sendMessageOneWay(wsConnection, command, payload);
-      }
-
-      throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
-    }
+    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(nodeTypes);
+    return protocolManager.sendMessageOneWay(connection, command, payload);
   }
 
-  public async sendOneWayRequestUnreliable(
-    nodeId: Uint8Array,
-    command: ICommandsKeys,
+  public async sendRequestOneWayUnreliable(
+    nodeTypes: INodeTypesKeys[],
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
     if (this.browserNode) {
-      return this.sendOneWayRequest(nodeId, command, payload);
+      return this.sendRequestOneWay(nodeTypes, command, payload);
     }
 
-    const address = await this.udpManager.nodeIdToConnection(nodeId);
-    if (address) {
-      return this.udpManager.sendMessageOneWay(address, command, payload);
-    } else {
-      // TODO: Fallback to reliable if no UDP route?
-      throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
+    const addresses = await this.udpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
+    if (addresses.length) {
+      const randomAddress = addresses[random_int(0, addresses.length - 1)];
+      return this.udpManager.sendMessageOneWay(randomAddress, command, payload);
     }
+
+    return this.sendRequestOneWay(nodeTypes, command, payload);
   }
 
   public async sendRequest(
-    nodeId: Uint8Array,
-    command: ICommandsKeys,
+    nodeTypes: INodeTypesKeys[],
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
-    const wsConnection = this.wsManager.nodeIdToActiveConnection(nodeId);
-    if (wsConnection) {
-      // Node likely doesn't have any other way to communicate besides WebSocket
-      return this.wsManager.sendMessage(wsConnection, command, payload);
-    }
-    const socket = await this.tcpManager.nodeIdToConnection(nodeId);
-    if (socket) {
-      return this.tcpManager.sendMessage(socket, command, payload);
-    }
-
-    {
-      const wsConnection = await this.wsManager.nodeIdToConnection(nodeId);
-      if (wsConnection) {
-        return this.wsManager.sendMessage(wsConnection, command, payload);
-      }
-
-      throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
-    }
+    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(nodeTypes);
+    return protocolManager.sendMessage(connection, command, payload);
   }
 
   public async sendRequestUnreliable(
-    nodeId: Uint8Array,
-    command: ICommandsKeys,
+    nodeTypes: INodeTypesKeys[],
+    command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
     if (this.browserNode) {
-      return this.sendRequest(nodeId, command, payload);
+      return this.sendRequest(nodeTypes, command, payload);
     }
-    const address = await this.udpManager.nodeIdToConnection(nodeId);
-    if (address) {
-      return this.udpManager.sendMessage(address, command, payload);
-    } else {
-      // TODO: Fallback to reliable if no UDP route?
-      throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
+
+    const addresses = await this.udpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
+    if (addresses.length) {
+      const randomAddress = addresses[random_int(0, addresses.length - 1)];
+      return this.udpManager.sendMessage(randomAddress, command, payload);
     }
+
+    return this.sendRequest(nodeTypes, command, payload);
   }
 
-  public async gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
+  public async gossip(command: ICommandsKeysForSending, payload: Uint8Array): Promise<void> {
     return this.gossipManager.gossip(command, payload);
   }
 
@@ -218,7 +185,7 @@ export class Network extends EventEmitter implements INetwork {
   // TODO: Achieve the same without re-implementing methods
 
   public on(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.on.call(this, event, listener);
@@ -226,7 +193,7 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public once(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.once.call(this, event, listener);
@@ -234,7 +201,7 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public off(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     listener: (payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.off.call(this, event, listener);
@@ -242,10 +209,50 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public emit(
-    event: ICommandsKeys,
+    event: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
   ): boolean {
     return EventEmitter.prototype.emit.call(this, event, payload, responseCallback);
+  }
+
+  // TODO: There should be a smart way to infer type instead of `any`
+  private async getProtocolManagerAndConnection(
+    nodeTypes: INodeTypesKeys[],
+  ): Promise<[AbstractProtocolManager<any, INodeContactInfo>, any]> {
+    const tcpConnections = this.tcpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
+    if (tcpConnections.length) {
+      const randomConnection = randomElement(tcpConnections);
+      return [this.tcpManager, randomConnection];
+    }
+
+    const nodeIds = this.tcpManager.getNodeIdsOfNodeTypes(nodeTypes);
+    if (nodeIds.length) {
+      const randomNodeId = randomElement(nodeIds);
+      const connection = await this.tcpManager.nodeIdToConnection(randomNodeId);
+      if (connection) {
+        return [this.tcpManager, connection];
+      }
+    }
+
+    // Node likely doesn't have any other way to communicate besides WebSocket
+    const wsConnections = this.wsManager.getActiveConnectionsOfNodeTypes(nodeTypes);
+    if (wsConnections.length) {
+      const randomConnection = randomElement(wsConnections);
+      return [this.wsManager, randomConnection];
+    }
+
+    {
+      const nodeIds = this.wsManager.getNodeIdsOfNodeTypes(nodeTypes);
+      if (nodeIds.length) {
+        const randomNodeId = randomElement(nodeIds);
+        const connection = await this.wsManager.nodeIdToConnection(randomNodeId);
+        if (connection) {
+          return [this.wsManager, connection];
+        }
+      }
+    }
+
+    throw new Error(`Can't find any node that is in node types list: ${nodeTypes.join(', ')}`);
   }
 }

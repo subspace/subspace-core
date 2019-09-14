@@ -68,9 +68,9 @@ export class RPC extends EventEmitter {
       });
   }
 
-  public async ping(nodeId: Uint8Array, payload?: Uint8Array): Promise<Uint8Array> {
-    return this.network.sendRequestUnreliable(nodeId, 'ping', payload);
-  }
+  // public async ping(nodeId: Uint8Array, payload?: Uint8Array): Promise<Uint8Array> {
+  //   return this.network.sendRequestUnreliable(nodeId, 'ping', payload);
+  // }
 
   /**
    * Gossip a new tx out to all peers.
@@ -99,13 +99,12 @@ export class RPC extends EventEmitter {
   /**
    * Request a tx over the network by id
    *
-   * @param nodeId  address of node to request from
    * @param txId    content-addressed id of tx
    *
    * @return A valid tx instance
    */
-  public async requestTx(nodeId: Uint8Array, txId: Uint8Array): Promise<Tx> {
-    const binaryTx = await this.network.sendRequestUnreliable(nodeId, 'tx-request', txId);
+  public async requestTx(txId: Uint8Array): Promise<Tx> {
+    const binaryTx = await this.network.sendRequestUnreliable(['full'], 'tx-request', txId);
     const tx = Tx.fromBytes(binaryTx);
     if (!tx.isValid(this.blsSignatures)) {
       // TODO
@@ -120,13 +119,12 @@ export class RPC extends EventEmitter {
   /**
    * Request a block over the network by id
    *
-   * @param nodeId  address of node to request from
    * @param blockId content-addressed id of block
    *
    * @return A valid block instance
    */
-  public async requestBlock(nodeId: Uint8Array, blockId: Uint8Array): Promise<Block> {
-    const binaryBlock = await this.network.sendRequestUnreliable(nodeId, 'block-request', blockId);
+  public async requestBlock(blockId: Uint8Array): Promise<Block> {
+    const binaryBlock = await this.network.sendRequestUnreliable(['full'], 'block-request', blockId);
     const block = Block.fromFullBytes(binaryBlock);
     if (!block.isValid(this.blsSignatures)) {
       // TODO

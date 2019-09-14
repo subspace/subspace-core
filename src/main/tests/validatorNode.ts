@@ -15,11 +15,12 @@ import { run } from '../run';
  */
 const testValidatorNode = async () => {
 
-  const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
+  // const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
 
   // spin up the gateway node
   const gatewayContactInfo: IPeerContactInfo = {
-    nodeId: gatewayNodeId,
+    nodeId: new Uint8Array(),
+    nodeType: 'gateway',
     address: 'localhost',
     udpPort: 10888,
     tcpPort: 10889,
@@ -27,11 +28,12 @@ const testValidatorNode = async () => {
     protocolVersion: '4',
   };
 
-  const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  // const validatorNodeId = crypto.hash(Buffer.from('validator'));
 
   // spin up the validator node
   const validatorContactInfo: IPeerContactInfo = {
-    nodeId: validatorNodeId,
+    nodeId: new Uint8Array(),
+    nodeType: 'validator',
     address: 'localhost',
     udpPort: 11888,
     tcpPort: 11889,

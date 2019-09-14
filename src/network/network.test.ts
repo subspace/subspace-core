@@ -6,6 +6,7 @@ import {Network} from "./Network";
 const peer1: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('1'.repeat(64), 'hex'),
+  nodeType: 'full',
   protocolVersion: '4',
   tcpPort: allocatePort(),
   udpPort: allocatePort(),
@@ -15,6 +16,7 @@ const peer1: IPeerContactInfo = {
 const peer2: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('2'.repeat(64), 'hex'),
+  nodeType: 'full',
   protocolVersion: '4',
   tcpPort: allocatePort(),
   udpPort: allocatePort(),
@@ -24,6 +26,7 @@ const peer2: IPeerContactInfo = {
 const peer3: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('3'.repeat(64), 'hex'),
+  nodeType: 'full',
   protocolVersion: '4',
   tcpPort: allocatePort(),
   udpPort: allocatePort(),
@@ -33,6 +36,7 @@ const peer3: IPeerContactInfo = {
 const peer4: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('4'.repeat(64), 'hex'),
+  nodeType: 'client',
   protocolVersion: '4',
   tcpPort: allocatePort(),
   udpPort: allocatePort(),
@@ -64,7 +68,7 @@ describe('UDP', () => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         resolve();
       });
-      networkClient1.sendOneWayRequestUnreliable(peer2.nodeId, 'ping', randomPayload);
+      networkClient1.sendRequestOneWayUnreliable(['full'], 'ping', randomPayload);
     });
   });
 
@@ -78,7 +82,7 @@ describe('UDP', () => {
           resolve();
         });
       }),
-      networkClient1.sendRequestUnreliable(peer2.nodeId, 'ping', randomPayload),
+      networkClient1.sendRequestUnreliable(['full'], 'ping', randomPayload),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
@@ -92,7 +96,7 @@ describe('TCP', () => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         resolve();
       });
-      networkClient1.sendOneWayRequest(peer2.nodeId, 'ping', randomPayload);
+      networkClient1.sendRequestOneWay(['full'], 'ping', randomPayload);
     });
   });
 
@@ -106,7 +110,7 @@ describe('TCP', () => {
           resolve();
         });
       }),
-      networkClient1.sendRequest(peer2.nodeId, 'ping', randomPayload),
+      networkClient1.sendRequest(['full'], 'ping', randomPayload),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
@@ -120,7 +124,7 @@ describe('WebSocket', () => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         resolve();
       });
-      networkClient4.sendOneWayRequest(peer1.nodeId, 'ping', randomPayload);
+      networkClient4.sendRequestOneWay(['full'], 'ping', randomPayload);
     });
   });
 
@@ -134,8 +138,7 @@ describe('WebSocket', () => {
           resolve();
         });
       }),
-      // TODO: Changing `peer1` to `peer2` causes test to fail, likely because of concurrent execution with the same port
-      networkClient4.sendRequest(peer1.nodeId, 'ping', randomPayload),
+      networkClient4.sendRequest(['full'], 'ping', randomPayload),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });

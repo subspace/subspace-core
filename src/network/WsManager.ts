@@ -2,16 +2,27 @@ import * as http from "http";
 import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeys} from "./commands";
-import {IAddress, INodeAddress} from "./Network";
+import {ICommandsKeys} from "./constants";
+import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {IAddress} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
-export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
+function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoWs[] {
+  const bootstrapNodesWs: INodeContactInfoWs[] = [];
+  for (const bootstrapNode of bootstrapNodes) {
+    if (bootstrapNode.wsPort !== undefined) {
+      bootstrapNodesWs.push(bootstrapNode as INodeContactInfoWs);
+    }
+  }
+  return bootstrapNodesWs;
+}
+
+export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
   public static init(
-    ownNodeId: Uint8Array,
-    bootstrapWsNodes: INodeAddress[],
+    identificationPayload: Uint8Array,
+    bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -20,8 +31,8 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   ): Promise<WsManager> {
     return new Promise((resolve, reject) => {
       const instance = new WsManager(
-        ownNodeId,
-        bootstrapWsNodes,
+        identificationPayload,
+        extractWsBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
@@ -35,14 +46,14 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     });
   }
 
-  private readonly ownNodeId: Uint8Array;
+  private readonly identificationPayload: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
 
   /**
-   * @param ownNodeId
-   * @param bootstrapWsNodes
+   * @param identificationPayload
+   * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
@@ -52,8 +63,8 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
    * @param errorCallback
    */
   public constructor(
-    ownNodeId: Uint8Array,
-    bootstrapWsNodes: INodeAddress[],
+    identificationPayload: Uint8Array,
+    bootstrapNodes: INodeContactInfoWs[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
@@ -62,10 +73,10 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapWsNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.ownNodeId = ownNodeId;
+    this.identificationPayload = identificationPayload;
     this.connectionTimeout = connectionTimeout;
 
     if (ownWsAddress) {
@@ -123,7 +134,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
         resolve(null);
         return;
       }
-      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.port}`);
+      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.wsPort}`);
       connection.onopen = () => {
         clearTimeout(timeout);
         if (timedOut) {
@@ -132,7 +143,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
           const identificationMessage = composeMessage(
             'identification',
             0,
-            this.ownNodeId,
+            this.identificationPayload,
           );
           connection.send(identificationMessage);
           this.registerBrowserWsConnection(connection, nodeId);
@@ -148,7 +159,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       throw new Error(
-        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
       );
     }
     if ('sendBytes' in connection) {
