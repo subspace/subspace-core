@@ -177,21 +177,23 @@ describe('Gossip', () => {
   });
 });
 
-// describe('Identification', () => {
-//   test('Send one-way reliable to initially unknown', async () => {
-//     const randomPayload = randomBytes(32);
-//     return new Promise((resolve) => {
-//       networkClient4.once('ping', (payload, _, clientIdentification) => {
-//         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-//         expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
-//         expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
-//         resolve();
-//       });
-//       networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
-//     });
-//   });
-//
-// });
+describe('Identification', () => {
+  test('Send one-way reliable to initially unknown', async () => {
+    const randomPayload = randomBytes(32);
+    return new Promise((resolve) => {
+      networkClient4.once('ping', (payload, _, clientIdentification) => {
+        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
+        resolve();
+      });
+      setTimeout(() => {
+        networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
+      });
+    });
+  });
+
+});
 
 afterEach(async () => {
   await networkClient1.destroy();

@@ -1,4 +1,4 @@
-import {ArrayMap} from "array-map-set";
+import {ArrayMap, ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
 import {
   ADDRESS_PAYLOAD_LENGTH,
@@ -186,19 +186,23 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
 
   /**
    * @param nodeTypes
-   *
-   * @return
    */
   public getNodeIdsOfNodeTypes(nodeTypes: INodeTypesKeys[]): Uint8Array[] {
     const nodeTypesSet = new Set(nodeTypes);
-    const nodeIds: Uint8Array[] = [];
+    const nodeIds = ArraySet();
     this.nodeIdToAddressMap.forEach((address: Address, nodeId: Uint8Array) => {
       if (nodeTypesSet.has(address.nodeType)) {
-        nodeIds.push(nodeId);
+        nodeIds.add(nodeId);
       }
     });
 
-    return nodeIds;
+    this.nodeIdToIdentificationMap.forEach((nodeContactIdentification: INodeContactIdentification) => {
+      if (nodeTypesSet.has(nodeContactIdentification.nodeType)) {
+        nodeIds.add(nodeContactIdentification.nodeId);
+      }
+    });
+
+    return Array.from(nodeIds);
   }
 
   /**

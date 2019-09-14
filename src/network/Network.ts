@@ -83,7 +83,7 @@ export class Network extends EventEmitter implements INetwork {
     const bootstrapPromises: Array<Promise<any>> = [];
     // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
     for (const bootstrapNode of bootstrapNodes) {
-      if (bootstrapNode.tcp4Port) {
+      if (bootstrapNode.tcp4Port && !browserNode) {
         bootstrapPromises.push(
           tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
             .catch((_) => {
