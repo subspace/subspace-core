@@ -66,6 +66,7 @@ const startValidatorNode = async () => {
     [awsGatewayContactInfo],
   );
 
+  validatorNode.ping();
   validatorNode.syncLedgerAndValidate();
 
 };

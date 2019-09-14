@@ -129,7 +129,7 @@ export class RPC extends EventEmitter {
    * @return A valid tx instance
    */
   public async requestTx(txId: Uint8Array): Promise<Tx> {
-    const binaryTx = await this.network.sendRequestUnreliable(['full', 'validator', 'gateway'], 'tx-request', txId);
+    const binaryTx = await this.network.sendRequest(['full', 'validator', 'gateway'], 'tx-request', txId);
     const tx = Tx.fromBytes(binaryTx);
     if (!tx.isValid(this.blsSignatures)) {
       // TODO
@@ -149,7 +149,7 @@ export class RPC extends EventEmitter {
    * @return A valid block instance
    */
   public async requestBlock(blockId: Uint8Array): Promise<Block> {
-    const binaryBlock = await this.network.sendRequestUnreliable(['gateway', 'full', 'validator'], 'block-request', blockId);
+    const binaryBlock = await this.network.sendRequest(['gateway', 'full', 'validator'], 'block-request', blockId);
     const block = Block.fromFullBytes(binaryBlock);
     if (!block.isValid(this.blsSignatures)) {
       // TODO
@@ -170,7 +170,7 @@ export class RPC extends EventEmitter {
    */
   public async requestBlockByIndex(blockIndex: number): Promise<Block> {
     const binaryIndex = num2Bin(blockIndex);
-    const binaryBlock = await this.network.sendRequestUnreliable(['gateway', 'full', 'validator'], 'block-request-by-index', binaryIndex);
+    const binaryBlock = await this.network.sendRequest(['gateway', 'full', 'validator'], 'block-request-by-index', binaryIndex);
     const block = Block.fromFullBytes(binaryBlock);
     if (!block.isValid(this.blsSignatures)) {
       // TODO
@@ -190,8 +190,8 @@ export class RPC extends EventEmitter {
    * @return A valid piece instance, with metadata
    */
   public async requestPiece(pieceId: Uint8Array): Promise<IPiece> {
-    const binaryPiece = await this.network.sendRequestUnreliable(['gateway', 'full'], 'piece-request', pieceId);
-    if (binaryPiece.length < 4166) {
+    const binaryPiece = await this.network.sendRequest(['gateway', 'full'], 'piece-request', pieceId);
+    if (binaryPiece.length < 4162) {
       throw new Error('Received invalid piece, too short');
     }
 
@@ -199,8 +199,8 @@ export class RPC extends EventEmitter {
       piece: binaryPiece.subarray(0, 4096),
       data: {
         pieceHash: binaryPiece.subarray(4096, 4128),
-        stateHash: binaryPiece.subarray(4128, 4164),
-        pieceIndex: smallBin2Num(binaryPiece.subarray(4164, 4166)),
+        stateHash: binaryPiece.subarray(4128, 4160),
+        pieceIndex: smallBin2Num(binaryPiece.subarray(4160, 4164)),
         proof: binaryPiece.subarray(4166),
       },
     };

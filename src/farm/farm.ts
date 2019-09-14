@@ -262,6 +262,9 @@ export class Farm {
   private async getPieceData(pieceHash: Uint8Array): Promise<IPieceData> {
     const binaryPieceData = await this.metadataStore.get(pieceHash);
     if (!binaryPieceData) {
+      // tslint:disable: no-console
+      // console.log(pieceHash);
+      // console.log(await this.metadataStore.getKeys());
       throw new Error('Cannot get piece data, does not exist in persistent storage');
     }
     return {

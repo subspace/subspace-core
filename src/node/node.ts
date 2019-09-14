@@ -1,8 +1,9 @@
 // tslint:disable: no-console
 // tslint:disable: member-ordering
 
+import { ArrayMap } from 'array-map-set';
 import { EventEmitter } from 'events';
-// import * as codes from '../codes/codes';
+import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
@@ -12,7 +13,7 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings, IPiece } from '../main/interfaces';
 import { RPC } from '../network/rpc';
-import { bin2Hex, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -217,30 +218,47 @@ export class Node extends EventEmitter {
     console.log('\nLaunching a new Subspace Validator Node!');
     console.log('-----------------------------------\n');
 
-    this.isGossiping = true;
+    // this.isGossiping = true;
 
-    // console.log('Syncing ledger state......');
-    // let blockIndex = 0;
-    // let hasChild = true;
-    // while (hasChild) {
-    //   console.log(`Requesting block at index: ${blockIndex}`);
-    //   const block = await this.requestBlockByIndex(blockIndex);
-    //   console.log('Received block', block);
-    //   console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
-    //   const piece = await this.requestPiece(block.value.proof.value.pieceHash);
-    //   console.log('Received piece', piece);
-    //   const encoding = codes.encodePiece(piece.piece, block.value.proof.value.publicKey, this.settings.encodingRounds);
-    //   console.log('Completing encoding piece');
-    //   if (block && encoding) {
-    //     console.log('Validating block and encoding...');
-    //     await this.onBlock(block, encoding);
-    //     ++ blockIndex;
-    //   } else {
-    //     console.log('Completed syncing the ledger');
-    //     hasChild = false;
-    //     // this.isGossiping = true;
-    //   }
-    // }
+    console.log('Syncing ledger state......');
+    let blockIndex = 0;
+    let hasChild = true;
+    const piecePool: Map<Uint8Array, IPiece> = ArrayMap<Uint8Array, IPiece>();
+    while (hasChild) {
+      let encoding: Uint8Array;
+      console.log(`Requesting block at index: ${blockIndex}`);
+      const block = await this.requestBlockByIndex(blockIndex);
+      console.log('Received block');
+
+      // only get piece if not genesis piece
+      if (areArraysEqual(block.value.proof.value.pieceHash, new Uint8Array(32))) {
+        console.log('Genesis piece, use null encoding');
+        encoding = new Uint8Array(4096);
+      } else {
+        console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
+        let piece = piecePool.get(block.value.proof.value.pieceHash);
+        if (!piece) {
+          piece = await this.requestPiece(block.value.proof.value.pieceHash);
+          piecePool.set(piece.data.pieceHash, piece);
+        }
+        console.log('Received piece');
+        const proverAddress = crypto.hash(block.value.proof.value.publicKey);
+        encoding = codes.encodePiece(piece.piece, proverAddress, this.settings.encodingRounds);
+        console.log('Completing encoding piece');
+      }
+
+      if (block && encoding) {
+        console.log('Validating block and encoding...');
+        if (await this.ledger.isValidBlock(block, encoding)) {
+          this.ledger.applyBlock(block);
+          ++ blockIndex;
+        }
+      } else {
+        console.log('Completed syncing the ledger');
+        hasChild = false;
+        this.isGossiping = true;
+      }
+    }
   }
 
   /**
@@ -261,6 +279,7 @@ export class Node extends EventEmitter {
 
   public async ping(): Promise<void> {
     await this.rpc.ping();
+    console.log('Received a ping reply from gateway');
   }
 
   public async joinGossipNetwork(): Promise<void> {
@@ -295,24 +314,23 @@ export class Node extends EventEmitter {
    * Apply the block to the ledger and gossip to all other peers.
    */
   public async onBlock(block: Block, encoding: Uint8Array): Promise<void> {
-    console.log('New block received by node via gossip', bin2Hex(block.key));
+    if (this.isGossiping) {
+      console.log('New block received by node via gossip', bin2Hex(block.key));
+      // check to ensure you have parent
+      if (!this.ledger.proofMap.has(block.value.previousBlockHash)) {
+        // we have received an early block who arrived before its parent
+        this.ledger.earlyBlocks.set(block.key, block.value);
+        // this.rpc.requestBlock()
+        // request the block from network while waiting to possibly receive via gossip
+        // once a new block is received and applied, check to see if it is parent of an orphan
+      }
 
-    // check to ensure you have parent
-    if (!this.ledger.proofMap.has(block.value.previousBlockHash)) {
-      // we have received an early block who arrived before its parent
-      this.ledger.earlyBlocks.set(block.key, block.value);
-      // this.rpc.requestBlock()
-      // request the block from network while waiting to possibly receive via gossip
-      // once a new block is received and applied, check to see if it is parent of an orphan
-    }
-
-    // filter duplicates or my own block
-    if (!this.ledger.compactBlockMap.has(block.key)) {
-      // console.log('Proofs in my proof map', this.ledger.proofMap.keys());
-      // console.log(block.key);
-      if (await this.ledger.isValidBlock(block, encoding)) {
-        this.ledger.applyBlock(block);
-        if (this.isGossiping) {
+      // filter duplicates or my own block
+      if (!this.ledger.compactBlockMap.has(block.key)) {
+        // console.log('Proofs in my proof map', this.ledger.proofMap.keys());
+        // console.log(block.key);
+        if (await this.ledger.isValidBlock(block, encoding)) {
+          this.ledger.applyBlock(block);
           this.rpc.gossipBlock(block, encoding);
         }
       }
@@ -377,7 +395,10 @@ export class Node extends EventEmitter {
    * @return block instance or not found
    */
   public async requestBlockByIndex(index: number): Promise<Block> {
-    return this.rpc.requestBlockByIndex(index);
+    const block = await this.rpc.requestBlockByIndex(index);
+    console.log('Received block at index', index);
+    // print(block.print());
+    return block;
   }
 
   /**
@@ -389,6 +410,11 @@ export class Node extends EventEmitter {
    */
   private async onBlockRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlockByIndex(index);
+    if (blockData) {
+      console.log('Got block by index');
+    } else {
+      throw new Error('Could not get block data by index');
+    }
     blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
   }
 
@@ -412,6 +438,7 @@ export class Node extends EventEmitter {
    */
   private async onPieceRequest(pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     if (this.farm) {
+      console.log('\n\n *** New Piece Request Received *** \n\n');
       const piece = await this.farm.getExactPiece(pieceId);
       if (piece) {
         const pieceData = Buffer.concat([
@@ -421,6 +448,7 @@ export class Node extends EventEmitter {
           smallNum2Bin(piece.data.pieceIndex),
           piece.data.proof,
         ]);
+        // console.log(piece);
         responseCallback(pieceData);
       }
       responseCallback(new Uint8Array());

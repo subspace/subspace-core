@@ -553,6 +553,7 @@ export class Ledger extends EventEmitter {
         this.unconfirmedTxs.delete(txId);
       }
       console.log('Completed applying new block');
+      // print(block.print());
       console.log('Checking if pending level has confirmed during applyBlock()');
 
       // update level confirmation cache and check if level is confirmed
@@ -733,16 +734,29 @@ export class Ledger extends EventEmitter {
     }
 
     const content = Content.fromBytes(contentData);
-    const txDataArray: Uint8Array[] = [];
-    for (const txId of content.value.payload) {
-      const txData = await this.getTx(txId);
-      if (!txData) {
+    const proof = Proof.fromBytes(proofData);
+    let coinbase: Tx | undefined;
+    if (content.value.payload[0]) {
+      const coinbaseData = await this.getTx(content.value.payload[0]);
+      if (!coinbaseData) {
         return;
       }
-      txDataArray.push(txData);
+      coinbase = Tx.fromBytes(coinbaseData);
     }
 
-    return Buffer.concat([proofData, contentData, ...txDataArray]);
+    const block = new Block({
+      previousBlockHash: compactBlock.previousBlockHash,
+      proof,
+      content,
+      coinbase,
+    });
+
+    if (!areArraysEqual(block.key, blockId)) {
+      print(block.print());
+      throw new Error('Error retrieving block, hash does not match request id');
+    }
+
+    return block.toFullBytes();
   }
 
   /**

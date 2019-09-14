@@ -59,7 +59,7 @@ const startGatewayNode = async () => {
     true,
     3,
     `${os.tmpdir()}/gateway`,
-    100,
+    1000,
     false,
     false,
     gatewayContactInfo,
@@ -68,7 +68,7 @@ const startGatewayNode = async () => {
 
   setTimeout(() => {
     gatewayNode.createLedgerAndFarm();
-  }, 5000);
+  }, 0);
 
 };
 

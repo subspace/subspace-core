@@ -1,11 +1,12 @@
 // @ts-ignore
+import { ArrayMap } from "array-map-set";
 import IAdapter from './IAdapter';
 
 export default class MemoryAdapter implements IAdapter {
   public db: Map<Uint8Array, Uint8Array>;
 
   public constructor() {
-    this.db = new Map();
+    this.db = ArrayMap<Uint8Array, Uint8Array>();
   }
 
   public async put(key: Uint8Array, value: Uint8Array): Promise<void> {

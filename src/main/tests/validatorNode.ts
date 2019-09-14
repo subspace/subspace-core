@@ -55,7 +55,7 @@ const testValidatorNode = async () => {
     [gatewayContactInfo],
   );
 
-  validatorNode.syncLedgerAndValidate();
+  await validatorNode.syncLedgerAndValidate();
 };
 
 testValidatorNode();
