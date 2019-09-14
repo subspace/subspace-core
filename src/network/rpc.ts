@@ -35,6 +35,7 @@ export class RPC extends EventEmitter {
 
       // received a new block and encoding via gossip
       this.network.on('block-gossip', (payload: Uint8Array) => {
+        console.log('Received a block via gossip');
         const encoding = payload.subarray(0, 4096);
         const blockData = payload.subarray(4096);
         const block = Block.fromFullBytes(blockData);
@@ -168,18 +169,20 @@ export class RPC extends EventEmitter {
    *
    * @return A valid block instance
    */
-  public async requestBlockByIndex(blockIndex: number): Promise<Block> {
+  public async requestBlockByIndex(blockIndex: number): Promise<Block | void> {
     const binaryIndex = num2Bin(blockIndex);
     const binaryBlock = await this.network.sendRequest(['gateway', 'full', 'validator'], 'block-request-by-index', binaryIndex);
-    const block = Block.fromFullBytes(binaryBlock);
-    if (!block.isValid(this.blsSignatures)) {
-      // TODO
-        // Drop the node who sent response from peer table
-        // Add to blacklisted nodes
-        // Request from another node
-      throw new Error('Received invalid block response from peer');
+    if (binaryBlock.length > 0) {
+      const block = Block.fromFullBytes(binaryBlock);
+      if (!block.isValid(this.blsSignatures)) {
+        // TODO
+          // Drop the node who sent response from peer table
+          // Add to blacklisted nodes
+          // Request from another node
+        throw new Error('Received invalid block response from peer');
+      }
+      return block;
     }
-    return block;
   }
 
   /**

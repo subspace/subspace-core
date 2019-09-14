@@ -225,29 +225,29 @@ export class Node extends EventEmitter {
     let hasChild = true;
     const piecePool: Map<Uint8Array, IPiece> = ArrayMap<Uint8Array, IPiece>();
     while (hasChild) {
-      let encoding: Uint8Array;
+      let encoding = new Uint8Array();
       console.log(`Requesting block at index: ${blockIndex}`);
       const block = await this.requestBlockByIndex(blockIndex);
-      console.log('Received block');
-
-      // only get piece if not genesis piece
-      if (areArraysEqual(block.value.proof.value.pieceHash, new Uint8Array(32))) {
-        console.log('Genesis piece, use null encoding');
-        encoding = new Uint8Array(4096);
-      } else {
-        console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
-        let piece = piecePool.get(block.value.proof.value.pieceHash);
-        if (!piece) {
-          piece = await this.requestPiece(block.value.proof.value.pieceHash);
-          piecePool.set(piece.data.pieceHash, piece);
+      if (block) {
+        console.log('Received block');
+        // only get piece if not genesis piece
+        if (areArraysEqual(block.value.proof.value.pieceHash, new Uint8Array(32))) {
+          console.log('Genesis piece, use null encoding');
+          encoding = new Uint8Array(4096);
+        } else {
+          console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
+          let piece = piecePool.get(block.value.proof.value.pieceHash);
+          if (!piece) {
+            piece = await this.requestPiece(block.value.proof.value.pieceHash);
+            piecePool.set(piece.data.pieceHash, piece);
+          }
+          console.log('Received piece');
+          const proverAddress = crypto.hash(block.value.proof.value.publicKey);
+          encoding = codes.encodePiece(piece.piece, proverAddress, this.settings.encodingRounds);
+          console.log('Completing encoding piece');
         }
-        console.log('Received piece');
-        const proverAddress = crypto.hash(block.value.proof.value.publicKey);
-        encoding = codes.encodePiece(piece.piece, proverAddress, this.settings.encodingRounds);
-        console.log('Completing encoding piece');
       }
-
-      if (block && encoding) {
+      if (block && encoding.length) {
         console.log('Validating block and encoding...');
         if (await this.ledger.isValidBlock(block, encoding)) {
           this.ledger.applyBlock(block);
@@ -394,10 +394,11 @@ export class Node extends EventEmitter {
    *
    * @return block instance or not found
    */
-  public async requestBlockByIndex(index: number): Promise<Block> {
+  public async requestBlockByIndex(index: number): Promise<Block | void> {
     const block = await this.rpc.requestBlockByIndex(index);
-    console.log('Received block at index', index);
-    // print(block.print());
+    if (block) {
+      console.log('Received block at index', index);
+    }
     return block;
   }
 
@@ -410,11 +411,6 @@ export class Node extends EventEmitter {
    */
   private async onBlockRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlockByIndex(index);
-    if (blockData) {
-      console.log('Got block by index');
-    } else {
-      throw new Error('Could not get block data by index');
-    }
     blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
   }
 
