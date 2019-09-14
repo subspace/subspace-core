@@ -16,7 +16,6 @@ import { run } from '../run';
 const startGatewayNode = async () => {
 
   const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
-  const chainCount = 1;
 
   // spin up the gateway node
   const gatewayContactInfo: IPeerContactInfo = {
@@ -42,7 +41,7 @@ const startGatewayNode = async () => {
 
   const gatewayNode: Node = await run(
     'full',
-    1,
+    32,
     'memory',
     1,
     100000000,
@@ -55,8 +54,8 @@ const startGatewayNode = async () => {
   );
 
   setTimeout(() => {
-    gatewayNode.createLedgerAndFarm(chainCount);
-  }, 3000);
+    gatewayNode.createLedgerAndFarm();
+  }, 5000);
 
 };
 

@@ -16,7 +16,6 @@ import { run } from '../run';
 const testValidatorNode = async () => {
 
   const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
-  // const chainCount = 1;
 
   // spin up the gateway node
   const gatewayContactInfo: IPeerContactInfo = {
@@ -42,7 +41,7 @@ const testValidatorNode = async () => {
 
   const validatorNode: Node = await run(
     'validator',
-    1,
+    32,
     'disk',
     0,
     0,

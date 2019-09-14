@@ -11,7 +11,7 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings } from '../main/interfaces';
 import { RPC } from '../network/rpc';
-import { bin2Hex, measureProximity, print, randomWait } from '../utils/utils';
+import { bin2Hex, measureProximity, randomWait } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -41,16 +41,15 @@ export class Node extends EventEmitter {
      * A new level has been confirmed and encoded into a piece set.
      * Add each piece to the plot, if farming.
      */
-    this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array, confirmedTxs: Tx[]) => {
+    this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array, confirmedTxs: Tx[], lastCoinBaseTxTime: number) => {
+      // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
+      const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash, lastCoinBaseTxTime);
+      console.log('Finished encoding a new level and updating state');
       if (this.farm) {
-        // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
-        const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash);
-        if (this.farm) {
-          for (const piece of pieceDataSet) {
-            await this.farm.addPiece(piece.piece, piece.data);
-          }
-          this.ledger.emit('completed-plotting');
+        for (const piece of pieceDataSet) {
+          await this.farm.addPiece(piece.piece, piece.data);
         }
+        this.ledger.emit('completed-plotting');
       }
 
       // update account for each tx that links to an account for this node
@@ -70,7 +69,7 @@ export class Node extends EventEmitter {
      */
     this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
       console.log('New block created by this Node.');
-      print(block.print());
+      // print(block.print());
       if (this.ledger.isValidating) {
         await this.ledger.isValidBlock(block, encoding);
       }
@@ -87,7 +86,7 @@ export class Node extends EventEmitter {
 
     // switch (this.type) {
     //   case 'full':
-    //     this.createLedgerAndFarm(this.settings.numberOfChains);
+    //     this.createLedgerAndFarm();
     //     break;
     //   case 'validator':
     //     this.syncLedgerAndValidate();
@@ -99,7 +98,7 @@ export class Node extends EventEmitter {
    * Starts a new ledger from genesis and begins farming its own plot in isolation. Mostly for testing.
    * Retains both the original ledger data within storage and the encoded piece set in the plot.
    */
-  public async createLedgerAndFarm(chainCount: number): Promise<void> {
+  public async createLedgerAndFarm(): Promise<void> {
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
@@ -107,14 +106,15 @@ export class Node extends EventEmitter {
     console.log('\nLaunching a new Subspace Full Node!');
     console.log('-----------------------------------\n');
     console.log(`Created a new node identity with address ${bin2Hex(account.address)}`);
-    console.log(`Starting a new ledger from genesis with ${chainCount} chains.`);
-    const [levelRecords, levelHash] = await this.ledger.createGenesisLevel();
-    const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
-    console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
-    for (const piece of pieceSet) {
-      await this.farm.addPiece(piece.piece, piece.data);
-    }
-    console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
+    console.log(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
+    // const [levelRecords, levelHash] =
+    await this.ledger.createGenesisLevel();
+    // const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
+    // console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
+    // for (const piece of pieceSet) {
+    //   await this.farm.addPiece(piece.piece, piece.data);
+    // }
+    // console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
 
     // start a farming evaluation loop
     while (this.config.farm) {
@@ -123,7 +123,7 @@ export class Node extends EventEmitter {
   }
 
   public async farmBlock(): Promise<void> {
-    await randomWait(300);
+    await randomWait(25);
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
@@ -253,21 +253,26 @@ export class Node extends EventEmitter {
    * Apply the block to the ledger and gossip to all other peers.
    */
   public async onBlock(block: Block, encoding: Uint8Array): Promise<void> {
-    console.log('New block received by node via gossip');
-    if (!this.ledger.proofMap.has(block.key)) {
+    console.log('New block received by node via gossip', bin2Hex(block.key));
+
+    // check to ensure you have parent
+    if (!this.ledger.proofMap.has(block.value.previousBlockHash)) {
       // we have received an early block who arrived before its parent
       this.ledger.earlyBlocks.set(block.key, block.value);
       // this.rpc.requestBlock()
       // request the block from network while waiting to possibly receive via gossip
       // once a new block is received and applied, check to see if it is parent of an orphan
     }
-    if (await this.ledger.isValidBlock(block, encoding)) {
-      this.ledger.applyBlock(block);
-      this.rpc.gossipBlock(block, encoding);
-    }
 
-    // ToDo
-      // filter duplicates and prevent re-gossip to sender
+    // filter duplicates or my own block
+    if (!this.ledger.compactBlockMap.has(block.key)) {
+      // console.log('Proofs in my proof map', this.ledger.proofMap.keys());
+      // console.log(block.key);
+      if (await this.ledger.isValidBlock(block, encoding)) {
+        this.ledger.applyBlock(block);
+        this.rpc.gossipBlock(block, encoding);
+      }
+    }
   }
 
   /**

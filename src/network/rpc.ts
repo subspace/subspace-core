@@ -3,6 +3,7 @@ import {BlsSignatures} from "../crypto/BlsSignatures";
 // import * as crypto from '../crypto/crypto';
 import { Block } from "../ledger/block";
 import { Tx } from "../ledger/tx";
+import { bin2Hex } from "../utils/utils";
 import { Network } from './Network';
 
 export class RPC extends EventEmitter {
@@ -89,6 +90,7 @@ export class RPC extends EventEmitter {
    *
    */
   public async gossipBlock(block: Block, encoding: Uint8Array): Promise<void> {
+    console.log('gossiping a new block', bin2Hex(block.key));
     const blockData = block.toFullBytes();
     const payload = Buffer.concat([encoding, blockData]);
     await this.network.gossip('block-gossip', payload);

@@ -93,6 +93,7 @@ export class Block {
       previousBlockHash: data.subarray(0, 32),
       proofHash: data.subarray(32, 64),
       contentHash: data.subarray(64, 96),
+      // coinbase: data.subarray(96),
     };
     return compactBlockValue;
   }
@@ -117,10 +118,10 @@ export class Block {
    * Returns a compact binary representation of the block data for level encoding.
    */
   public toBytes(): Uint8Array {
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
       this._value.proof.toBytes(),
       this._value.content.toBytes(),
-    ]));
+    ]);
   }
 
   /**
@@ -150,7 +151,7 @@ export class Block {
       this._value.previousBlockHash,
       this._value.proof.key,
       this._value.content.key,
-      this._value.coinbase ? this._value.coinbase.key : new Uint8Array(),
+      // this._value.coinbase ? this._value.coinbase.key : new Uint8Array(),
     ]));
   }
 
