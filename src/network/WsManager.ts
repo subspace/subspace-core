@@ -21,7 +21,7 @@ function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeConta
 export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
-    identificationPayload: Uint8Array,
+    extendedIdentificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -31,7 +31,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     return new Promise((resolve, reject) => {
       const instance = new WsManager(
         ownNodeContactInfo,
-        identificationPayload,
+        extendedIdentificationPayload,
         extractWsBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
@@ -45,14 +45,14 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     });
   }
 
-  private readonly identificationPayload: Uint8Array;
+  private readonly extendedIdentificationPayload: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
 
   /**
    * @param ownNodeContactInfo
-   * @param identificationPayload
+   * @param extendedIdentificationPayload
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -63,7 +63,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
    */
   public constructor(
     ownNodeContactInfo: INodeContactInfo,
-    identificationPayload: Uint8Array,
+    extendedIdentificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoWs[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -75,7 +75,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.identificationPayload = identificationPayload;
+    this.extendedIdentificationPayload = extendedIdentificationPayload;
     this.connectionTimeout = connectionTimeout;
 
     if (!browserNode && ownNodeContactInfo.wsPort) {
@@ -143,7 +143,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
           const identificationMessage = composeMessage(
             'identification',
             0,
-            this.identificationPayload,
+            this.extendedIdentificationPayload,
           );
           connection.send(identificationMessage);
           this.registerBrowserWsConnection(
