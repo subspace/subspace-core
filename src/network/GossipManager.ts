@@ -2,7 +2,7 @@ import {ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
 import {hash} from "../crypto/crypto";
 import {bin2Hex, compareUint8Array} from "../utils/utils";
-import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS, ICommandsKeys} from "./commands";
+import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS_SET, ICommandsKeysForSending} from "./constants";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {composeMessage, noopResponseCallback} from "./utils";
@@ -38,7 +38,7 @@ export class GossipManager extends EventEmitter {
 
   public on(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.on.call(this, event, listener);
     return this;
@@ -46,7 +46,7 @@ export class GossipManager extends EventEmitter {
 
   public once(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.once.call(this, event, listener);
     return this;
@@ -54,7 +54,7 @@ export class GossipManager extends EventEmitter {
 
   public off(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this {
     EventEmitter.prototype.off.call(this, event, listener);
     return this;
@@ -62,15 +62,15 @@ export class GossipManager extends EventEmitter {
 
   public emit(
     event: 'command',
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
   ): boolean {
     return EventEmitter.prototype.emit.call(this, event, command, payload, responseCallback);
   }
 
-  public gossip(command: ICommandsKeys, payload: Uint8Array): Promise<void> {
-    if (!GOSSIP_COMMANDS.has(command)) {
+  public gossip(command: ICommandsKeysForSending, payload: Uint8Array): Promise<void> {
+    if (!GOSSIP_COMMANDS_SET.has(command)) {
       throw new Error(`Command ${command} is not supported for gossiping`);
     }
     const gossipMessage = new Uint8Array(1 + payload.length);
@@ -170,7 +170,7 @@ export class GossipManager extends EventEmitter {
 
   private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
     const command = COMMANDS_INVERSE[gossipMessage[0]];
-    if (!GOSSIP_COMMANDS.has(command)) {
+    if (!GOSSIP_COMMANDS_SET.has(command)) {
       // TODO: Log in debug mode
       return;
     }
@@ -182,7 +182,7 @@ export class GossipManager extends EventEmitter {
     this.gossipCache.add(messageHash);
 
     const payload = gossipMessage.subarray(1);
-    this.emit('command', command, payload);
+    this.emit('command', command as ICommandsKeysForSending, payload);
     this.gossipInternal(gossipMessage, sourceNodeId)
       .catch((_) => {
         // TODO: Log in debug mode

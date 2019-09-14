@@ -21,6 +21,7 @@ import { RPC } from './rpc';
 
 const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
+  nodeType: 'full',
   address: 'localhost',
   udpPort: allocatePort(),
   tcpPort: allocatePort(),
@@ -30,6 +31,7 @@ const peer1: IPeerContactInfo = {
 
 const peer2: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
+  nodeType: 'validator',
   address: 'localhost',
   udpPort: allocatePort(),
   tcpPort: allocatePort(),
@@ -40,8 +42,8 @@ const peer2: IPeerContactInfo = {
 const networkOptions1 = parseContactInfo(peer1, [peer2]);
 const networkOptions2 = parseContactInfo(peer2, [peer1]);
 
-const network1 = new Network(...networkOptions1);
-const network2 = new Network(...networkOptions2);
+let network1: Network;
+let network2: Network;
 
 let rpc1: RPC;
 let rpc2: RPC;
@@ -52,7 +54,8 @@ let wallet: Wallet;
 const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomBytes(32));
 
 beforeAll(async () => {
-  const blsSignatures = await BlsSignatures.init();
+  network1 = await Network.init(...networkOptions1);
+  network2 = await Network.init(...networkOptions2);  const blsSignatures = await BlsSignatures.init();
   rpc1 = new RPC(network1, blsSignatures);
   rpc2 = new RPC(network2, blsSignatures);
   const storage = new Storage('memory', 'tests', 'rpc');
@@ -62,13 +65,13 @@ beforeAll(async () => {
   tx = await wallet.createCoinBaseTx(1, publicKey);
 });
 
-test('ping-pong', async () => {
-  const sentPayload = crypto.randomBytes(32);
-  rpc2.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
-  const receivedPayload = await rpc1.ping(peer2.nodeId, sentPayload);
-  expect(sentPayload.join(', ')).toEqual(receivedPayload.join(', '));
-
-});
+// test('ping-pong', async () => {
+//   const sentPayload = crypto.randomBytes(32);
+//   rpc2.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
+//   const receivedPayload = await rpc1.ping(peer2.nodeId, sentPayload);
+//   expect(sentPayload.join(', ')).toEqual(receivedPayload.join(', '));
+//
+// });
 
 test('gossip-tx', async () => {
   rpc2.on('tx-gossip', (payload: Uint8Array) => {
@@ -87,21 +90,21 @@ test('gossip-block', async () => {
 });
 
 test('request-tx', async () => {
-  rpc2.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+  rpc1.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
     expect(txId.join(',')).toEqual(tx.key.join(','));
     responseCallback(tx.toBytes());
   });
-  const payload = await rpc1.requestTx(peer2.nodeId, tx.key);
+  const payload = await rpc2.requestTx(tx.key);
   expect(payload.toBytes().join(',')).toEqual(tx.toBytes().join(','));
 
 });
 
 test('request-block', async () => {
-  rpc2.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+  rpc1.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
     expect(blockId.join(',')).toEqual(block.key.join(','));
     responseCallback(block.toFullBytes());
   });
-  const payload = await rpc1.requestBlock(peer2.nodeId, block.key);
+  const payload = await rpc2.requestBlock(block.key);
   expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
 });
 

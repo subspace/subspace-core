@@ -1,13 +1,12 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {NODE_ID_LENGTH} from "../main/constants";
-import {ICommandsKeys} from "./commands";
-import {IAddress, INodeAddress} from "./Network";
-import {noopResponseCallback, parseMessage} from "./utils";
+import {ICommandsKeys, ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
+import {INodeContactInfo} from "./INetwork";
+import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
 
-export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
+export abstract class AbstractProtocolManager<Connection, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
-  protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, IAddress>();
+  protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, Address>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
@@ -30,7 +29,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
-    bootstrapNodes: INodeAddress[],
+    bootstrapNodes: Address[],
     protected readonly browserNode: boolean,
     protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
@@ -40,14 +39,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
     this.setMaxListeners(Infinity);
 
     for (const bootstrapNode of bootstrapNodes) {
-      this.nodeIdToAddressMap.set(
-        bootstrapNode.nodeId,
-        {
-          address: bootstrapNode.address,
-          port: bootstrapNode.port,
-          protocolVersion: bootstrapNode.protocolVersion,
-        },
-      );
+      this.nodeIdToAddressMap.set(bootstrapNode.nodeId, bootstrapNode);
     }
   }
 
@@ -60,7 +52,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   ): this;
   public on(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
   public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
     EventEmitter.prototype.on.call(this, event, listener);
@@ -73,7 +65,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   ): this;
   public once(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
   public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
     EventEmitter.prototype.once.call(this, event, listener);
@@ -86,7 +78,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   ): this;
   public off(
     event: 'command',
-    listener: (command: ICommandsKeys, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
   ): this;
   public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
     EventEmitter.prototype.off.call(this, event, listener);
@@ -100,7 +92,7 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
   ): boolean;
   public emit(
     event: 'command',
-    command: ICommandsKeys,
+    command: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void,
   ): boolean;
@@ -128,6 +120,44 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
    */
   public getMessageSizeLimit(): number {
     return this.messageSizeLimit;
+  }
+
+  /**
+   * @param nodeTypes
+   *
+   * @return Active connections
+   */
+  public getActiveConnectionsOfNodeTypes(nodeTypes: INodeTypesKeys[]): Connection[] {
+    const nodeTypesSet = new Set(nodeTypes);
+    const connections: Connection[] = [];
+    this.nodeIdToAddressMap.forEach((address: Address, nodeId: Uint8Array) => {
+      if (!nodeTypesSet.has(address.nodeType)) {
+        return;
+      }
+      const connection = this.nodeIdToConnectionMap.get(nodeId);
+      if (connection) {
+        connections.push(connection);
+      }
+    });
+
+    return connections;
+  }
+
+  /**
+   * @param nodeTypes
+   *
+   * @return
+   */
+  public getNodeIdsOfNodeTypes(nodeTypes: INodeTypesKeys[]): Uint8Array[] {
+    const nodeTypesSet = new Set(nodeTypes);
+    const nodeIds: Uint8Array[] = [];
+    this.nodeIdToAddressMap.forEach((address: Address, nodeId: Uint8Array) => {
+      if (nodeTypesSet.has(address.nodeType)) {
+        nodeIds.push(nodeId);
+      }
+    });
+
+    return nodeIds;
   }
 
   /**
@@ -202,16 +232,21 @@ export abstract class AbstractProtocolManager<Connection> extends EventEmitter {
     // TODO: Almost no validation!
     if (command === 'identification') {
       if (!this.connectionBased) {
+        this.destroyConnection(connection);
         throw new Error('Identification is not supported by protocol');
       }
-      if (payload.length !== NODE_ID_LENGTH) {
-        // TODO: Log in debug mode that payload length is incorrect
+      if (payload.length !== IDENTIFICATION_PAYLOAD_LENGTH) {
         this.destroyConnection(connection);
-      } else if (this.nodeIdToConnectionMap.has(payload)) {
+        throw new Error(
+          `Identification payload length is incorrect, expected ${IDENTIFICATION_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
+        );
+      }
+      // TODO: nodeType is not used
+      const {nodeId} = parseIdentificationPayload(payload);
+      if (this.nodeIdToConnectionMap.has(nodeId)) {
         // TODO: Log in debug mode that node mapping is already present
         this.destroyConnection(connection);
       } else {
-        const nodeId = payload.slice();
         this.nodeIdToConnectionMap.set(nodeId, connection);
         this.connectionToNodeIdMap.set(connection, nodeId);
       }

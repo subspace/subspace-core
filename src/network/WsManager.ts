@@ -2,47 +2,110 @@ import * as http from "http";
 import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeys} from "./commands";
-import {IAddress, INodeAddress} from "./Network";
+import {ICommandsKeys} from "./constants";
+import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {IAddress} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
 
-export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
-  private readonly ownNodeId: Uint8Array;
-  private readonly connectionTimeout: number;
-  private readonly wsServer: websocket.server | undefined;
-  private readonly httpServer: http.Server | undefined;
+function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoWs[] {
+  const bootstrapNodesWs: INodeContactInfoWs[] = [];
+  for (const bootstrapNode of bootstrapNodes) {
+    if (bootstrapNode.wsPort !== undefined) {
+      bootstrapNodesWs.push(bootstrapNode as INodeContactInfoWs);
+    }
+  }
+  return bootstrapNodesWs;
+}
 
-  /**
-   * @param ownNodeId
-   * @param bootstrapWsNodes
-   * @param browserNode
-   * @param messageSizeLimit In bytes
-   * @param responseTimeout In seconds
-   * @param connectionTimeout
-   * @param ownWsAddress
-   */
-  public constructor(
-    ownNodeId: Uint8Array,
-    bootstrapWsNodes: INodeAddress[],
+export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
+  public static init(
+    identificationPayload: Uint8Array,
+    bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
     ownWsAddress?: IAddress,
+  ): Promise<WsManager> {
+    return new Promise((resolve, reject) => {
+      const instance = new WsManager(
+        identificationPayload,
+        extractWsBootstrapNodes(bootstrapNodes),
+        browserNode,
+        messageSizeLimit,
+        responseTimeout,
+        connectionTimeout,
+        ownWsAddress,
+        () => {
+          resolve(instance);
+        },
+        reject,
+      );
+    });
+  }
+
+  private readonly identificationPayload: Uint8Array;
+  private readonly connectionTimeout: number;
+  private readonly wsServer: websocket.server | undefined;
+  private readonly httpServer: http.Server | undefined;
+
+  /**
+   * @param identificationPayload
+   * @param bootstrapNodes
+   * @param browserNode
+   * @param messageSizeLimit In bytes
+   * @param responseTimeout In seconds
+   * @param connectionTimeout
+   * @param ownWsAddress
+   * @param readyCallback
+   * @param errorCallback
+   */
+  public constructor(
+    identificationPayload: Uint8Array,
+    bootstrapNodes: INodeContactInfoWs[],
+    browserNode: boolean,
+    messageSizeLimit: number,
+    responseTimeout: number,
+    connectionTimeout: number,
+    ownWsAddress?: IAddress,
+    readyCallback?: () => void,
+    errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapWsNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.ownNodeId = ownNodeId;
+    this.identificationPayload = identificationPayload;
     this.connectionTimeout = connectionTimeout;
 
     if (ownWsAddress) {
-      const httpServer = http.createServer();
-      this.wsServer = this.createWebSocketServer(httpServer);
-      httpServer.listen(ownWsAddress.port, ownWsAddress.address);
+      const httpServer = http.createServer()
+        .on('error', (error: Error) => {
+          if (errorCallback) {
+            errorCallback(error);
+          }
+        })
+        .listen(ownWsAddress.port, ownWsAddress.address, readyCallback);
+
+      const wsServer = new websocket.server({
+        fragmentOutgoingMessages: false,
+        httpServer,
+        keepaliveGracePeriod: 5000,
+        keepaliveInterval: 2000,
+      });
+      wsServer
+        .on('request', (request: websocket.request) => {
+          const connection = request.accept();
+          this.registerServerWsConnection(connection);
+        })
+        .on('close', (connection: websocket.connection) => {
+          this.connectionCloseHandler(connection);
+        });
       this.httpServer = httpServer;
+      this.wsServer = wsServer;
+    } else if (readyCallback) {
+      setTimeout(readyCallback);
     }
   }
 
@@ -71,7 +134,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
         resolve(null);
         return;
       }
-      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.port}`);
+      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.wsPort}`);
       connection.onopen = () => {
         clearTimeout(timeout);
         if (timedOut) {
@@ -80,7 +143,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
           const identificationMessage = composeMessage(
             'identification',
             0,
-            this.ownNodeId,
+            this.identificationPayload,
           );
           connection.send(identificationMessage);
           this.registerBrowserWsConnection(connection, nodeId);
@@ -96,7 +159,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
     if (message.length > this.messageSizeLimit) {
       throw new Error(
-        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
       );
     }
     if ('sendBytes' in connection) {
@@ -148,25 +211,6 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection> {
       this.connectionToNodeIdMap.delete(connection);
       this.nodeIdToConnectionMap.delete(nodeId);
     }
-  }
-
-  private createWebSocketServer(httpServer: http.Server): websocket.server {
-    const wsServer = new websocket.server({
-      fragmentOutgoingMessages: false,
-      httpServer,
-      keepaliveGracePeriod: 5000,
-      keepaliveInterval: 2000,
-    });
-    wsServer
-      .on('request', (request: websocket.request) => {
-        const connection = request.accept();
-        this.registerServerWsConnection(connection);
-      })
-      .on('close', (connection: websocket.connection) => {
-        this.connectionCloseHandler(connection);
-      });
-
-    return wsServer;
   }
 
   private registerServerWsConnection(connection: websocket.connection, nodeId?: Uint8Array): void {

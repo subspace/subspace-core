@@ -1,35 +1,76 @@
 import * as dgram from "dgram";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeys} from "./commands";
-import {IAddress, INodeAddress} from "./Network";
-import {composeMessage} from "./utils";
+import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
+import {INodeContactInfo, INodeContactInfoUdp} from "./INetwork";
+import {IAddress} from "./Network";
+import {composeMessage, parseIdentificationPayload} from "./utils";
 
-export class UdpManager extends AbstractProtocolManager<IAddress> {
-  private ready: boolean = true;
-  private readyPromise: Promise<any> = Promise.resolve();
-  private readonly udp4Socket: dgram.Socket;
+function extractUdpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoUdp[] {
+  const bootstrapNodesUdp: INodeContactInfoUdp[] = [];
+  for (const bootstrapNode of bootstrapNodes) {
+    if (bootstrapNode.udp4Port !== undefined) {
+      bootstrapNodesUdp.push(bootstrapNode as INodeContactInfoUdp);
+    }
+  }
+  return bootstrapNodesUdp;
+}
 
-  /**
-   * @param bootstrapUdpNodes
-   * @param browserNode
-   * @param messageSizeLimit In bytes
-   * @param responseTimeout In seconds
-   * @param ownUdpAddress
-   */
-  public constructor(
-    bootstrapUdpNodes: INodeAddress[],
+export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INodeContactInfoUdp> {
+  public static init(
+    identificationPayload: Uint8Array,
+    bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     ownUdpAddress?: IAddress,
-  ) {
-    super(bootstrapUdpNodes, browserNode, messageSizeLimit, responseTimeout, false);
-    this.setMaxListeners(Infinity);
-
-    this.udp4Socket = this.createUdp4Socket(ownUdpAddress);
+  ): Promise<UdpManager> {
+    return new Promise((resolve, reject) => {
+      const instance = new UdpManager(
+        identificationPayload,
+        extractUdpBootstrapNodes(bootstrapNodes),
+        browserNode,
+        messageSizeLimit,
+        responseTimeout,
+        ownUdpAddress,
+        () => {
+          resolve(instance);
+        },
+        reject,
+      );
+    });
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<IAddress | null> {
+  private readonly identificationPayload: Uint8Array;
+  private readonly udp4Socket: dgram.Socket;
+
+  /**
+   * @param identificationPayload
+   * @param bootstrapNodes
+   * @param browserNode
+   * @param messageSizeLimit In bytes
+   * @param responseTimeout In seconds
+   * @param ownUdpAddress
+   * @param readyCallback
+   * @param errorCallback
+   */
+  public constructor(
+    identificationPayload: Uint8Array,
+    bootstrapNodes: INodeContactInfoUdp[],
+    browserNode: boolean,
+    messageSizeLimit: number,
+    responseTimeout: number,
+    ownUdpAddress?: IAddress,
+    readyCallback?: () => void,
+    errorCallback?: (error: Error) => void,
+  ) {
+    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, false);
+    this.setMaxListeners(Infinity);
+
+    this.identificationPayload = identificationPayload;
+    this.udp4Socket = this.createUdp4Socket(ownUdpAddress, readyCallback, errorCallback);
+  }
+
+  public async nodeIdToConnection(nodeId: Uint8Array): Promise<INodeContactInfoUdp | null> {
     if (this.browserNode) {
       return null;
     }
@@ -41,24 +82,19 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     throw new Error('Sending to arbitrary nodeId is not implemented yet');
   }
 
-  public async sendRawMessage(address: IAddress, message: Uint8Array): Promise<void> {
-    if (message.length > this.messageSizeLimit) {
+  public async sendRawMessage(address: INodeContactInfoUdp, message: Uint8Array): Promise<void> {
+    const udpMessage = new Uint8Array(IDENTIFICATION_PAYLOAD_LENGTH + message.length);
+    udpMessage.set(this.identificationPayload);
+    udpMessage.set(message, IDENTIFICATION_PAYLOAD_LENGTH);
+    if (udpMessage.length > this.messageSizeLimit) {
       throw new Error(
-        `UDP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed}`,
+        `UDP message too big, ${udpMessage.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
       );
-    }
-    if (!this.ready) {
-      try {
-        await this.readyPromise;
-      } catch {
-        // Just to avoid unhandled Promise exception
-        return;
-      }
     }
     return new Promise((resolve, reject) => {
       this.udp4Socket.send(
-        message,
-        address.port,
+        udpMessage,
+        address.udp4Port,
         address.address,
         (error) => {
           if (error) {
@@ -78,7 +114,7 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
   }
 
   protected sendMessageImplementation(
-    address: IAddress,
+    address: INodeContactInfoUdp,
     command: ICommandsKeys,
     requestResponseId: number,
     payload: Uint8Array,
@@ -91,13 +127,29 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
     // Not used by non-connection-based manager
   }
 
-  private createUdp4Socket(ownUdpAddress?: IAddress): dgram.Socket {
+  private createUdp4Socket(
+    ownUdpAddress?: IAddress,
+    readyCallback?: () => void,
+    errorCallback?: (error: Error) => void,
+  ): dgram.Socket {
     const udp4Socket = dgram.createSocket('udp4');
     udp4Socket
       .on(
         'message',
-        (message: Buffer, remote: dgram.RemoteInfo) => {
-          this.handleIncomingMessage(remote, message)
+        (udpMessage: Buffer, remote: dgram.RemoteInfo) => {
+          // Should be at least identification payload + command
+          if (udpMessage.length < (IDENTIFICATION_PAYLOAD_LENGTH + 1)) {
+            // TODO: Log in debug mode
+            return;
+          }
+          const {nodeId, nodeType} = parseIdentificationPayload(udpMessage.subarray(0, IDENTIFICATION_PAYLOAD_LENGTH));
+          const nodeContactInfo: INodeContactInfoUdp = {
+            address: remote.address,
+            nodeId: nodeId,
+            nodeType: nodeType,
+            udp4Port: remote.port,
+          };
+          this.handleIncomingMessage(nodeContactInfo, udpMessage.slice(IDENTIFICATION_PAYLOAD_LENGTH))
             .catch((_) => {
               // TODO: Handle errors
             });
@@ -107,16 +159,20 @@ export class UdpManager extends AbstractProtocolManager<IAddress> {
         // TODO: Handle errors
       });
     if (ownUdpAddress) {
-      this.ready = false;
-      this.readyPromise = new Promise((resolve, reject) => {
-        udp4Socket
-          .once('listening', () => {
-            this.ready = true;
-            resolve();
-          })
-          .once('error', reject);
-      });
+      udp4Socket
+        .once('listening', () => {
+          if (readyCallback) {
+            readyCallback();
+          }
+        })
+        .once('error', (error: Error) => {
+          if (errorCallback) {
+            errorCallback(error);
+          }
+        });
       udp4Socket.bind(ownUdpAddress.port, ownUdpAddress.address);
+    } else if (readyCallback) {
+      setTimeout(readyCallback);
     }
 
     return udp4Socket;
