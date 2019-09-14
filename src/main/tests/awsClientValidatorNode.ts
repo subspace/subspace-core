@@ -13,7 +13,7 @@ import { run } from '../run';
  * Step three: test that a new farmer can join, sync the ledger manually, and start farming
  * Step four: test that a light client can join and sync state before validating new blocks
  */
-const startGatewayNode = async () => {
+const startValidatorNode = async () => {
 
   const awsGatewayNodeId = crypto.hash(Buffer.from('aws-gateway'));
 
@@ -50,26 +50,24 @@ const startGatewayNode = async () => {
   //   wsPort: 13890,
   // };
 
-  const gatewayNode: Node = await run(
-    'full',
+  const validatorNode: Node = await run(
+    'validator',
     1,
     'memory',
-    1,
-    100000000,
+    0,
+    0,
     true,
     3,
-    `${os.tmpdir()}/gateway`,
+    `${os.tmpdir()}/validator`,
     1000,
     false,
     false,
-    awsGatewayContactInfo,
-    [validatorContactInfo],
+    validatorContactInfo,
+    [awsGatewayContactInfo],
   );
 
-  setTimeout(() => {
-    gatewayNode.createLedgerAndFarm();
-  }, 10000);
+  validatorNode.syncLedgerAndValidate();
 
 };
 
-startGatewayNode();
+startValidatorNode();
