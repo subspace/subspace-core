@@ -134,6 +134,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         return;
       }
       const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.wsPort}`);
+      connection.binaryType = 'arraybuffer';
       connection.onopen = () => {
         clearTimeout(timeout);
         if (timedOut) {

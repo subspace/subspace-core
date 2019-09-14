@@ -249,8 +249,8 @@ export class Farm {
    */
   private async addPieceData(pieceData: IPieceData): Promise<void> {
     const binaryPieceData = Buffer.concat([
-      smallNum2Bin(pieceData.pieceIndex),
       pieceData.stateHash,
+      smallNum2Bin(pieceData.pieceIndex),
       pieceData.proof,
     ]);
     await this.metadataStore.put(pieceData.pieceHash, binaryPieceData);
@@ -266,8 +266,8 @@ export class Farm {
     }
     return {
       pieceHash,
-      pieceIndex: smallBin2Num(binaryPieceData.subarray(0, 2)),
-      stateHash: Uint8Array.from(binaryPieceData.subarray(2, 34)),
+      stateHash: Uint8Array.from(binaryPieceData.subarray(0, 32)),
+      pieceIndex: smallBin2Num(binaryPieceData.subarray(32, 34)),
       proof: binaryPieceData.subarray(34),
     };
   }

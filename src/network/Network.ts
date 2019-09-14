@@ -71,7 +71,7 @@ export class Network extends EventEmitter implements INetwork {
   // In seconds
   private static readonly GOSSIP_CACHE_TIMEOUT = 60;
   // In bytes
-  private static readonly UDP_MESSAGE_SIZE_LIMIT = 508;
+  private static readonly UDP_MESSAGE_SIZE_LIMIT = 8192;
   // In bytes, excluding 4-bytes header with message length
   private static readonly TCP_MESSAGE_SIZE_LIMIT = 2 * 1024 * 1024; // 2 MiB
   // In bytes

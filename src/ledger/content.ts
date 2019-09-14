@@ -92,11 +92,11 @@ export class Content {
    * Returns a compact binary representation of the content data.
    */
   public toBytes(): Uint8Array {
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
       this._value.parentContentHash,
       this._value.proofHash,
       ...this._value.payload,
-    ]));
+    ]);
   }
 
   /**

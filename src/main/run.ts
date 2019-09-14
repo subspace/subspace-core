@@ -49,6 +49,8 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * @param reset
  * @param contactInfo     IP and ports to expose for this node, defaults provided.
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
+ * @param autostart       Whether to start the node role automatically or explicitly, default true
+ * @param delay           Random farm/solve delay (for local testing) in milliseconds, following a poisson distribution around provided value
  */
 export const run = async (
   nodeType: 'full' | 'farmer' | 'validator' | 'client' | 'gateway',
@@ -59,6 +61,8 @@ export const run = async (
   validateRecords: boolean,
   encodingRounds: number,
   storageDir?: string,
+  delay = 0,
+  autostart = true,
   reset = true,
   contactInfo: IPeerContactInfo = defaultContactInfo,
   bootstrapPeers: IPeerContactInfo[] = defaultBootstrapPeers,
@@ -68,7 +72,6 @@ export const run = async (
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
   let plotAdapter: 'mem-db' | 'disk-db' | 'indexed-db';
-  // let storage: Storage;
   let rpc: RPC;
   let ledger: Ledger;
   let wallet: Wallet | undefined;
@@ -235,9 +238,6 @@ export const run = async (
   env === 'node' && config.farm && isPersistingStorage ? plotAdapter = 'disk-db' : plotAdapter = 'mem-db';
   env === 'browser' && config.farm && isPersistingStorage ? plotAdapter = 'indexed-db' : plotAdapter = 'mem-db';
 
-  // instantiate a single storage instance
-  // storage = new Storage(storageAdapter, 'storage', 'storage');
-
   const blsSignatures = await BlsSignatures.init();
   const storage = new Storage(storageAdapter, storagePath, 'storage');
 
@@ -246,12 +246,12 @@ export const run = async (
     await storage.clear();
   }
 
-  // instantiate a wallet
+  // instantiate a wallet for light clients
   if (config.wallet && !config.farm) {
     wallet = new Wallet(blsSignatures, storage);
   }
 
-  // instantiate a farm & wallet
+  // instantiate a farm & wallet for farmers
   if (config.farm && config.wallet) {
 
     // create wallet and addresses
@@ -267,14 +267,14 @@ export const run = async (
     farm = new Farm(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
   }
 
-  // instantiate a ledger
-  ledger = new Ledger(blsSignatures, storage, validateRecords, encodingRounds);
+  // instantiate a ledger for all nodes
+  ledger = new Ledger(blsSignatures, storage, numberOfChains, validateRecords, encodingRounds);
 
-  // instantiate the network & rpc interface
+  // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
-  contactInfo.nodeId = crypto.randomBytes(32);
-  // tslint:disable-next-line: no-console
-  console.log('Launching network');
+  if (!contactInfo.nodeId) {
+    contactInfo.nodeId = crypto.randomBytes(32);
+  }
   const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
   rpc = new RPC(network, blsSignatures);
 
@@ -287,6 +287,8 @@ export const run = async (
     validateRecords,
     contactInfo,
     bootstrapPeers,
+    autostart,
+    delay,
   };
 
   return new Node(nodeType, config, settings, rpc, ledger, wallet, farm);

@@ -14,11 +14,12 @@ program
   .option('-m, --mode <mode>', 'mode to operate node (full, farmer, validator, client', 'full')
   .option('-c, --chains <chains>', 'number of chains in the ledger', 1)
   .option('-f, --farm <farm>', 'mode to operate farm (memory, disk)', 'disk')
-  .option('-p, --plots <plots>', 'number of plots in the farm', 100)
+  .option('-p, --plots <plots>', 'number of plots in the farm', 1)
   .option('-s, --size <size>', 'size of farm in bytes', 10000000000)
-  .option('-v, --validate <validate>', 'if to validate records (t/f)', false)
+  .option('-a, --validate <validate>', 'if to validate records (t/f)', false)
   .option('-e, --encoding <encoding>', 'number of rounds for piece encoding/decoding', 3)
   .option('-d, --directory <directory>', 'directory for persistent storage and plotting', null)
+  .option('-w, --wait <wait>', 'a mean random delay time for farming', 0)
   .action((args) => {
     run(
       args.mode,
@@ -29,6 +30,7 @@ program
       args.validate,
       args.encoding,
       args.directory,
+      args.wait,
     );
   });
 

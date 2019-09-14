@@ -81,8 +81,8 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     if (address) {
       return address;
     }
-    // TODO: Implement fetching from DHT
-    throw new Error('Sending to arbitrary nodeId is not implemented yet');
+
+    return null;
   }
 
   public async sendRawMessage(address: INodeContactInfoUdp, message: Uint8Array): Promise<void> {

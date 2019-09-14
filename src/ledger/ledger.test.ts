@@ -196,7 +196,9 @@ test('create-block', async () => {
   const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, receiverAccount.publicKey);
   txIds.unshift(coinbaseTx.key);
 
-  const block = Block.create(signedProof, parentContentHash, txIds, coinbaseTx);
+  const previousBlockHash = crypto.randomBytes(32);
+
+  const block = Block.create(previousBlockHash, signedProof, parentContentHash, txIds, coinbaseTx);
   expect(block.isValid(blsSignatures)).toBe(true);
 
   const data = block.toFullBytes();

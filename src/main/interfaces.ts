@@ -21,15 +21,17 @@ export interface IStateValue {
  */
 
 export interface IFullBlockValue {
-   proof: Proof;
-   content: Content;
-   coinbase?: Tx;
- }
+  previousBlockHash: Uint8Array;
+  proof: Proof;
+  content: Content;
+  coinbase?: Tx;
+}
 
 /**
  * An even smaller representation of a Block as pointers to store within Chain objects held in memory.
  */
 export interface ICompactBlockValue {
+  previousBlockHash: Uint8Array;
   proofHash: Uint8Array;
   contentHash: Uint8Array;
 }
@@ -170,4 +172,6 @@ export interface INodeSettings {
   validateRecords: boolean;             // if to validate new records as they are created
   contactInfo: IPeerContactInfo;        // network contact info for this node
   bootstrapPeers: IPeerContactInfo [];  // known network contact info for other nodes
+  autostart: boolean;                   // if to start the node role automatically
+  delay: number;                        // optional random delay in milliseconds (for farmers)
 }

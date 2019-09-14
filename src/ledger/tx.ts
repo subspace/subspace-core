@@ -117,14 +117,14 @@ export class Tx {
    * Returns a compact binary representation of the tx data.
    */
   public toBytes(signed = true): Uint8Array {
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
       this._value.sender,
       this._value.receiver,
       num2Bin(this._value.amount),
       smallNum2Bin(this._value.nonce),
       num2Bin(this._value.timestamp / 1000),
       signed ? this._value.signature : new Uint8Array(),
-    ]));
+    ]);
   }
 
   /**

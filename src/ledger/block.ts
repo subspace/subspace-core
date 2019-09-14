@@ -21,6 +21,7 @@ export class Block {
     const genesisProof = Proof.createGenesisProof(previousProofHash);
     const genesisContent = Content.createGenesisContent(parentContentHash, genesisProof.key);
     const genesisBlockValue: IFullBlockValue = {
+      previousBlockHash: new Uint8Array(32),
       proof: genesisProof,
       content: genesisContent,
     };
@@ -31,6 +32,7 @@ export class Block {
    * Returns a new block record given correct inputs.
    */
   public static create(
+    previousBlockHash: Uint8Array,
     proof: Proof,
     parentContentHash: Uint8Array,
     txIds: Uint8Array[],
@@ -38,6 +40,7 @@ export class Block {
   ): Block {
     const content = Content.create(parentContentHash, proof.key, txIds);
     const fullBlockValue: IFullBlockValue = {
+      previousBlockHash,
       proof,
       content,
       coinbase,
@@ -53,26 +56,29 @@ export class Block {
    */
   public static fromFullBytes(data: Uint8Array): Block {
 
+    // tslint:disable: no-console
+    // console.log(data.length);
+
     // Parse a block received as binary
     // proof and content size is variable so we read their lengths (2 byte integer)
-
-    const proofLength = smallBin2Num(data.subarray(0, 2));
-    const proof = Proof.fromBytes(data.subarray(2, proofLength + 2));
-    const contentLength = smallBin2Num(data.subarray(2 + proofLength, 2 + proofLength + 2));
-    const content = Content.fromBytes(data.subarray(2 + proofLength + 2, 2 + proofLength + 2 + contentLength));
+    const previousBlockHash = data.subarray(0, 32);
+    const proofLength = smallBin2Num(data.subarray(32, 32 + 2));
+    const proof = Proof.fromBytes(data.subarray(32 + 2, 32 + 2 + proofLength));
+    const contentLength = smallBin2Num(data.subarray(32 + 2 + proofLength, 32 + 2 + proofLength + 2));
+    const content = Content.fromBytes(data.subarray(32 + 2 + proofLength + 2, 32 + 2 + proofLength + 2 + contentLength));
 
     // coinbase tx will be missing on genesis blocks, test contains by checking for extra data
     // if included the tx will be 204 bytes long
 
-    if (data.length > 2 + proofLength + 2 + contentLength) {
-      const coinbase = Tx.fromBytes(data.subarray(2 + proofLength + 2 + contentLength, 2 + proofLength + 2 + contentLength + 204));
-      const fullBlockValue: IFullBlockValue = { proof, content, coinbase };
+    if (data.length > 32 + 2 + proofLength + 2 + contentLength) {
+      const coinbase = Tx.fromBytes(data.subarray(32 + 2 + proofLength + 2 + contentLength, 32 + 2 + proofLength + 2 + contentLength + 204));
+      const fullBlockValue: IFullBlockValue = { previousBlockHash, proof, content, coinbase };
       const block = new Block(fullBlockValue);
       block.setKey();
       return block;
     }
 
-    const fullBlockValue: IFullBlockValue = { proof, content };
+    const fullBlockValue: IFullBlockValue = { previousBlockHash, proof, content };
     const block = new Block(fullBlockValue);
     block.setKey();
     return block;
@@ -87,8 +93,10 @@ export class Block {
   public static fromCompactBytes(data: Uint8Array): ICompactBlockValue {
     // content and proof hash are always 32 bytes
     const compactBlockValue: ICompactBlockValue = {
-      proofHash: data.subarray(0, 32),
-      contentHash: data.subarray(32, 64),
+      previousBlockHash: data.subarray(0, 32),
+      proofHash: data.subarray(32, 64),
+      contentHash: data.subarray(64, 96),
+      // coinbase: data.subarray(96),
     };
     return compactBlockValue;
   }
@@ -113,10 +121,10 @@ export class Block {
    * Returns a compact binary representation of the block data for level encoding.
    */
   public toBytes(): Uint8Array {
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
       this._value.proof.toBytes(),
       this._value.content.toBytes(),
-    ]));
+    ]);
   }
 
   /**
@@ -128,13 +136,14 @@ export class Block {
     const contentData = this._value.content.toBytes();
     const contentLength = smallNum2Bin(contentData.length);
     const coinbaseData = this._value.coinbase ? this._value.coinbase.toBytes() : new Uint8Array();
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
+      this._value.previousBlockHash,
       proofLength,
       proofData,
       contentLength,
       contentData,
       coinbaseData,
-    ]));
+    ]);
   }
 
   /**
@@ -142,9 +151,10 @@ export class Block {
    */
   public toCompactBytes(): Uint8Array {
     return Uint8Array.from(Buffer.concat([
+      this._value.previousBlockHash,
       this._value.proof.key,
       this._value.content.key,
-      this._value.coinbase ? this._value.coinbase.key : new Uint8Array(),
+      // this._value.coinbase ? this._value.coinbase.key : new Uint8Array(),
     ]));
   }
 
@@ -156,6 +166,7 @@ export class Block {
       type: 'Block',
       key: bin2Hex(this._key),
       value: {
+        previousBlockHash: bin2Hex(this.value.previousBlockHash),
         proof: this.value.proof.print(),
         content: this.value.content.print(),
         coinbase: this.value.coinbase ? this.value.coinbase.print() : undefined,
@@ -178,8 +189,13 @@ export class Block {
     // validate proof, will throw if invalid
     this._value.content.isValid();
 
-    // if genesis block
-    if (areArraysEqual(this._value.proof.value.previousLevelHash, new Uint8Array(32))) {
+    // if the first genesis block
+    if (areArraysEqual(this._value.proof.value.previousProofHash, new Uint8Array(32))) {
+
+      // previous block hash should null
+      if (!areArraysEqual(this._value.previousBlockHash, new Uint8Array(32))) {
+        throw new Error('Invalid block, first genesis block must have a null previous block hash');
+      }
 
       // content record must be genesis type
       if (areArraysEqual(this._value.content.value.proofHash, new Uint8Array(32))) {
@@ -194,7 +210,20 @@ export class Block {
       return true;
     }
 
+    // if subsequent genesis block (on the genesis level)
+    if (areArraysEqual(this._value.proof.value.previousLevelHash, new Uint8Array(32))) {
+      // coinbase should be missing
+      if (this._value.coinbase) {
+        throw new Error('Invalid genesis block, cannot have a coinbase transaction');
+      }
+
+      return true;
+    }
+
     // else if normal block
+    if (areArraysEqual(this._value.previousBlockHash, new Uint8Array(32))) {
+      throw new Error('Invalid block, only the genesis block may have a null previous block hash');
+    }
 
     if (!this.value.coinbase) {
       throw new Error('Invalid block, must have a coinbase tx');

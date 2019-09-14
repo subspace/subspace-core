@@ -17,6 +17,7 @@ export class State {
     previousStateHash: Uint8Array,
     levelHash: Uint8Array,
     pieceRoot: Uint8Array,
+    timestamp: number,
     difficulty: number,
     version: number,
     indexPiece: Uint8Array,
@@ -25,7 +26,7 @@ export class State {
       previousStateHash,
       levelHash,
       pieceRoot,
-      timestamp: (Date.now() / 1000) * 1000,
+      timestamp: (timestamp / 1000) * 1000,
       difficulty,
       version,
       indexPiece,
@@ -71,7 +72,7 @@ export class State {
    * Returns a compact binary representation of the state data.
    */
   public toBytes(): Uint8Array {
-    return Uint8Array.from(Buffer.concat([
+    return Buffer.concat([
       this._value.previousStateHash,
       this._value.levelHash,
       this._value.pieceRoot,
@@ -79,7 +80,7 @@ export class State {
       smallNum2Bin(this._value.difficulty),
       smallNum2Bin(this._value.version),
       this._value.indexPiece,
-    ]));
+    ]);
   }
 
   /**

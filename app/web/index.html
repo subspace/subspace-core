@@ -37,14 +37,16 @@
         <div class="container">
           <div class="tabs">
             <ul>
+              <li v-bind:class="{ 'is-active': activeTab == 'subspace' }" @click="activeTab = 'subspace'"><a>Subspace</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'network' }" @click="activeTab = 'network'"><a>Network</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'ledger' }" @click="activeTab = 'ledger'"><a>Ledger</a></li>
+              <li v-bind:class="{ 'is-active': activeTab == 'farm' }" @click="activeTab = 'farm'"><a>Farm</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'wallet' }" @click="activeTab = 'wallet'"><a>Wallet</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'settings' }" @click="activeTab = 'settings'"><a>Settings</a></li>
             </ul>
           </div>
           <div class="content">
-            <div v-if='activeTab === "network"'>
+            <div v-if='activeTab === "subspace"'>
               <nav class="level">
                 <div class="level-item has-text-centered">
                   <div>
@@ -84,6 +86,46 @@
                 </ul>
               </div>              
             </div>
+            <div v-if='activeTab === "network"'>
+                <nav class="level">
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Nodes</p>
+                      <p class="title">16</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Space Pledged</p>
+                      <p class="title">16 TB</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Ledger Size</p>
+                      <p class="title">1 GB</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Load Factor</p>
+                      <p class="title">16k</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Pieces</p>
+                      <p class="title">250k</p>
+                    </div>
+                  </div>
+                </nav>
+                <div class="content">
+                  <ul>
+                    <li>Activity Log</li>
+                    <li>Network Map</li>
+                  </ul>
+                </div>              
+              </div>
 
             <div v-else-if='activeTab === "ledger"'>
               <nav class="level">
@@ -125,6 +167,46 @@
                 </div>
               </nav>
             </div>
+            <div v-else-if='activeTab === "farm"'>
+                <nav class="level">
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Chains</p>
+                      <p class="title">1024</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Blocks</p>
+                      <p class="title">42k</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                      <div>
+                        <p class="heading">Levels</p>
+                        <p class="title">550</p>
+                      </div>
+                    </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Transactions</p>
+                      <p class="title">75k</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Credits</p>
+                      <p class="title">42k</p>
+                    </div>
+                  </div>
+                  <div class="level-item has-text-centered">
+                    <div>
+                      <p class="heading">Accounts</p>
+                      <p class="title">423</p>
+                    </div>
+                  </div>
+                </nav>
+              </div>
             <div v-else-if='activeTab === "wallet"'>
               Wallet Content
             </div>
@@ -139,17 +221,87 @@
 </html>
 
 <script type='text/javascript'>
+
+// Stats for Browser GUI
+  // Subspace Tab
+    // Number of full-nodes on the network (from DHT)
+    // Size of the Ledger (from Ledger)
+    // Total Number of Pieces
+    // Size of all Space Pledged (from work difficulty)
+    // Replication Factor (times the ledger is copied)
+  // Node Tab (Aggregate Stats)
+    // Node ID
+    // Node Role (breakdown of services)
+    // Space Pledged
+    // Credits
+  // Network Tab
+    // Number of peers
+    // Peer graph (and their peers)
+    // Peer map (geo-ip)
+    // My network info
+    // sub nets (red/green)
+      // relay network status -- gossip rate & active connections by type
+      // srpc network status -- number of connections
+      // krpc network status -- known peers
+      // jrpc network status -- number of clients
+  // Ledger Tab
+    // Ledger visuals as bar graph of blocks
+    // Ledger visuals as throughput dashboard
+      // Tx throughput
+      // Block throughput
+      // Block confirmation time
+      // Level confirmation time
+      // Piece confirmation time
+    // Visuals as block explorer (record search with last confirmed)
+    // Visuals like Bitcoin Visuals
+    // Number of chains
+    // Number of confirmed/pending blocks
+    // Number of confirmed/pending txs
+    // Number of confirmed levels
+    // Number of encoded state blocks
+    // Total number of credits
+    // Total size of the ledger
+  // Farm Tab
+    // type of plot
+    // number of plots
+    // size of my plots
+    // plotting progress
+    // number of pieces
+    // % of the ledger
+    // % of all space pledged
+    // win-rate vs target
+    // credits earned
+    // per
+  // Wallet Tab
+    // different accounts
+    // pending/confirmed balance
+    // pending/confirmed txs (credits and debits)
+    // send/receive funds
+    // extract keys
+  // Setting Tab
+    // edit config and restart
+
   var app = new Vue({
     el: '#app',
     data: {
       nodeId: 'myNodeId',
-      activeTab: 'network'
+      activeTab: 'subspace',
+      subspace: null,
     },
     methods: {
       
     },
+    async mounted() {
+      const subspace = await Subspace;
+      subspace.syncLedgerAndValidate();
+      subspace.ping();
+      this.subspace = subspace;
+      // console.log(subspace);
+    }
   })
 </script>
+
+
 
 <style type='css'>
     .fade-enter-active, .fade-leave-active {
