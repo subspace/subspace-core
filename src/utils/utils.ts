@@ -9,9 +9,6 @@ import * as path from 'path';
 import {random_int} from "random-bytes-numbers";
 import { inspect } from 'util';
 import * as winston from 'winston';
-import { IPeerContactInfo } from '../main/interfaces';
-import {INodeContactInfo} from "../network/INetwork";
-import {IAddress, Network} from '../network/Network';
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
   const length = aKey.length;
@@ -196,54 +193,6 @@ export function rmDirRecursiveSync(dirPath: string): void {
 
 export function allocatePort(): number {
   return 20000 + Math.round(Math.random() * 30000);
-}
-
-export function parseContactInfo(
-  selfContactInfo: IPeerContactInfo,
-  bootstrapPeerContactInfo: IPeerContactInfo[],
-  browserNode: boolean = false,
-): Parameters<typeof Network.init> {
-  const bootstrapNodes: INodeContactInfo[] = [];
-
-  for (const peer of bootstrapPeerContactInfo) {
-    bootstrapNodes.push({
-      address: peer.address,
-      nodeId: peer.nodeId,
-      nodeType: peer.nodeType,
-      tcp4Port: peer.tcpPort,
-      udp4Port: peer.udpPort,
-      wsPort: peer.wsPort,
-    });
-  }
-
-  const ownNodeId = selfContactInfo.nodeId;
-  const ownUdpAddress: IAddress = {
-    address: selfContactInfo.address,
-    port: selfContactInfo.udpPort,
-    protocolVersion: selfContactInfo.protocolVersion,
-  };
-
-  const ownTcpAddress: IAddress = {
-    address: selfContactInfo.address,
-    port: selfContactInfo.tcpPort,
-    protocolVersion: selfContactInfo.protocolVersion,
-  };
-
-  const ownWsAddress: IAddress = {
-    address: selfContactInfo.address,
-    port: selfContactInfo.wsPort,
-    protocolVersion: selfContactInfo.protocolVersion,
-  };
-
-  return [
-    bootstrapNodes,
-    selfContactInfo.nodeType,
-    browserNode,
-    ownNodeId,
-    browserNode ? undefined : ownUdpAddress,
-    browserNode ? undefined : ownTcpAddress,
-    browserNode ? undefined : ownWsAddress,
-  ];
 }
 
 export interface ILogger {

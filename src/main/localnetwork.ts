@@ -21,10 +21,9 @@ const testLocalNetwork = async () => {
     nodeId: new Uint8Array(),
     nodeType: 'gateway',
     address: 'localhost',
-    udpPort: 10888,
-    tcpPort: 10889,
+    udp4Port: 10888,
+    tcp4Port: 10889,
     wsPort: 10890,
-    protocolVersion: '4',
   };
 
   const gatewayNode: Node = await run(
@@ -48,10 +47,9 @@ const testLocalNetwork = async () => {
     nodeId: new Uint8Array(),
     nodeType: 'validator',
     address: 'localhost',
-    udpPort: 11888,
-    tcpPort: 11889,
+    udp4Port: 11888,
+    tcp4Port: 11889,
     wsPort: 11890,
-    protocolVersion: '4',
   };
 
   const validatorNode: Node = await run(

@@ -1,4 +1,5 @@
-import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys, INodeTypesKeys, NODE_TYPES_INVERSE} from "./constants";
+import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys, NODE_TYPES_INVERSE} from "./constants";
+import {INodeContactAddress, INodeContactIdentification} from "./INetwork";
 
 export function noopResponseCallback(): void {
   // Do nothing
@@ -45,7 +46,7 @@ export function parseMessage(message: Uint8Array): [ICommandsKeys, number, Uint8
   return [command, requestId, payload];
 }
 
-export function parseIdentificationPayload(identificationPayload: Uint8Array): { nodeType: INodeTypesKeys; nodeId: Uint8Array } {
+export function parseIdentificationPayload(identificationPayload: Uint8Array): INodeContactIdentification {
   return {
     nodeId: identificationPayload.slice(1),
     nodeType: NODE_TYPES_INVERSE[identificationPayload[0]],

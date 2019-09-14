@@ -48,39 +48,63 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
 
   public on(
     event: 'gossip',
-    listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
+    listener: (gossipMessage: Uint8Array, sourceNodeId: Uint8Array) => void,
   ): this;
   public on(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra?: {
+        nodeId: Uint8Array,
+        nodeType: INodeTypesKeys,
+      },
+    ) => void,
   ): this;
-  public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
+  public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
     EventEmitter.prototype.on.call(this, event, listener);
     return this;
   }
 
   public once(
     event: 'gossip',
-    listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
+    listener: (gossipMessage: Uint8Array, sourceNodeId: Uint8Array) => void,
   ): this;
   public once(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra?: {
+        nodeId: Uint8Array,
+        nodeType: INodeTypesKeys,
+      },
+    ) => void,
   ): this;
-  public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
+  public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
     EventEmitter.prototype.once.call(this, event, listener);
     return this;
   }
 
   public off(
     event: 'gossip',
-    listener: (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array) => void,
+    listener: (gossipMessage: Uint8Array, sourceNodeId: Uint8Array) => void,
   ): this;
   public off(
     event: 'command',
-    listener: (command: ICommandsKeysForSending, payload: Uint8Array, responseCallback: (responsePayload: Uint8Array) => void) => void,
+    listener: (
+      command: ICommandsKeysForSending,
+      payload: Uint8Array,
+      responseCallback: (responsePayload: Uint8Array) => void,
+      extra?: {
+        nodeId: Uint8Array,
+        nodeType: INodeTypesKeys,
+      },
+    ) => void,
   ): this;
-  public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any) => void): this {
+  public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
     EventEmitter.prototype.off.call(this, event, listener);
     return this;
   }
@@ -88,21 +112,26 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   public emit(
     event: 'gossip',
     gossipMessage: Uint8Array,
-    sourceNodeId?: Uint8Array,
+    sourceNodeId: Uint8Array,
   ): boolean;
   public emit(
     event: 'command',
     command: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void,
+    extra?: {
+      nodeId: Uint8Array,
+      nodeType: INodeTypesKeys,
+    },
   ): boolean;
   public emit(
     event: string,
     arg1: any,
-    arg2?: any,
+    arg2: any,
     arg3?: any,
+    arg4?: any,
   ): boolean {
-    return EventEmitter.prototype.emit.call(this, event, arg1, arg2, arg3);
+    return EventEmitter.prototype.emit.call(this, event, arg1, arg2, arg3, arg4);
   }
 
   /**

@@ -4,7 +4,6 @@ import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
 import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
-import {IAddress} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -21,23 +20,23 @@ function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeConta
 
 export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
   public static init(
+    ownNodeContactInfo: INodeContactInfo,
     identificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
-    ownWsAddress?: IAddress,
   ): Promise<WsManager> {
     return new Promise((resolve, reject) => {
       const instance = new WsManager(
+        ownNodeContactInfo,
         identificationPayload,
         extractWsBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
         connectionTimeout,
-        ownWsAddress,
         () => {
           resolve(instance);
         },
@@ -52,24 +51,24 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   private readonly httpServer: http.Server | undefined;
 
   /**
+   * @param ownNodeContactInfo
    * @param identificationPayload
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param connectionTimeout
-   * @param ownWsAddress
    * @param readyCallback
    * @param errorCallback
    */
   public constructor(
+    ownNodeContactInfo: INodeContactInfo,
     identificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoWs[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
-    ownWsAddress?: IAddress,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
@@ -79,14 +78,14 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     this.identificationPayload = identificationPayload;
     this.connectionTimeout = connectionTimeout;
 
-    if (ownWsAddress) {
+    if (!browserNode && ownNodeContactInfo.wsPort) {
       const httpServer = http.createServer()
         .on('error', (error: Error) => {
           if (errorCallback) {
             errorCallback(error);
           }
         })
-        .listen(ownWsAddress.port, ownWsAddress.address, readyCallback);
+        .listen(ownNodeContactInfo.wsPort, ownNodeContactInfo.address, readyCallback);
 
       const wsServer = new websocket.server({
         fragmentOutgoingMessages: false,

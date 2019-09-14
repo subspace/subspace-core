@@ -13,6 +13,7 @@ export class GossipManager extends EventEmitter {
   private readonly maxMessageSizeLimit: number;
 
   constructor(
+    private readonly ownNodeId: Uint8Array,
     private readonly browserNode: boolean,
     private readonly udpManager: UdpManager,
     private readonly tcpManager: TcpManager,
@@ -24,7 +25,7 @@ export class GossipManager extends EventEmitter {
 
     let maxMessageSizeLimit = 0;
     for (const protocolManager of [udpManager, tcpManager, wsManager]) {
-      protocolManager.on('gossip', (gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void => {
+      protocolManager.on('gossip', (gossipMessage: Uint8Array, sourceNodeId: Uint8Array): void => {
         this.handleIncomingGossip(gossipMessage, sourceNodeId);
       });
       maxMessageSizeLimit = Math.max(maxMessageSizeLimit, protocolManager.getMessageSizeLimit());
@@ -76,10 +77,10 @@ export class GossipManager extends EventEmitter {
     const gossipMessage = new Uint8Array(1 + payload.length);
     gossipMessage.set([COMMANDS[command]]);
     gossipMessage.set(payload, 1);
-    return this.gossipInternal(gossipMessage);
+    return this.gossipInternal(gossipMessage, this.ownNodeId);
   }
 
-  private async gossipInternal(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): Promise<void> {
+  private async gossipInternal(gossipMessage: Uint8Array, sourceNodeId: Uint8Array): Promise<void> {
     const message = composeMessage('gossip', 0, gossipMessage);
     if (message.length >= this.maxMessageSizeLimit) {
       throw new Error(
@@ -168,7 +169,7 @@ export class GossipManager extends EventEmitter {
     }
   }
 
-  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId?: Uint8Array): void {
+  private handleIncomingGossip(gossipMessage: Uint8Array, sourceNodeId: Uint8Array): void {
     const command = COMMANDS_INVERSE[gossipMessage[0]];
     if (!GOSSIP_COMMANDS_SET.has(command)) {
       // TODO: Log in debug mode
