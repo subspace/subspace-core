@@ -40,7 +40,7 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
-    identificationPayload: Uint8Array,
+    extendedIdentificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -51,7 +51,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
         ownNodeContactInfo,
-        identificationPayload,
+        extendedIdentificationPayload,
         extractTcpBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
@@ -67,13 +67,13 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   }
 
   private readonly tcp4Server: net.Server | undefined;
-  private readonly identificationPayload: Uint8Array;
+  private readonly extendedIdentificationPayload: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly connectionExpiration: number;
 
   /**
    * @param ownNodeContactInfo
-   * @param identificationPayload
+   * @param extendedIdentificationPayload
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -85,7 +85,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
    */
   public constructor(
     ownNodeContactInfo: INodeContactInfo,
-    identificationPayload: Uint8Array,
+    extendedIdentificationPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoTcp[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -98,7 +98,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
-    this.identificationPayload = identificationPayload;
+    this.extendedIdentificationPayload = extendedIdentificationPayload;
     this.connectionTimeout = connectionTimeout;
     this.connectionExpiration = connectionExpiration;
 
@@ -135,6 +135,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       const timeout = setTimeout(
         () => {
           timedOut = true;
+          if (!socket.destroyed) {
+            socket.destroy();
+          }
           reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
         },
         this.connectionTimeout * 1000,
@@ -153,7 +156,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
             const identificationMessage = composeMessageWithTcpHeader(
               'identification',
               0,
-              this.identificationPayload,
+              this.extendedIdentificationPayload,
             );
             socket.write(identificationMessage);
             this.registerTcpConnection(
@@ -167,6 +170,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           }
         },
       );
+      socket
+        .setTimeout(this.connectionTimeout)
+        .once('error', reject);
     });
   }
 

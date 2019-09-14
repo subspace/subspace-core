@@ -1,6 +1,6 @@
 import * as dgram from "dgram";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH} from "./constants";
+import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
 import {INodeContactInfo, INodeContactInfoUdp} from "./INetwork";
 import {composeMessage, parseIdentificationPayload} from "./utils";
 
@@ -71,6 +71,24 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     } else if (readyCallback) {
       setTimeout(readyCallback);
     }
+  }
+
+  /**
+   * @param nodeTypes
+   *
+   * @return Active connections
+   */
+  public getActiveConnectionsOfNodeTypes(nodeTypes: INodeTypesKeys[]): INodeContactInfoUdp[] {
+    const nodeTypesSet = new Set(nodeTypes);
+    const connections: INodeContactInfoUdp[] = [];
+    this.nodeIdToAddressMap.forEach((address: INodeContactInfoUdp) => {
+      if (!nodeTypesSet.has(address.nodeType)) {
+        return;
+      }
+      connections.push(address);
+    });
+
+    return connections;
   }
 
   public async nodeIdToConnection(nodeId: Uint8Array): Promise<INodeContactInfoUdp | null> {

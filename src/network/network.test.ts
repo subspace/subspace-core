@@ -34,9 +34,6 @@ const peer4: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('4'.repeat(64), 'hex'),
   nodeType: 'client',
-  tcp4Port: allocatePort(),
-  udp4Port: allocatePort(),
-  wsPort: allocatePort(),
 };
 
 let networkClient1: Network;
@@ -55,7 +52,7 @@ describe('UDP', () => {
   test('Send one-way unreliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient2.on('ping', (payload, _, clientIdentification) => {
+      networkClient2.once('ping', (payload, _, clientIdentification) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
         expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
         expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
@@ -184,4 +181,5 @@ afterEach(async () => {
   await networkClient1.destroy();
   await networkClient2.destroy();
   await networkClient3.destroy();
+  await networkClient4.destroy();
 });

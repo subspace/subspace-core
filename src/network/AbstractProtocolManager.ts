@@ -1,8 +1,15 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {ICommandsKeys, ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
+import {
+  ADDRESS_PAYLOAD_LENGTH,
+  EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH,
+  ICommandsKeys,
+  ICommandsKeysForSending,
+  IDENTIFICATION_PAYLOAD_LENGTH,
+  INodeTypesKeys,
+} from "./constants";
 import {INodeContactIdentification, INodeContactInfo} from "./INetwork";
-import {noopResponseCallback, parseIdentificationPayload, parseMessage} from "./utils";
+import {noopResponseCallback, parseAddressPayload, parseIdentificationPayload, parseMessage} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
@@ -52,6 +59,10 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public on(
+    event: 'peer-contact-info',
+    listener: (nodeContactInfo: INodeContactInfo) => void,
+  ): this;
+  public on(
     event: 'command',
     listener: (
       command: ICommandsKeysForSending,
@@ -70,6 +81,10 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public once(
+    event: 'peer-contact-info',
+    listener: (nodeContactInfo: INodeContactInfo) => void,
+  ): this;
+  public once(
     event: 'command',
     listener: (
       command: ICommandsKeysForSending,
@@ -86,6 +101,10 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   public off(
     event: 'gossip',
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
+  ): this;
+  public off(
+    event: 'peer-contact-info',
+    listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
   public off(
     event: 'command',
@@ -107,6 +126,10 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
     contactIdentification: INodeContactIdentification,
   ): boolean;
   public emit(
+    event: 'peer-contact-info',
+    nodeContactInfo: INodeContactInfo,
+  ): boolean;
+  public emit(
     event: 'command',
     command: ICommandsKeysForSending,
     payload: Uint8Array,
@@ -116,7 +139,7 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
   public emit(
     event: string,
     arg1: any,
-    arg2: any,
+    arg2?: any,
     arg3?: any,
     arg4?: any,
   ): boolean {
@@ -189,6 +212,10 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
 
   public abstract nodeIdToConnection(nodeId: Uint8Array): Promise<Connection | null>;
 
+  public setNodeAddress(nodeId: Uint8Array, nodeContactAddress: Address): void {
+    this.nodeIdToAddressMap.set(nodeId, nodeContactAddress);
+  }
+
   /**
    * @param connection
    * @param command
@@ -257,21 +284,29 @@ export abstract class AbstractProtocolManager<Connection, Address extends INodeC
         this.destroyConnection(connection);
         throw new Error('Identification is not supported by protocol');
       }
-      if (payload.length !== IDENTIFICATION_PAYLOAD_LENGTH) {
+      if (payload.length !== EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH) {
         this.destroyConnection(connection);
         throw new Error(
-          `Identification payload length is incorrect, expected ${IDENTIFICATION_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
+          `Identification payload length is incorrect, expected ${EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
         );
       }
       // TODO: nodeType is not used
-      const {nodeId, nodeType} = parseIdentificationPayload(payload);
-      if (this.nodeIdToConnectionMap.has(nodeId)) {
+      const nodeContactIdentification = parseIdentificationPayload(payload.subarray(0, IDENTIFICATION_PAYLOAD_LENGTH));
+      const nodeContactAddress = parseAddressPayload(
+        payload.subarray(
+          IDENTIFICATION_PAYLOAD_LENGTH,
+          IDENTIFICATION_PAYLOAD_LENGTH + ADDRESS_PAYLOAD_LENGTH,
+        ),
+      );
+      const nodeContactInfo = {...nodeContactIdentification, ...nodeContactAddress};
+      if (this.nodeIdToConnectionMap.has(nodeContactIdentification.nodeId)) {
         // TODO: Log in debug mode that node mapping is already present
         this.destroyConnection(connection);
       } else {
-        this.nodeIdToConnectionMap.set(nodeId, connection);
-        this.connectionToNodeIdMap.set(connection, nodeId);
-        this.nodeIdToIdentificationMap.set(nodeId, {nodeId, nodeType});
+        this.nodeIdToConnectionMap.set(nodeContactIdentification.nodeId, connection);
+        this.connectionToNodeIdMap.set(connection, nodeContactIdentification.nodeId);
+        this.nodeIdToIdentificationMap.set(nodeContactIdentification.nodeId, nodeContactIdentification);
+        this.emit('peer-contact-info', nodeContactInfo);
       }
       return;
     }

@@ -1,5 +1,5 @@
-import {COMMANDS, COMMANDS_INVERSE, ICommandsKeys, NODE_TYPES_INVERSE} from "./constants";
-import {INodeContactIdentification} from "./INetwork";
+import {ADDRESS_PAYLOAD_LENGTH, COMMANDS, COMMANDS_INVERSE, ICommandsKeys, NODE_TYPES_INVERSE} from "./constants";
+import {INodeContactAddress, INodeContactIdentification} from "./INetwork";
 
 export function noopResponseCallback(): void {
   // Do nothing
@@ -51,4 +51,26 @@ export function parseIdentificationPayload(identificationPayload: Uint8Array): I
     nodeId: identificationPayload.slice(1),
     nodeType: NODE_TYPES_INVERSE[identificationPayload[0]],
   };
+}
+
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+export function composeAddressPayload(nodeContactAddress: INodeContactAddress): Uint8Array {
+  const addressPayload = new Uint8Array(ADDRESS_PAYLOAD_LENGTH);
+  const view = new DataView(addressPayload.buffer);
+  view.setUint16(0, nodeContactAddress.tcp4Port || 0, false);
+  view.setUint16(2, nodeContactAddress.udp4Port || 0, false);
+  view.setUint16(4, nodeContactAddress.wsPort || 0, false);
+  addressPayload.set(encoder.encode(nodeContactAddress.address), 6);
+  return addressPayload;
+}
+
+export function parseAddressPayload(addressPayload: Uint8Array): INodeContactAddress {
+  const view = new DataView(addressPayload.buffer, addressPayload.byteOffset, addressPayload.byteLength);
+  const tcp4Port = view.getUint16(0, false) || undefined;
+  const udp4Port = view.getUint16(2, false) || undefined;
+  const wsPort = view.getUint16(4, false) || undefined;
+  const address = decoder.decode(addressPayload.subarray(6));
+  return {address, tcp4Port, udp4Port, wsPort};
 }

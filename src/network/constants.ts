@@ -5,17 +5,17 @@ export const COMMANDS = {
   'response': 0,
   'identification': 1,
   'gossip': 2,
-  'tx-gossip': 3,
-  'block-gossip': 4,
-  'ping': 5,
-  'pong': 6,
-  'tx-request': 7,
-  'block-request': 8,
-  'block-request-by-index': 9,
-  'piece-request': 10,
-  'proof-request': 11,
-  'content-request': 12,
-  'state-request': 13,
+  'tx-gossip': 10,
+  'block-gossip': 11,
+  'ping': 12,
+  'pong': 13,
+  'tx-request': 14,
+  'block-request': 15,
+  'block-request-by-index': 16,
+  'piece-request': 17,
+  'proof-request': 18,
+  'content-request': 19,
+  'state-request': 20,
 };
 // tslint:enable:object-literal-sort-keys
 
@@ -55,3 +55,7 @@ for (const nodeType in NODE_TYPES) {
 
 // Node type + node ID
 export const IDENTIFICATION_PAYLOAD_LENGTH = 1 + NODE_ID_LENGTH;
+// 3 ports 2 bytes each + 64 bytes for node address (IP or domain name)
+export const ADDRESS_PAYLOAD_LENGTH = 2 + 2 + 2 + 64;
+
+export const EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH = IDENTIFICATION_PAYLOAD_LENGTH + ADDRESS_PAYLOAD_LENGTH;

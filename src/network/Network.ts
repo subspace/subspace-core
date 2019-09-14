@@ -1,13 +1,24 @@
 import {EventEmitter} from "events";
-import {random_int} from "random-bytes-numbers";
 import {randomElement} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
-import {ICommandsKeysForSending, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys, NODE_TYPES} from "./constants";
+import {
+  ICommandsKeysForSending,
+  IDENTIFICATION_PAYLOAD_LENGTH,
+  INodeTypesKeys,
+  NODE_TYPES,
+} from "./constants";
 import {GossipManager} from "./GossipManager";
-import {INetwork, INodeContactIdentification, INodeContactInfo} from "./INetwork";
+import {
+  INetwork,
+  INodeContactIdentification,
+  INodeContactInfo,
+  INodeContactInfoTcp,
+  INodeContactInfoUdp,
+  INodeContactInfoWs,
+} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
-import {noopResponseCallback} from "./utils";
+import {composeAddressPayload, noopResponseCallback} from "./utils";
 import {WsManager} from "./WsManager";
 
 const emptyPayload = new Uint8Array(0);
@@ -22,6 +33,12 @@ export class Network extends EventEmitter implements INetwork {
     identificationPayload.set([NODE_TYPES[ownNodeContactInfo.nodeType]]);
     identificationPayload.set(ownNodeContactInfo.nodeId, 1);
 
+    const addressPayload = composeAddressPayload(ownNodeContactInfo);
+
+    const extendedIdentificationPayload = new Uint8Array(identificationPayload.length + addressPayload.length);
+    extendedIdentificationPayload.set(identificationPayload);
+    extendedIdentificationPayload.set(addressPayload, identificationPayload.length);
+
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
         ownNodeContactInfo,
@@ -33,7 +50,7 @@ export class Network extends EventEmitter implements INetwork {
       ),
       TcpManager.init(
         ownNodeContactInfo,
-        identificationPayload,
+        extendedIdentificationPayload,
         bootstrapNodes,
         browserNode,
         Network.TCP_MESSAGE_SIZE_LIMIT,
@@ -43,7 +60,7 @@ export class Network extends EventEmitter implements INetwork {
       ),
       WsManager.init(
         ownNodeContactInfo,
-        identificationPayload,
+        extendedIdentificationPayload,
         bootstrapNodes,
         browserNode,
         Network.WS_MESSAGE_SIZE_LIMIT,
@@ -60,6 +77,30 @@ export class Network extends EventEmitter implements INetwork {
       wsManager,
       this.GOSSIP_CACHE_TIMEOUT,
     );
+
+    // // TODO: We wait for them since otherwise concurrent connections to the same peer will cause issues; this should be
+    // //  handled by protocol managers nicely
+    // const bootstrapPromises: Array<Promise<any>> = [];
+    // // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
+    // for (const bootstrapNode of bootstrapNodes) {
+    //   if (bootstrapNode.tcp4Port) {
+    //     bootstrapPromises.push(
+    //       tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
+    //         .catch((_) => {
+    //           // TODO: Log in debug mode
+    //         }),
+    //     );
+    //   } else if (bootstrapNode.wsPort) {
+    //     bootstrapPromises.push(
+    //       wsManager.nodeIdToConnection(bootstrapNode.nodeId)
+    //         .catch((_) => {
+    //           // TODO: Log in debug mode
+    //         }),
+    //     );
+    //   }
+    // }
+    //
+    // await Promise.all(bootstrapPromises);
 
     return new Network(udpManager, tcpManager, wsManager, gossipManager, browserNode);
   }
@@ -100,6 +141,20 @@ export class Network extends EventEmitter implements INetwork {
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {
       manager.on('command', this.emit.bind(this));
     }
+
+    for (const manager of [udpManager, tcpManager, wsManager]) {
+      manager.on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
+        if (nodeContactInfo.udp4Port) {
+          udpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoUdp);
+        }
+        if (nodeContactInfo.tcp4Port) {
+          tcpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoTcp);
+        }
+        if (nodeContactInfo.wsPort) {
+          wsManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoWs);
+        }
+      });
+    }
   }
 
   public async sendRequestOneWay(
@@ -122,7 +177,7 @@ export class Network extends EventEmitter implements INetwork {
 
     const addresses = await this.udpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
     if (addresses.length) {
-      const randomAddress = addresses[random_int(0, addresses.length - 1)];
+      const randomAddress = randomElement(addresses);
       return this.udpManager.sendMessageOneWay(randomAddress, command, payload);
     }
 
@@ -149,7 +204,7 @@ export class Network extends EventEmitter implements INetwork {
 
     const addresses = await this.udpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
     if (addresses.length) {
-      const randomAddress = addresses[random_int(0, addresses.length - 1)];
+      const randomAddress = randomElement(addresses);
       return this.udpManager.sendMessage(randomAddress, command, payload);
     }
 
