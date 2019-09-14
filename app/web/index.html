@@ -293,9 +293,9 @@
     },
     async mounted() {
       const subspace = await Subspace;
-      subspace.createLedgerAndFarm();
+      subspace.syncLedgerAndValidate();
       this.subspace = subspace;
-      console.log(subspace);
+      // console.log(subspace);
     }
   })
 </script>

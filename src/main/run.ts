@@ -72,7 +72,6 @@ export const run = async (
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
   let plotAdapter: 'mem-db' | 'disk-db' | 'indexed-db';
-  // let storage: Storage;
   let rpc: RPC;
   let ledger: Ledger;
   let wallet: Wallet | undefined;
@@ -247,12 +246,12 @@ export const run = async (
     await storage.clear();
   }
 
-  // instantiate a wallet
+  // instantiate a wallet for light clients
   if (config.wallet && !config.farm) {
     wallet = new Wallet(blsSignatures, storage);
   }
 
-  // instantiate a farm & wallet
+  // instantiate a farm & wallet for farmers
   if (config.farm && config.wallet) {
 
     // create wallet and addresses
@@ -268,10 +267,10 @@ export const run = async (
     farm = new Farm(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
   }
 
-  // instantiate a ledger
+  // instantiate a ledger for all nodes
   ledger = new Ledger(blsSignatures, storage, numberOfChains, validateRecords, encodingRounds);
 
-  // instantiate the network & rpc interface
+  // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
   if (!contactInfo.nodeId) {
     contactInfo.nodeId = crypto.randomBytes(32);

@@ -42,15 +42,15 @@ const testValidatorNode = async () => {
   const validatorNode: Node = await run(
     'validator',
     1,
-    'disk',
+    'memory',
     0,
     0,
     true,
     3,
     `${os.tmpdir()}/validator`,
-    100,
+    0,
     false,
-    false,
+    true,
     validatorContactInfo,
     [gatewayContactInfo],
   );
