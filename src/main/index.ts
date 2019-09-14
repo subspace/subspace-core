@@ -3,7 +3,7 @@
 import {run} from "./run";
 
 /**
- * Default Args
+ * Default Args for Browser Build
  *
  * Full Node
  * 128 chains
@@ -15,12 +15,17 @@ import {run} from "./run";
  * Storage Path (optional)
  */
 
+// module.exports = run;
+
 module.exports = run(
   'full',
   1,
   'memory',
   1,
   1000000000,
-  false,
+  true,
   3,
-);
+  undefined,
+  1000,
+  false,
+  );

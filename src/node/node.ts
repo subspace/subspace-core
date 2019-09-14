@@ -84,14 +84,16 @@ export class Node extends EventEmitter {
       this.rpc.gossipTx(tx);
     });
 
-    // switch (this.type) {
-    //   case 'full':
-    //     this.createLedgerAndFarm();
-    //     break;
-    //   case 'validator':
-    //     this.syncLedgerAndValidate();
-    //     break;
-    // }
+    if (this.settings.autostart) {
+      switch (this.type) {
+        case 'full':
+          this.createLedgerAndFarm();
+          break;
+        case 'validator':
+          this.syncLedgerAndValidate();
+          break;
+      }
+    }
   }
 
   /**
@@ -123,7 +125,7 @@ export class Node extends EventEmitter {
   }
 
   public async farmBlock(): Promise<void> {
-    await randomWait(25);
+    await randomWait(this.settings.delay);
     if (!this.farm || !this.wallet) {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
@@ -222,10 +224,10 @@ export class Node extends EventEmitter {
     return;
   }
 
-  // public async ping(nodeId: Uint8Array): Promise<void> {
-  //   await this.rpc.ping(nodeId);
-  // }
-  //
+  public async ping(): Promise<void> {
+    await this.rpc.ping();
+  }
+
   /**
    * A new tx is received over the network from another node.
    * Filter the tx for duplicates or spam. Validate the tx.

@@ -292,10 +292,10 @@
       
     },
     async mounted() {
-      // const subspace = await Subspace;
-      // subspace.createLedgerAndFarm(1);
-      // this.subspace = subspace;
-      // console.log(subspace);
+      const subspace = await Subspace;
+      subspace.createLedgerAndFarm();
+      this.subspace = subspace;
+      console.log(subspace);
     }
   })
 </script>

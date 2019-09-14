@@ -68,9 +68,9 @@ export class RPC extends EventEmitter {
       });
   }
 
-  // public async ping(nodeId: Uint8Array, payload?: Uint8Array): Promise<Uint8Array> {
-  //   return this.network.sendRequestUnreliable(nodeId, 'ping', payload);
-  // }
+  public async ping(payload?: Uint8Array): Promise<Uint8Array> {
+    return this.network.sendRequestUnreliable(['any'], 'ping', payload);
+  }
 
   /**
    * Gossip a new tx out to all peers.

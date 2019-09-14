@@ -41,14 +41,16 @@ const startGatewayNode = async () => {
 
   const gatewayNode: Node = await run(
     'full',
-    32,
+    1,
     'memory',
     1,
     100000000,
     true,
     3,
     `${os.tmpdir()}/gateway`,
-    true,
+    100,
+    false,
+    false,
     gatewayContactInfo,
     [validatorContactInfo],
   );

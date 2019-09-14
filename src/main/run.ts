@@ -49,6 +49,8 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * @param reset
  * @param contactInfo     IP and ports to expose for this node, defaults provided.
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
+ * @param autostart       Whether to start the node role automatically or explicitly, default true
+ * @param delay           Random farm/solve delay (for local testing) in milliseconds, following a poisson distribution around provided value
  */
 export const run = async (
   nodeType: 'full' | 'farmer' | 'validator' | 'client' | 'gateway',
@@ -59,6 +61,8 @@ export const run = async (
   validateRecords: boolean,
   encodingRounds: number,
   storageDir?: string,
+  delay = 0,
+  autostart = true,
   reset = true,
   contactInfo: IPeerContactInfo = defaultContactInfo,
   bootstrapPeers: IPeerContactInfo[] = defaultBootstrapPeers,
@@ -269,9 +273,9 @@ export const run = async (
 
   // instantiate the network & rpc interface
   // TODO: replace with ECDSA network keys
-  contactInfo.nodeId = crypto.randomBytes(32);
-  // tslint:disable-next-line: no-console
-  console.log('Launching network');
+  if (!contactInfo.nodeId) {
+    contactInfo.nodeId = crypto.randomBytes(32);
+  }
   const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
   rpc = new RPC(network, blsSignatures);
 
@@ -284,6 +288,8 @@ export const run = async (
     validateRecords,
     contactInfo,
     bootstrapPeers,
+    autostart,
+    delay,
   };
 
   return new Node(nodeType, config, settings, rpc, ledger, wallet, farm);

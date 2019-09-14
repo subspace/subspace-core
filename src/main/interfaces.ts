@@ -172,4 +172,6 @@ export interface INodeSettings {
   validateRecords: boolean;             // if to validate new records as they are created
   contactInfo: IPeerContactInfo;        // network contact info for this node
   bootstrapPeers: IPeerContactInfo [];  // known network contact info for other nodes
+  autostart: boolean;                   // if to start the node role automatically
+  delay: number;                        // optional random delay in milliseconds (for farmers)
 }
