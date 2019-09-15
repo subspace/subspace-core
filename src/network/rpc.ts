@@ -203,8 +203,8 @@ export class RPC extends EventEmitter {
       data: {
         pieceHash: binaryPiece.subarray(4096, 4128),
         stateHash: binaryPiece.subarray(4128, 4160),
-        pieceIndex: smallBin2Num(binaryPiece.subarray(4160, 4164)),
-        proof: binaryPiece.subarray(4166),
+        pieceIndex: smallBin2Num(binaryPiece.subarray(4160, 4162)),
+        proof: binaryPiece.subarray(4162),
       },
     };
 

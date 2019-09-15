@@ -58,7 +58,7 @@ const awsGatewayContactInfo: INodeContactInfo = {
 
 module.exports = run(
   'validator',
-  1,
+  4,
   'memory',
   0,
   0,

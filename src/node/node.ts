@@ -434,7 +434,7 @@ export class Node extends EventEmitter {
    */
   private async onPieceRequest(pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     if (this.farm) {
-      console.log('\n\n *** New Piece Request Received *** \n\n');
+      // console.log('\n\n *** New Piece Request Received *** \n\n');
       const piece = await this.farm.getExactPiece(pieceId);
       if (piece) {
         const pieceData = Buffer.concat([

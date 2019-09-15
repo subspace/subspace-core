@@ -26,7 +26,7 @@ const startValidatorNode = async () => {
     wsPort: 11890,
   };
 
-  const validatorNodeId = crypto.hash(Buffer.from('validator'));
+  const validatorNodeId = crypto.hash(Buffer.from('validator-1'));
 
   // spin up the validator node
   const validatorContactInfo: INodeContactInfo = {
@@ -40,14 +40,14 @@ const startValidatorNode = async () => {
 
   await run(
     'validator',
-    1,
+    4,
     'memory',
     0,
     0,
     true,
     3,
     `${os.tmpdir()}/validator`,
-    1000,
+    0,
     true,
     true,
     validatorContactInfo,
