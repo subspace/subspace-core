@@ -18,7 +18,7 @@ node -e "console.log('Running Node.js ' + process.version)"
 
 ```
 
-Setup the repo
+Setup the repository
 ```
 git clone https://www.github.com/subspace/subspace-core.git
 cd subspace-core
@@ -29,5 +29,11 @@ npm run build
 
 Start the Gateway
 ```
-npx ts-node src/main/tests/awsGatewayNode.ts
+npx ts-node src/main/tests/testnet/awsGatewayNode.ts
+```
+
+From Local Env, in two different tabs
+```
+ts-node src/main/tests/testnet/awsValidatorNode.ts
+ts-node src/main/tests/testnet/awsFarmerNode.ts
 ```

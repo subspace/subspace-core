@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Hello Subspace!</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css">
-    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
-    <script src="./build/bundle.js"></script>
   </head>
   <body>
     <div id='app'>
@@ -220,7 +217,11 @@
   </body>
 </html>
 
+<script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+<script src="./build/dev/bundle.js"></script>
 <script type='text/javascript'>
+
 
 // Stats for Browser GUI
   // Subspace Tab
@@ -293,10 +294,7 @@
     },
     async mounted() {
       const subspace = await Subspace;
-      // await subspace.syncLedgerAndValidate();
-      // subspace.ping();
       this.subspace = subspace;
-      // console.log(subspace);
     }
   })
 </script>

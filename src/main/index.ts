@@ -32,7 +32,7 @@ import {run} from "./run";
 //   wsPort: 10890,
 // };
 
-const browserNodeId = crypto.hash(Buffer.from('browser'));
+const browserNodeId = crypto.hash(Buffer.from('browser-validator'));
 
 // spin up the validator node
 const browserContactInfo: INodeContactInfo = {
@@ -51,6 +51,18 @@ const awsGatewayContactInfo: INodeContactInfo = {
   nodeId: awsGatewayNodeId,
   nodeType: 'gateway',
   address: 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com',
+  udp4Port: 11888,
+  tcp4Port: 11889,
+  wsPort: 11890,
+};
+
+const localGatewayNodeId = crypto.hash(Buffer.from('local-gateway'));
+
+// spin up the gateway node
+const localGatewayContactInfo: INodeContactInfo = {
+  nodeId: localGatewayNodeId,
+  nodeType: 'gateway',
+  address: 'localhost',
   udp4Port: 11888,
   tcp4Port: 11889,
   wsPort: 11890,
