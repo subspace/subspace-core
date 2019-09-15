@@ -111,7 +111,11 @@ test('request-block-by-index', async () => {
     responseCallback(block.toFullBytes());
   });
   const payload = await rpc2.requestBlockByIndex(0);
-  expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
+  if (payload) {
+    expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
+  } else {
+    fail(true);
+  }
 });
 
 test('request-piece', async () => {
@@ -121,7 +125,7 @@ test('request-piece', async () => {
     data: {
       pieceHash: crypto.hash(binaryPiece),
       stateHash: crypto.randomBytes(32),
-      pieceIndex: 128,
+      pieceIndex: 256,
       proof: crypto.randomBytes(256),
     },
   };

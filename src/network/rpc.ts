@@ -35,6 +35,7 @@ export class RPC extends EventEmitter {
 
       // received a new block and encoding via gossip
       this.network.on('block-gossip', (payload: Uint8Array) => {
+        console.log('Received a block via gossip');
         const encoding = payload.subarray(0, 4096);
         const blockData = payload.subarray(4096);
         const block = Block.fromFullBytes(blockData);
@@ -129,7 +130,7 @@ export class RPC extends EventEmitter {
    * @return A valid tx instance
    */
   public async requestTx(txId: Uint8Array): Promise<Tx> {
-    const binaryTx = await this.network.sendRequestUnreliable(['full', 'validator', 'gateway'], 'tx-request', txId);
+    const binaryTx = await this.network.sendRequest(['full', 'validator', 'gateway'], 'tx-request', txId);
     const tx = Tx.fromBytes(binaryTx);
     if (!tx.isValid(this.blsSignatures)) {
       // TODO
@@ -149,7 +150,7 @@ export class RPC extends EventEmitter {
    * @return A valid block instance
    */
   public async requestBlock(blockId: Uint8Array): Promise<Block> {
-    const binaryBlock = await this.network.sendRequestUnreliable(['gateway', 'full', 'validator'], 'block-request', blockId);
+    const binaryBlock = await this.network.sendRequest(['gateway', 'full', 'validator'], 'block-request', blockId);
     const block = Block.fromFullBytes(binaryBlock);
     if (!block.isValid(this.blsSignatures)) {
       // TODO
@@ -168,18 +169,20 @@ export class RPC extends EventEmitter {
    *
    * @return A valid block instance
    */
-  public async requestBlockByIndex(blockIndex: number): Promise<Block> {
+  public async requestBlockByIndex(blockIndex: number): Promise<Block | void> {
     const binaryIndex = num2Bin(blockIndex);
-    const binaryBlock = await this.network.sendRequestUnreliable(['gateway', 'full', 'validator'], 'block-request-by-index', binaryIndex);
-    const block = Block.fromFullBytes(binaryBlock);
-    if (!block.isValid(this.blsSignatures)) {
-      // TODO
-        // Drop the node who sent response from peer table
-        // Add to blacklisted nodes
-        // Request from another node
-      throw new Error('Received invalid block response from peer');
+    const binaryBlock = await this.network.sendRequest(['gateway', 'full', 'validator'], 'block-request-by-index', binaryIndex);
+    if (binaryBlock.length > 0) {
+      const block = Block.fromFullBytes(binaryBlock);
+      if (!block.isValid(this.blsSignatures)) {
+        // TODO
+          // Drop the node who sent response from peer table
+          // Add to blacklisted nodes
+          // Request from another node
+        throw new Error('Received invalid block response from peer');
+      }
+      return block;
     }
-    return block;
   }
 
   /**
@@ -190,8 +193,8 @@ export class RPC extends EventEmitter {
    * @return A valid piece instance, with metadata
    */
   public async requestPiece(pieceId: Uint8Array): Promise<IPiece> {
-    const binaryPiece = await this.network.sendRequestUnreliable(['gateway', 'full'], 'piece-request', pieceId);
-    if (binaryPiece.length < 4166) {
+    const binaryPiece = await this.network.sendRequest(['gateway', 'full'], 'piece-request', pieceId);
+    if (binaryPiece.length < 4162) {
       throw new Error('Received invalid piece, too short');
     }
 
@@ -199,8 +202,8 @@ export class RPC extends EventEmitter {
       piece: binaryPiece.subarray(0, 4096),
       data: {
         pieceHash: binaryPiece.subarray(4096, 4128),
-        stateHash: binaryPiece.subarray(4128, 4164),
-        pieceIndex: smallBin2Num(binaryPiece.subarray(4164, 4166)),
+        stateHash: binaryPiece.subarray(4128, 4160),
+        pieceIndex: smallBin2Num(binaryPiece.subarray(4160, 4164)),
         proof: binaryPiece.subarray(4166),
       },
     };

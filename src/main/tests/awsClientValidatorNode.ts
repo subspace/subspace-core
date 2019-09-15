@@ -4,7 +4,6 @@
 import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
 import { INodeContactInfo } from '../../network/INetwork';
-import { Node } from '../../node/node';
 import { run } from '../run';
 
 /**
@@ -13,18 +12,18 @@ import { run } from '../run';
  * Step three: test that a new farmer can join, sync the ledger manually, and start farming
  * Step four: test that a light client can join and sync state before validating new blocks
  */
-const testValidatorNode = async () => {
+const startValidatorNode = async () => {
 
-  const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
+  const awsGatewayNodeId = crypto.hash(Buffer.from('aws-gateway'));
 
   // spin up the gateway node
-  const gatewayContactInfo: INodeContactInfo = {
-    nodeId: gatewayNodeId,
+  const awsGatewayContactInfo: INodeContactInfo = {
+    nodeId: awsGatewayNodeId,
     nodeType: 'gateway',
-    address: 'localhost',
-    udp4Port: 10888,
-    tcp4Port: 10889,
-    wsPort: 10890,
+    address: 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com',
+    udp4Port: 11888,
+    tcp4Port: 11889,
+    wsPort: 11890,
   };
 
   const validatorNodeId = crypto.hash(Buffer.from('validator'));
@@ -32,30 +31,28 @@ const testValidatorNode = async () => {
   // spin up the validator node
   const validatorContactInfo: INodeContactInfo = {
     nodeId: validatorNodeId,
-    nodeType: 'validator',
     address: 'localhost',
-    udp4Port: 11888,
-    tcp4Port: 11889,
-    wsPort: 11890,
+    nodeType: 'validator',
+    udp4Port: 12888,
+    tcp4Port: 12889,
+    wsPort: 12890,
   };
 
-  const validatorNode: Node = await run(
+  await run(
     'validator',
-    16,
+    1,
     'memory',
     0,
     0,
     true,
     3,
     `${os.tmpdir()}/validator`,
-    0,
-    false,
+    1000,
+    true,
     true,
     validatorContactInfo,
-    [gatewayContactInfo],
+    [awsGatewayContactInfo],
   );
-
-  await validatorNode.syncLedgerAndValidate();
 };
 
-testValidatorNode();
+startValidatorNode();

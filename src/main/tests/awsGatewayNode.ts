@@ -4,7 +4,6 @@
 import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
 import { INodeContactInfo } from '../../network/INetwork';
-import { Node } from '../../node/node';
 import { run } from '../run';
 
 /**
@@ -15,19 +14,19 @@ import { run } from '../run';
  */
 const startGatewayNode = async () => {
 
-  const gatewayNodeId = crypto.hash(Buffer.from('gateway'));
+  const awsGatewayNodeId = crypto.hash(Buffer.from('aws-gateway'));
 
   // spin up the gateway node
-  const gatewayContactInfo: INodeContactInfo = {
-    nodeId: gatewayNodeId,
+  const awsGatewayContactInfo: INodeContactInfo = {
+    nodeId: awsGatewayNodeId,
     nodeType: 'gateway',
-    address: 'localhost',
-    udp4Port: 10888,
-    tcp4Port: 10889,
-    wsPort: 10890,
+    address: 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com',
+    udp4Port: 11888,
+    tcp4Port: 11889,
+    wsPort: 11890,
   };
 
-  const gatewayNode: Node = await run(
+  await run(
     'full',
     1,
     'disk',
@@ -36,17 +35,12 @@ const startGatewayNode = async () => {
     true,
     3,
     `${os.tmpdir()}/gateway`,
-    100,
-    false,
-    false,
-    gatewayContactInfo,
+    1000,
+    true,
+    true,
+    awsGatewayContactInfo,
     [],
   );
-
-  setTimeout(() => {
-    gatewayNode.createLedgerAndFarm();
-  }, 10000);
-
 };
 
 startGatewayNode();
