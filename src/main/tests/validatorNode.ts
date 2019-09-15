@@ -41,7 +41,7 @@ const testValidatorNode = async () => {
 
   const validatorNode: Node = await run(
     'validator',
-    16,
+    1,
     'memory',
     0,
     0,

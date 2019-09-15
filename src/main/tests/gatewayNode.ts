@@ -52,7 +52,7 @@ const startGatewayNode = async () => {
 
   const gatewayNode: Node = await run(
     'full',
-    16,
+    1,
     'disk',
     100,
     100000000,
