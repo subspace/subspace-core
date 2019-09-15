@@ -19,7 +19,7 @@ import {
 } from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
-import {composeAddressPayload, noopResponseCallback} from "./utils";
+import {composeAddressPayload} from "./utils";
 import {WsManager} from "./WsManager";
 
 const emptyPayload = new Uint8Array(0);
@@ -146,18 +146,25 @@ export class Network extends EventEmitter implements INetwork {
     }
 
     for (const manager of [udpManager, tcpManager, wsManager]) {
-      manager.on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
-        this.peers.set(nodeContactInfo.nodeId, nodeContactInfo);
-        if (nodeContactInfo.udp4Port) {
-          udpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoUdp);
-        }
-        if (nodeContactInfo.tcp4Port) {
-          tcpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoTcp);
-        }
-        if (nodeContactInfo.wsPort) {
-          wsManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoWs);
-        }
-      });
+      manager
+        .on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
+          this.peers.set(nodeContactInfo.nodeId, nodeContactInfo);
+          if (nodeContactInfo.udp4Port) {
+            udpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoUdp);
+          }
+          if (nodeContactInfo.tcp4Port) {
+            tcpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoTcp);
+          }
+          if (nodeContactInfo.wsPort) {
+            wsManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoWs);
+          }
+        })
+        .on('peer-connected', (nodeContactInfo: INodeContactInfo) => {
+          this.emit('peer-connected', nodeContactInfo);
+        })
+        .on('peer-disconnected', (nodeContactInfo: INodeContactInfo) => {
+          this.emit('peer-disconnected', nodeContactInfo);
+        });
     }
 
     for (const bootstrapNode of bootstrapNodes) {
@@ -242,17 +249,30 @@ export class Network extends EventEmitter implements INetwork {
   // TODO: Achieve the same without re-implementing methods
 
   public on(
+    event: 'peer-connected' | 'peer-disconnected',
+    listener: (
+      nodeContactInfo: INodeContactInfo,
+    ) => void,
+  ): this;
+  public on(
     event: ICommandsKeysForSending,
     listener: (
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
       extra: INodeContactIdentification,
     ) => void,
-  ): this {
-    EventEmitter.prototype.on.call(this, event, listener);
+  ): this;
+  public on(arg1: any, arg2: any): this {
+    EventEmitter.prototype.on.call(this, arg1, arg2);
     return this;
   }
 
+  public once(
+    event: 'peer-connected' | 'peer-disconnected',
+    listener: (
+      nodeContactInfo: INodeContactInfo,
+    ) => void,
+  ): this;
   public once(
     event: ICommandsKeysForSending,
     listener: (
@@ -260,11 +280,18 @@ export class Network extends EventEmitter implements INetwork {
       responseCallback: (responsePayload: Uint8Array) => void,
       extra: INodeContactIdentification,
     ) => void,
-  ): this {
-    EventEmitter.prototype.once.call(this, event, listener);
+  ): this;
+  public once(arg1: any, arg2: any): this {
+    EventEmitter.prototype.once.call(this, arg1, arg2);
     return this;
   }
 
+  public off(
+    event: 'peer-connected' | 'peer-disconnected',
+    listener: (
+      nodeContactInfo: INodeContactInfo,
+    ) => void,
+  ): this;
   public off(
     event: ICommandsKeysForSending,
     listener: (
@@ -272,18 +299,24 @@ export class Network extends EventEmitter implements INetwork {
       responseCallback: (responsePayload: Uint8Array) => void,
       extra: INodeContactIdentification,
     ) => void,
-  ): this {
-    EventEmitter.prototype.off.call(this, event, listener);
+  ): this;
+  public off(arg1: any, arg2: any): this {
+    EventEmitter.prototype.off.call(this, arg1, arg2);
     return this;
   }
 
   public emit(
+    event: 'peer-connected' | 'peer-disconnected',
+    nodeContactInfo: INodeContactInfo,
+  ): boolean;
+  public emit(
     event: ICommandsKeysForSending,
     payload: Uint8Array,
-    responseCallback: (responsePayload: Uint8Array) => void = noopResponseCallback,
+    responseCallback: (responsePayload: Uint8Array) => void,
     extra: INodeContactIdentification,
-  ): boolean {
-    return EventEmitter.prototype.emit.call(this, event, payload, responseCallback, extra);
+  ): boolean;
+  public emit(arg1: any, arg2: any, arg3?: any, arg4?: any): boolean {
+    return EventEmitter.prototype.emit.call(this, arg1, arg2, arg3, arg4);
   }
 
   // TODO: There should be a smart way to infer type instead of `any`

@@ -80,6 +80,12 @@ export interface INetwork extends EventEmitter {
   destroy(): Promise<void>;
 
   on(
+    event: 'peer-connected',
+    listener: (
+      nodeContactInfo: INodeContactInfo,
+    ) => void,
+  ): this;
+  on(
     event: ICommandsKeysForSending,
     listener: (
       payload: Uint8Array,
@@ -88,6 +94,12 @@ export interface INetwork extends EventEmitter {
     ) => void,
   ): this;
 
+  once(
+    event: 'peer-connected' | 'peer-disconnected',
+    listener: (
+      nodeContactInfo: INodeContactInfo,
+    ) => void,
+  ): this;
   once(
     event: ICommandsKeysForSending,
     listener: (
@@ -98,6 +110,12 @@ export interface INetwork extends EventEmitter {
   ): this;
 
   off(
+    event: 'peer-connected' | 'peer-disconnected',
+    listener: (
+      nodeContactInfo: INodeContactInfo,
+    ) => void,
+  ): this;
+  off(
     event: ICommandsKeysForSending,
     listener: (
       payload: Uint8Array,
@@ -106,6 +124,10 @@ export interface INetwork extends EventEmitter {
     ) => void,
   ): this;
 
+  emit(
+    event: 'peer-connected' | 'peer-disconnected',
+    nodeContactInfo: INodeContactInfo,
+  ): boolean;
   emit(
     event: ICommandsKeysForSending,
     payload: Uint8Array,

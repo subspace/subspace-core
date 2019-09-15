@@ -1,12 +1,23 @@
 import {randomBytes} from "crypto";
+import {NODE_ID_LENGTH} from "../main/constants";
 import {IPeerContactInfo} from "../main/interfaces";
 import {allocatePort, bin2Hex} from "../utils/utils";
 import {INodeContactInfo} from "./INetwork";
 import {Network} from "./Network";
 
+function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
+  return JSON.stringify({
+    address: nodeContactInfo.address,
+    nodeId: bin2Hex(nodeContactInfo.nodeId),
+    nodeType: nodeContactInfo.nodeType,
+    tcp4Port: nodeContactInfo.tcp4Port,
+    udp4Port: nodeContactInfo.udp4Port,
+    wsPort: nodeContactInfo.wsPort,
+  });
+}
 const peer1: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('1'.repeat(64), 'hex'),
+  nodeId: Buffer.from('1'.repeat(NODE_ID_LENGTH * 2), 'hex'),
   nodeType: 'full',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
@@ -15,7 +26,7 @@ const peer1: IPeerContactInfo = {
 
 const peer2: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('2'.repeat(64), 'hex'),
+  nodeId: Buffer.from('2'.repeat(NODE_ID_LENGTH * 2), 'hex'),
   nodeType: 'full',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
@@ -24,7 +35,7 @@ const peer2: IPeerContactInfo = {
 
 const peer3: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('3'.repeat(64), 'hex'),
+  nodeId: Buffer.from('3'.repeat(NODE_ID_LENGTH * 2), 'hex'),
   nodeType: 'full',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
@@ -33,7 +44,7 @@ const peer3: IPeerContactInfo = {
 
 const peer4: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('4'.repeat(64), 'hex'),
+  nodeId: Buffer.from('4'.repeat(NODE_ID_LENGTH * 2), 'hex'),
   nodeType: 'client',
 };
 
@@ -50,7 +61,7 @@ beforeEach(async () => {
 });
 
 describe('UDP', () => {
-  test('Send one-way unreliable', async () => {
+  test('Send one-way unreliable', () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       networkClient2.once('ping', (payload, _, clientIdentification) => {
@@ -146,7 +157,7 @@ describe('WebSocket', () => {
 });
 
 describe('Gossip', () => {
-  test('Send gossip command', async () => {
+  test('Send gossip command', () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       let waitingFor = 3;
@@ -196,17 +207,7 @@ describe('Identification', () => {
 });
 
 describe('Peers', () => {
-  test('Get peers from network instance', async () => {
-    function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
-      return JSON.stringify({
-        address: nodeContactInfo.address,
-        nodeId: bin2Hex(nodeContactInfo.nodeId),
-        nodeType: nodeContactInfo.nodeType,
-        tcp4Port: nodeContactInfo.tcp4Port,
-        udp4Port: nodeContactInfo.udp4Port,
-        wsPort: nodeContactInfo.wsPort,
-      });
-    }
+  test('Get peers from network instance', () => {
     return new Promise((resolve) => {
       setTimeout(() => {
         const peer1Peers = networkClient1.getPeers().map(serializeNodeContactInfo);
@@ -220,6 +221,36 @@ describe('Peers', () => {
     });
   });
 
+  test('Connection events', () => {
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        const peerServer: IPeerContactInfo = {
+          address: 'localhost',
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+          wsPort: allocatePort(),
+        };
+        const peerClient: IPeerContactInfo = {
+          address: 'localhost',
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+        };
+        let client: Network;
+        const server = await Network.init(peerServer, [], false);
+        server
+          .once('peer-connected', (nodeContactInfo: INodeContactInfo) => {
+            expect(serializeNodeContactInfo(nodeContactInfo)).toContainEqual(serializeNodeContactInfo(peerClient));
+            client.destroy();
+          })
+          .once('peer-disconnected', async (nodeContactInfo: INodeContactInfo) => {
+            expect(serializeNodeContactInfo(nodeContactInfo)).toContainEqual(serializeNodeContactInfo(peerClient));
+            await server.destroy();
+            resolve();
+          });
+        client = await Network.init(peerClient, [peer1], true);
+      });
+    });
+  });
 });
 
 afterEach(async () => {
