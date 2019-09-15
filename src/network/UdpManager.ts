@@ -157,7 +157,7 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
   }
 
   private createUdp4Socket(
-    address: string,
+    address?: string,
     port?: number,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
@@ -204,7 +204,7 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
             errorCallback(error);
           }
         });
-      udp4Socket.bind(port, address);
+      udp4Socket.bind(port, address as string);
     } else if (readyCallback) {
       setTimeout(readyCallback);
     }

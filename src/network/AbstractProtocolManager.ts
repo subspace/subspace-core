@@ -14,7 +14,7 @@ import {noopResponseCallback, parseAddressPayload, parseIdentificationPayload, p
 export abstract class AbstractProtocolManager<Connection extends object, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
   protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, Address>();
-  protected readonly nodeIdToIdentificationMap = new WeakMap<Connection, INodeContactIdentification>();
+  protected readonly connectionToIdentificationMap = new WeakMap<Connection, INodeContactIdentification>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
   /**
    * Mapping from requestId to callback
@@ -197,7 +197,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     });
 
     this.nodeIdToConnectionMap.forEach((connection: Connection) => {
-      const nodeContactIdentification = this.nodeIdToIdentificationMap.get(connection);
+      const nodeContactIdentification = this.connectionToIdentificationMap.get(connection);
       if (nodeContactIdentification && nodeTypesSet.has(nodeContactIdentification.nodeType)) {
         nodeIds.add(nodeContactIdentification.nodeId);
       }
@@ -310,7 +310,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       } else {
         this.nodeIdToConnectionMap.set(nodeContactIdentification.nodeId, connection);
         this.connectionToNodeIdMap.set(connection, nodeContactIdentification.nodeId);
-        this.nodeIdToIdentificationMap.set(connection, nodeContactIdentification);
+        this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
         this.emit('peer-contact-info', nodeContactInfo);
         this.emit('peer-connected', nodeContactInfo);
       }
@@ -327,7 +327,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       }
       contactIdentification = this.nodeIdToAddressMap.get(nodeId);
       if (!contactIdentification) {
-        contactIdentification = this.nodeIdToIdentificationMap.get(connection);
+        contactIdentification = this.connectionToIdentificationMap.get(connection);
         if (!contactIdentification) {
           throw new Error('There is no contact identification, this should never happen');
         }

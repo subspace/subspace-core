@@ -43,7 +43,6 @@ const peer3: IPeerContactInfo = {
 };
 
 const peer4: IPeerContactInfo = {
-  address: 'localhost',
   nodeId: Buffer.from('4'.repeat(NODE_ID_LENGTH * 2), 'hex'),
   nodeType: 'client',
 };
@@ -231,23 +230,22 @@ describe('Peers', () => {
           wsPort: allocatePort(),
         };
         const peerClient: IPeerContactInfo = {
-          address: 'localhost',
           nodeId: randomBytes(NODE_ID_LENGTH),
           nodeType: 'client',
         };
-        let client: Network;
-        const server = await Network.init(peerServer, [], false);
-        server
+        let networkClient: Network;
+        const networkServer = await Network.init(peerServer, [], false);
+        networkServer
           .once('peer-connected', (nodeContactInfo: INodeContactInfo) => {
-            expect(serializeNodeContactInfo(nodeContactInfo)).toContainEqual(serializeNodeContactInfo(peerClient));
-            client.destroy();
+            expect(serializeNodeContactInfo(nodeContactInfo)).toEqual(serializeNodeContactInfo(peerClient));
+            networkClient.destroy();
           })
           .once('peer-disconnected', async (nodeContactInfo: INodeContactInfo) => {
-            expect(serializeNodeContactInfo(nodeContactInfo)).toContainEqual(serializeNodeContactInfo(peerClient));
-            await server.destroy();
+            expect(serializeNodeContactInfo(nodeContactInfo)).toEqual(serializeNodeContactInfo(peerClient));
+            await networkServer.destroy();
             resolve();
           });
-        client = await Network.init(peerClient, [peer1], true);
+        networkClient = await Network.init(peerClient, [peerServer], true);
       });
     });
   });

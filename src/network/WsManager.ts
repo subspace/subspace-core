@@ -174,8 +174,11 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
 
   public destroy(): Promise<void> {
     return new Promise((resolve, reject) => {
+      for (const connection of this.connectionToNodeIdMap.keys()) {
+        connection.close();
+        this.connectionCloseHandler(connection);
+      }
       if (this.wsServer) {
-        this.wsServer.closeAllConnections();
         this.wsServer.shutDown();
       }
       if (this.httpServer) {
@@ -211,7 +214,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   private connectionCloseHandler(connection: WebSocketConnection): void {
     const nodeId = this.connectionToNodeIdMap.get(connection);
     if (nodeId) {
-      const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId);
+      const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId) || this.connectionToIdentificationMap.get(connection);
       if (nodeContactInfo) {
         this.emit('peer-disconnected', nodeContactInfo);
       }

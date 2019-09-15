@@ -2,7 +2,7 @@ import {EventEmitter} from "events";
 import {ICommandsKeysForSending, INodeTypesKeys} from "./constants";
 
 export interface INodeContactAddress {
-  address: string;
+  address?: string;
   tcp4Port?: number;
   udp4Port?: number;
   wsPort?: number;
@@ -16,14 +16,17 @@ export interface INodeContactIdentification {
 export type INodeContactInfo = INodeContactAddress & INodeContactIdentification;
 
 export interface INodeContactInfoUdp extends INodeContactInfo {
+  address: string;
   udp4Port: number;
 }
 
 export interface INodeContactInfoTcp extends INodeContactInfo {
+  address: string;
   tcp4Port: number;
 }
 
 export interface INodeContactInfoWs extends INodeContactInfo {
+  address: string;
   wsPort: number;
 }
 
