@@ -78,6 +78,6 @@ export function parseAddressPayload(addressPayload: Uint8Array): INodeContactAdd
           return byte !== 0;
         }),
     ),
-  );
+  ) || undefined;
   return {address, tcp4Port, udp4Port, wsPort};
 }

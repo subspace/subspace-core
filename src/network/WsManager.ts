@@ -3,7 +3,7 @@ import * as websocket from "websocket";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactIdentification, INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -113,8 +113,8 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     if (connection) {
       return connection;
     }
-    const address = this.nodeIdToAddressMap.get(nodeId);
-    if (!address) {
+    const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId);
+    if (!nodeContactInfo) {
       return null;
     }
     return new Promise((resolve, reject) => {
@@ -133,7 +133,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         resolve(null);
         return;
       }
-      const connection = new websocket.w3cwebsocket(`ws://${address.address}:${address.wsPort}`);
+      const connection = new websocket.w3cwebsocket(`ws://${nodeContactInfo.address}:${nodeContactInfo.wsPort}`);
       connection.binaryType = 'arraybuffer';
       connection.onopen = () => {
         clearTimeout(timeout);
@@ -148,10 +148,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
           connection.send(identificationMessage);
           this.registerBrowserWsConnection(
             connection,
-            {
-              nodeId: nodeId,
-              nodeType: address.nodeType,
-            },
+            nodeContactInfo,
           );
           resolve(connection);
         }
@@ -177,8 +174,11 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
 
   public destroy(): Promise<void> {
     return new Promise((resolve, reject) => {
+      for (const connection of this.connectionToNodeIdMap.keys()) {
+        connection.close();
+        this.connectionCloseHandler(connection);
+      }
       if (this.wsServer) {
-        this.wsServer.closeAllConnections();
         this.wsServer.shutDown();
       }
       if (this.httpServer) {
@@ -214,6 +214,10 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   private connectionCloseHandler(connection: WebSocketConnection): void {
     const nodeId = this.connectionToNodeIdMap.get(connection);
     if (nodeId) {
+      const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId) || this.connectionToIdentificationMap.get(connection);
+      if (nodeContactInfo) {
+        this.emit('peer-disconnected', nodeContactInfo);
+      }
       this.connectionToNodeIdMap.delete(connection);
       this.nodeIdToConnectionMap.delete(nodeId);
     }
@@ -239,7 +243,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
 
   private registerBrowserWsConnection(
     connection: websocket.w3cwebsocket,
-    contactIdentification?: INodeContactIdentification,
+    nodeContactInfo?: INodeContactInfo,
   ): void {
     connection.onmessage = (event: MessageEvent) => {
       if (!(event.data instanceof ArrayBuffer)) {
@@ -253,11 +257,11 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         });
     };
     // TODO: Connection expiration for cleanup
-    if (contactIdentification) {
-      const nodeId = contactIdentification.nodeId;
-      this.nodeIdToIdentificationMap.set(nodeId, contactIdentification);
+    if (nodeContactInfo) {
+      const nodeId = nodeContactInfo.nodeId;
       this.nodeIdToConnectionMap.set(nodeId, connection);
       this.connectionToNodeIdMap.set(connection, nodeId);
+      this.emit('peer-connected', nodeContactInfo);
     }
   }
 }

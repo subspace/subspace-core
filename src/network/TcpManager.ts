@@ -2,7 +2,7 @@ import * as net from "net";
 import {bin2Hex} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactIdentification, INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
 import {composeMessage} from "./utils";
 
 function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {
@@ -125,8 +125,8 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     if (socket) {
       return socket;
     }
-    const address = this.nodeIdToAddressMap.get(nodeId);
-    if (!address) {
+    const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId);
+    if (!nodeContactInfo) {
       return null;
     }
     return new Promise((resolve, reject) => {
@@ -145,8 +145,8 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         timeout.unref();
       }
       const socket = net.createConnection(
-        address.tcp4Port,
-        address.address,
+        nodeContactInfo.tcp4Port,
+        nodeContactInfo.address,
         () => {
           clearTimeout(timeout);
           if (timedOut) {
@@ -155,10 +155,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
             socket.write(this.identificationMessage);
             this.registerTcpConnection(
               socket,
-              {
-                nodeId: nodeId,
-                nodeType: address.nodeType,
-              },
+              nodeContactInfo,
             );
             resolve(socket);
           }
@@ -222,7 +219,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     socket.destroy();
   }
 
-  private registerTcpConnection(socket: net.Socket, contactIdentification?: INodeContactIdentification): void {
+  private registerTcpConnection(socket: net.Socket, nodeContactInfo?: INodeContactInfo): void {
     let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
     socket
       .on('data', (buffer: Buffer) => {
@@ -246,7 +243,14 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         if (nodeId) {
           this.connectionToNodeIdMap.delete(socket);
           this.nodeIdToConnectionMap.delete(nodeId);
-          this.nodeIdToIdentificationMap.delete(nodeId);
+          if (nodeContactInfo) {
+            this.emit('peer-disconnected', nodeContactInfo);
+          } else {
+            const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId);
+            if (nodeContactInfo) {
+              this.emit('peer-disconnected', nodeContactInfo);
+            }
+          }
         }
       })
       .setTimeout(this.connectionExpiration * 1000)
@@ -254,11 +258,11 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         socket.destroy();
       });
 
-    if (contactIdentification) {
-      const nodeId = contactIdentification.nodeId;
-      this.nodeIdToIdentificationMap.set(nodeId, contactIdentification);
+    if (nodeContactInfo) {
+      const nodeId = nodeContactInfo.nodeId;
       this.nodeIdToConnectionMap.set(nodeId, socket);
       this.connectionToNodeIdMap.set(socket, nodeId);
+      this.emit('peer-connected', nodeContactInfo);
     }
   }
 }
