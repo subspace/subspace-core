@@ -2,7 +2,7 @@
 import * as crypto from '../../crypto/crypto';
 import { INodeContactInfo } from '../../network/INetwork';
 
-export const chainCount = 1;
+export const chainCount = 16;
 export const encodingRounds = 3;
 
 export const gatewayContactInfo: INodeContactInfo = {

@@ -102,6 +102,9 @@ export class Node extends EventEmitter {
         case 'validator':
           this.syncLedgerAndValidate();
           break;
+        case 'farmer':
+          this.syncLedgerAndFarm();
+          break;
       }
     }
   }
@@ -207,7 +210,10 @@ export class Node extends EventEmitter {
    * Discards the original ledger data after several confirmed levels while retaining only the encoded pieces within its plot.
    */
   public async syncLedgerAndFarm(): Promise<void> {
-    return;
+    await this.syncLedgerAndValidate();
+    while (this.config.farm) {
+      await this.farmBlock();
+    }
   }
 
   /**

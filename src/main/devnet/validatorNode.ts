@@ -17,7 +17,7 @@ const testValidatorNode = async () => {
     encodingRounds,
     `${os.tmpdir()}/validator`,
     0,
-    false,
+    true,
     true,
     validatorContactInfo,
     [gatewayContactInfo],

@@ -16,7 +16,7 @@ const testFarmerNode = async () => {
     true,
     encodingRounds,
     `${os.tmpdir()}/farmer`,
-    100,
+    1000,
     true,
     true,
     farmerContactInfo,
