@@ -44,17 +44,17 @@ const browserContactInfo: INodeContactInfo = {
   wsPort: undefined,
 };
 
-const awsGatewayNodeId = crypto.hash(Buffer.from('aws-gateway'));
+// const awsGatewayNodeId = crypto.hash(Buffer.from('aws-gateway'));
 
-// spin up the gateway node
-const awsGatewayContactInfo: INodeContactInfo = {
-  nodeId: awsGatewayNodeId,
-  nodeType: 'gateway',
-  address: 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com',
-  udp4Port: 11888,
-  tcp4Port: 11889,
-  wsPort: 11890,
-};
+// // spin up the gateway node
+// const awsGatewayContactInfo: INodeContactInfo = {
+//   nodeId: awsGatewayNodeId,
+//   nodeType: 'gateway',
+//   address: 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com',
+//   udp4Port: 11888,
+//   tcp4Port: 11889,
+//   wsPort: 11890,
+// };
 
 const localGatewayNodeId = crypto.hash(Buffer.from('local-gateway'));
 
@@ -70,7 +70,7 @@ const localGatewayContactInfo: INodeContactInfo = {
 
 module.exports = run(
   'validator',
-  4,
+  1,
   'memory',
   0,
   0,
@@ -81,5 +81,5 @@ module.exports = run(
   true,
   true,
   browserContactInfo,
-  [awsGatewayContactInfo],
+  [localGatewayContactInfo],
   );
