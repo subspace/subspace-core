@@ -63,14 +63,14 @@ const localGatewayContactInfo: INodeContactInfo = {
   nodeId: localGatewayNodeId,
   nodeType: 'gateway',
   address: 'localhost',
-  udp4Port: 11888,
-  tcp4Port: 11889,
-  wsPort: 11890,
+  udp4Port: 10888,
+  tcp4Port: 10889,
+  wsPort: 10890,
 };
 
 module.exports = run(
   'validator',
-  1,
+  16,
   'memory',
   0,
   0,

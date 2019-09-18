@@ -219,7 +219,7 @@
 
 <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue"></script>
-<script src="./build/dev/bundle.js"></script>
+<script src="./build/bundle.js"></script>
 <script type='text/javascript'>
 
 
@@ -293,8 +293,8 @@
       
     },
     async mounted() {
-      // const subspace = await Subspace;
-      // this.subspace = subspace;
+      const subspace = await Subspace;
+      this.subspace = subspace;
     }
   })
 </script>
