@@ -2,25 +2,27 @@
 // tslint:disable: no-console
 
 import * as os from 'os';
-import { run } from '../run';
-import { awsFarmerContactInfo, awsGatewayContactInfo, chainCount, encodingRounds } from './constants';
+import run from '../run';
+import { chainCount, encodingRounds } from './constants';
 
 const testFarmerNode = async () => {
 
   await run(
+    'dev',
     'farmer',
     chainCount,
     'disk',
     1,
     1000000000,
+    false,
     true,
     encodingRounds,
     `${os.tmpdir()}/farmer`,
     100,
     true,
     true,
-    awsFarmerContactInfo,
-    [awsGatewayContactInfo],
+    undefined,
+    [],
   );
 };
 

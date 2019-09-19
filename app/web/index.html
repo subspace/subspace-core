@@ -44,43 +44,10 @@
           </div>
           <div class="content">
             <div v-if='activeTab === "subspace"'>
-              <nav class="level">
-                <div class="level-item has-text-centered">
-                  <div>
-                    <p class="heading">Nodes</p>
-                    <p class="title">16</p>
-                  </div>
-                </div>
-                <div class="level-item has-text-centered">
-                  <div>
-                    <p class="heading">Space Pledged</p>
-                    <p class="title">16 TB</p>
-                  </div>
-                </div>
-                <div class="level-item has-text-centered">
-                  <div>
-                    <p class="heading">Ledger Size</p>
-                    <p class="title">1 GB</p>
-                  </div>
-                </div>
-                <div class="level-item has-text-centered">
-                  <div>
-                    <p class="heading">Load Factor</p>
-                    <p class="title">16k</p>
-                  </div>
-                </div>
-                <div class="level-item has-text-centered">
-                  <div>
-                    <p class="heading">Pieces</p>
-                    <p class="title">250k</p>
-                  </div>
-                </div>
-              </nav>
-              <div class="content">
-                <ul>
-                  <li>Activity Log</li>
-                  <li>Network Map</li>
-                </ul>
+              <div class="buttons">
+                <a class="button is-primary" @click='startSingleNode()'>Start Single Node</a>
+                <a class="button is-info" @click='joinLocalNetwork()'>Join Local Network</a>
+                <a class="button is-success" @click='joinTestNetwork()'>Join Test Network</a>
               </div>              
             </div>
             <div v-if='activeTab === "network"'>
@@ -219,9 +186,8 @@
 
 <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue"></script>
-<script src="./build/dev/bundle.js"></script>
+<script src="./build/bundle.js"></script>
 <script type='text/javascript'>
-
 
 // Stats for Browser GUI
   // Subspace Tab
@@ -287,14 +253,64 @@
     data: {
       nodeId: 'myNodeId',
       activeTab: 'subspace',
-      subspace: null,
+      createNode: null,
+      node: null,
     },
     methods: {
-      
+      async startSingleNode() {
+        this.node = await this.createNode(
+          'dev',
+          'full',
+          1,
+          'memory',
+          1,
+          10000000,
+          true,
+          3,
+          undefined,
+          1000,
+          true,
+          true,
+          true,
+        )
+      },
+      async joinLocalNetwork() {
+        this.node = await this.createNode(
+          'dev',
+          'validator',
+          1,
+          'memory',
+          0,
+          0,
+          true,
+          3,
+          undefined,
+          0,
+          false,
+          true,
+          true,
+        )
+      },
+      async joinTestNetwork() {
+        this.node = await this.createNode(
+          'test',
+          'validator',
+          1,
+          'memory',
+          0,
+          0,
+          true,
+          3,
+          undefined,
+          0,
+          false,
+          true,
+          true,
+        )
+      }
     },
     async mounted() {
-      const subspace = await Subspace;
-      this.subspace = subspace;
+      this.createNode = await Subspace;
     }
   })
 </script>

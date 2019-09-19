@@ -12,11 +12,12 @@ import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Ledger } from '../ledger/ledger';
+import { INodeContactInfo } from '../network/INetwork';
 import { Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { Node } from '../node/node';
 import { Storage } from '../storage/storage';
-import { rmDirRecursiveSync } from '../utils/utils';
+import { allocatePort, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
@@ -24,12 +25,10 @@ const defaultContactInfo: IPeerContactInfo = {
   nodeId: new Uint8Array(),
   nodeType: 'full',
   address: 'localhost',
-  udp4Port: 10888,
-  tcp4Port: 10889,
-  wsPort: 10890,
+  udp4Port: allocatePort(),
+  tcp4Port: allocatePort(),
+  wsPort: allocatePort(),
 };
-
-const defaultBootstrapPeers: IPeerContactInfo[] = [];
 
 /**
  * Init Params
@@ -38,6 +37,7 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * plotMode: mem-db or disk-db -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
  * validateRecords: true or false -- whether to validate new blocks and tx on receipt, default false for DevNet testing -- since BLS signature validation is slow, it takes a long time to plot
  *
+ * @param network         Which network the node is joining (local testing, cloud testing, production network)
  * @param nodeType        Functional configuration for this node (full node, farmer, validator, light client, gateway)
  * @param numberOfChains      Number of chains for the ledger (1 -- 1024)
  * @param plotMode        How encoded pieces are persisted (js-memory, rocks db, raw disk)
@@ -46,18 +46,21 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * @param validateRecords If new records are validated (set to false for testing)
  * @param encodingRounds  How many rounds of encoding are applied when plotting (1 to 512)
  * @param storageDir      The path on disk for where to store all persistent data, defaults to homedir
- * @param reset
+ * @param genesis         If the node will create a new chain from genesis or sync an existing chain
+ * @param reset           If to reset storage on the node after each run
  * @param contactInfo     IP and ports to expose for this node, defaults provided.
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
  * @param autostart       Whether to start the node role automatically or explicitly, default true
  * @param delay           Random farm/solve delay (for local testing) in milliseconds, following a poisson distribution around provided value
  */
-export const run = async (
+export default async function run(
+  net: 'dev' | 'test' | 'main',
   nodeType: 'full' | 'farmer' | 'validator' | 'client' | 'gateway',
   numberOfChains: number,
   plotMode: 'memory' | 'disk',
   numberOfPlots: number,
   sizeOfFarm: number,
+  genesis = true,
   validateRecords: boolean,
   encodingRounds: number,
   storageDir?: string,
@@ -65,8 +68,8 @@ export const run = async (
   autostart = true,
   reset = true,
   contactInfo: IPeerContactInfo = defaultContactInfo,
-  bootstrapPeers: IPeerContactInfo[] = defaultBootstrapPeers,
-): Promise<Node> => {
+  bootstrapPeers: IPeerContactInfo[] = [],
+): Promise<Node> {
 
   // initialize empty config params
   let env: 'browser' | 'node';
@@ -270,6 +273,40 @@ export const run = async (
   // instantiate a ledger for all nodes
   ledger = new Ledger(blsSignatures, storage, numberOfChains, validateRecords, encodingRounds);
 
+  // set the gateway node based on env
+  let gatewayNodeId: string;
+  let gatewayAddress: string;
+  switch (net) {
+    case 'dev':
+      gatewayNodeId = 'devnet-gateway';
+      gatewayAddress = 'localhost';
+      break;
+    case 'test':
+      gatewayNodeId = 'testnet-gateway';
+      gatewayAddress = 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com';
+      break;
+    case 'main':
+      gatewayNodeId = 'mainnet-gateway';
+      gatewayAddress = '...';
+      break;
+    default:
+      gatewayNodeId = 'devnet-gateway';
+      gatewayAddress = 'localhost';
+  }
+
+  const gatewayContactInfo: INodeContactInfo = {
+    nodeId: crypto.hash(Buffer.from(gatewayNodeId)),
+    nodeType: 'gateway',
+    address: gatewayAddress,
+    udp4Port: 10888,
+    tcp4Port: 10889,
+    wsPort: 10890,
+  };
+
+  // if genesis, there is no gateway
+  bootstrapPeers = genesis ? [] : [gatewayContactInfo];
+  contactInfo = genesis ? gatewayContactInfo : contactInfo;
+
   // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
   if (!contactInfo.nodeId) {
@@ -279,11 +316,13 @@ export const run = async (
   rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {
+    network: net,
     storagePath,
     numberOfChains,
     numberOfPlots,
     sizeOfFarm,
     encodingRounds,
+    genesis,
     validateRecords,
     contactInfo,
     bootstrapPeers,
@@ -292,4 +331,4 @@ export const run = async (
   };
 
   return new Node(nodeType, config, settings, rpc, ledger, wallet, farm);
-};
+}

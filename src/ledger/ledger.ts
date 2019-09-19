@@ -352,8 +352,8 @@ export class Ledger extends EventEmitter {
     this.emit('block', block, encoding);
     if (this.isValidating) {
       await this.isValidBlock(block, encoding);
+      console.log(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
     }
-    console.log(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
     await this.applyBlock(block);
     console.log(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
     return block;
