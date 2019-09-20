@@ -21,15 +21,6 @@ import { allocatePort, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
-const defaultContactInfo: IPeerContactInfo = {
-  nodeId: new Uint8Array(),
-  nodeType: 'full',
-  address: 'localhost',
-  udp4Port: allocatePort(),
-  tcp4Port: allocatePort(),
-  wsPort: allocatePort(),
-};
-
 /**
  * Init Params
  * chainCount: 1 to 1024 -- number of chains in the ledger, the more chains the longer it will take to confirm new levels but the lower the probability of a fork on any given chain.
@@ -56,18 +47,17 @@ const defaultContactInfo: IPeerContactInfo = {
 export default async function run(
   net: 'dev' | 'test' | 'main',
   nodeType: 'full' | 'farmer' | 'validator' | 'client' | 'gateway',
-  numberOfChains: number,
-  plotMode: 'memory' | 'disk',
-  numberOfPlots: number,
-  sizeOfFarm: number,
-  genesis = true,
-  validateRecords: boolean,
-  encodingRounds: number,
-  storageDir?: string,
+  farmMode: 'memory' | 'disk',
+  storageDir: string | undefined,
+  numberOfChains = 1,
+  numberOfPlots = 1,
+  sizeOfFarm = 1000000,
+  encodingRounds = 3,
   delay = 0,
-  autostart = true,
-  reset = true,
-  contactInfo: IPeerContactInfo = defaultContactInfo,
+  genesis: boolean,
+  reset: boolean,
+  trustRecords: boolean,
+  contactInfo: IPeerContactInfo | undefined,
   bootstrapPeers: IPeerContactInfo[] = [],
 ): Promise<Node> {
 
@@ -97,8 +87,19 @@ export default async function run(
   // determine the basic system env
   env = typeof window === 'undefined' ? 'node' : 'browser';
 
+  const nodeContactInfo: IPeerContactInfo = {
+    nodeId: crypto.randomBytes(32),
+    nodeType,
+    address: 'localhost',
+    udp4Port: allocatePort(),
+    tcp4Port: allocatePort(),
+    wsPort: allocatePort(),
+  };
+
+  const nodeId = Buffer.from(nodeContactInfo.nodeId).toString('hex');
+
   // are we persisting storage?
-  const isPersistingStorage = plotMode === 'disk';
+  const isPersistingStorage = farmMode === 'disk';
 
   // set storage path
   let storagePath: string;
@@ -107,16 +108,16 @@ export default async function run(
   } else {
     switch (os.platform()) {
       case 'linux':
-        storagePath = path.join(os.homedir(), '/.local/share/data/subspace');
+        storagePath = path.join(os.homedir(), `/.local/share/data/subspace/${nodeId}`);
         break;
       case 'darwin':
-        storagePath = path.join(os.homedir(), '/subspace');
+        storagePath = path.join(os.homedir(), `/subspace/${nodeId}`);
         break;
       case 'win32':
-        storagePath = path.join(os.homedir(), '\\AppData\\Subspace');
+        storagePath = path.join(os.homedir(), `\\AppData\\Subspace\\${nodeId}`);
         break;
       default:
-        storagePath = path.join(os.homedir(), '/subspace');
+        storagePath = path.join(os.homedir(), `/subspace${nodeId}`);
         break;
     }
   }
@@ -235,6 +236,10 @@ export default async function run(
     config.krpc = false;
     config.srpc = false;
     config.jrpc = false;
+
+    // browser cannot have TCP or UDP ports
+    nodeContactInfo.udp4Port = undefined;
+    nodeContactInfo.tcp4Port = undefined;
   }
 
   // set plot adapter for farming
@@ -271,7 +276,7 @@ export default async function run(
   }
 
   // instantiate a ledger for all nodes
-  ledger = new Ledger(blsSignatures, storage, numberOfChains, validateRecords, encodingRounds);
+  ledger = new Ledger(blsSignatures, storage, numberOfChains, trustRecords, encodingRounds);
 
   // set the gateway node based on env
   let gatewayNodeId: string;
@@ -305,13 +310,10 @@ export default async function run(
 
   // if genesis, there is no gateway
   bootstrapPeers = genesis ? [] : [gatewayContactInfo];
-  contactInfo = genesis ? gatewayContactInfo : contactInfo;
+  contactInfo = genesis ? gatewayContactInfo : nodeContactInfo;
 
   // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
-  if (!contactInfo.nodeId) {
-    contactInfo.nodeId = crypto.randomBytes(32);
-  }
   const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
   rpc = new RPC(network, blsSignatures);
 
@@ -323,10 +325,9 @@ export default async function run(
     sizeOfFarm,
     encodingRounds,
     genesis,
-    validateRecords,
+    trustRecords,
     contactInfo,
     bootstrapPeers,
-    autostart,
     delay,
   };
 

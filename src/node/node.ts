@@ -94,18 +94,18 @@ export class Node extends EventEmitter {
       }
     });
 
-    if (this.settings.autostart) {
-      switch (this.type) {
-        case 'full':
-          this.createLedgerAndFarm();
-          break;
-        case 'validator':
-          this.syncLedgerAndValidate();
-          break;
-        case 'farmer':
+    switch (this.type) {
+      case 'full':
+        this.settings.genesis ?
+          this.createLedgerAndFarm() :
           this.syncLedgerAndFarm();
-          break;
-      }
+        break;
+      case 'validator':
+        this.syncLedgerAndValidate();
+        break;
+      case 'farmer':
+        this.syncLedgerAndFarm();
+        break;
     }
   }
 

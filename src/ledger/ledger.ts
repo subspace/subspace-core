@@ -98,14 +98,14 @@ export class Ledger extends EventEmitter {
     blsSignatures: BlsSignatures,
     storage: Storage,
     chainCount: number,
-    validateRecords: boolean,
+    trustRecords: boolean,
     encodingRounds: number,
   ) {
     super();
     this.blsSignatures = blsSignatures;
     this.storage = storage;
     this.accounts = new Account();
-    this.isValidating = validateRecords;
+    this.isValidating = !trustRecords;
     this.encodingRounds = encodingRounds;
 
     // initialize chains

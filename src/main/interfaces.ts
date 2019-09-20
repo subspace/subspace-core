@@ -170,10 +170,9 @@ export interface INodeSettings {
   numberOfPlots: number;                // number of plots, 0 denotes not farming
   sizeOfFarm: number;                   // size of farm in bytes, 0 denotes not farming
   encodingRounds: number;               // rounds of encoding/decoding to apply to pieces
+  delay: number;                        // optional random delay in milliseconds (for farmers)
   genesis: boolean;                     // if to start the node from genesis
-  validateRecords: boolean;             // if to validate new records as they are created
+  trustRecords: boolean;             // if to validate new records as they are created
   contactInfo: IPeerContactInfo;        // network contact info for this node
   bootstrapPeers: IPeerContactInfo [];  // known network contact info for other nodes
-  autostart: boolean;                   // if to start the node role automatically
-  delay: number;                        // optional random delay in milliseconds (for farmers)
 }
