@@ -36,4 +36,4 @@ From Local Env, in two different tabs
 ```
 ts-node src/main/tests/testnet/awsValidatorNode.ts
 ts-node src/main/tests/testnet/awsFarmerNode.ts
-```
+``` 
