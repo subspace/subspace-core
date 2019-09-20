@@ -1,4 +1,84 @@
-## Gateway Testing
+## Single Node Testing
+
+Clone and build the repo.
+
+### Node JS
+
+Start a new genesis node. If there is not another genesis node on the same network, the node will crash.
+
+```bash
+./bin/subspace.js run -g 
+```
+
+Start with more advanced options
+
+```bash
+./bin/subspace.js run -g -t -r -c 32 -p 100 -f memory
+```
+* Genesis Node
+* Trusted mode (does not validate records -- faster)
+* Reset (wipes disk on startup)
+* 32 chains
+* 100 plots (each new piece is plotted 100 times)
+* Memory plotting
+
+## Browser
+
+```bash
+npm run test-browser
+```
+
+Open a browser tab with specified local port.
+
+Open up the dev tools and go to console.
+
+Click [start single node]() button.
+
+You should see output in the console.
+
+Right now these setting must be changed manually at the bottom of `index.html`.
+
+
+## Local Network Testing
+
+> All nodes must have the same number of chains, be on the same network, and have the same encoding rounds.
+> If you don't change anything this will happen automatically through defaults.
+
+### Node JS
+
+Startup the genesis/gateway node.
+
+```bash
+./bin/subspace.js run -g -w 1000 -c 16
+```
+
+Startup a validator node
+
+```bash
+./bin/subspace.js run -m validator -c 16
+```
+
+### Browser
+
+Startup a browser validator node
+
+Click [Join Local Network]()
+
+It should connect to the first node that was spun up.
+
+
+Startup a farmer (it will crash soon...)
+
+```bash
+./bin/subspace.js run -m farmer -c 16 -w 1000
+```
+
+## AWS Testnet 
+
+
+### Gateway Node Setup
+
+> Note -- the Gateway node is already setup -- you just need to SSH into it and run a gateway.
 
 Download the private key file from AWS and add permissions
 Then remote in
@@ -7,7 +87,7 @@ Then remote in
 cd /dir/where/key/is
 chmod 400 gateway.pem 
 ssh -i "gateway.pem" ubuntu@ec2-54-191-145-133.us-west-2.compute.amazonaws.com
-````
+```
 
 Configure the server
 ```
@@ -27,13 +107,19 @@ npm test
 npm run build
 ```
 
+### Start the Gateway
+
 Start the Gateway
 ```
-npx ts-node src/main/tests/testnet/awsGatewayNode.ts
+./bin/subspace.js run -g -n test -c 16 -w 1000
 ```
 
-From Local Env, in two different tabs
+On your local machine
+
+```bash
+./bin/subspace.js run -m validator -n test -c 16
 ```
-ts-node src/main/tests/testnet/awsValidatorNode.ts
-ts-node src/main/tests/testnet/awsFarmerNode.ts
-``` 
+
+### Browser
+
+Click [Join Test Network]() button.
