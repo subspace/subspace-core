@@ -28,7 +28,9 @@ export class Network extends EventEmitter implements INetwork {
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     routingTableMinSize: number = 10,
-    routingTableMaxSize: number = 20,
+    routingTableMaxSize: number = 100,
+    activeConnectionsMinNumber: number = 5,
+    activeConnectionsMaxNumber: number = 20,
   ): Promise<Network> {
     const identificationPayload = composeIdentificationPayload(ownNodeContactInfo);
     const nodeInfoPayload = composeNodeInfoPayload(ownNodeContactInfo);
@@ -86,6 +88,8 @@ export class Network extends EventEmitter implements INetwork {
         reject,
         routingTableMinSize,
         routingTableMaxSize,
+        activeConnectionsMinNumber,
+        activeConnectionsMaxNumber,
       );
     });
   }
@@ -119,7 +123,11 @@ export class Network extends EventEmitter implements INetwork {
     resolve: () => void,
     reject: (error: Error) => void,
     routingTableMinSize: number = 10,
-    routingTableMaxSize: number = 20,
+    routingTableMaxSize: number = 100,
+    // @ts-ignore Will be used later
+    activeConnectionsMinNumber: number = 5,
+    // @ts-ignore Will be used later
+    activeConnectionsMaxNumber: number = 20,
   ) {
     super();
     this.setMaxListeners(Infinity);
