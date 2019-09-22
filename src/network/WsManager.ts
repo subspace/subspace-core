@@ -49,6 +49,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   private readonly connectionTimeout: number;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
+  private readonly incompleteConnections = new Set<WebSocketConnection>();
 
   /**
    * @param ownNodeContactInfo
@@ -109,6 +110,9 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   }
 
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
     if (message.length > this.messageSizeLimit) {
       throw new Error(
         `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
@@ -131,10 +135,18 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
       return null;
     }
     return new Promise((resolve, reject) => {
+      if (this.destroying) {
+        return;
+      }
+      if (!this.browserNode) {
+        resolve(null);
+        return;
+      }
       let timedOut = false;
       const timeout = setTimeout(
         () => {
           timedOut = true;
+          this.incompleteConnections.delete(connection);
           reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed`));
         },
         this.connectionTimeout * 1000,
@@ -142,17 +154,13 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
       if (timeout.unref) {
         timeout.unref();
       }
-      if (!this.browserNode) {
-        resolve(null);
-        return;
-      }
       const connection = new websocket.w3cwebsocket(`ws://${nodeContactInfo.address}:${nodeContactInfo.wsPort}`);
       connection.binaryType = 'arraybuffer';
       connection.onopen = () => {
-        clearTimeout(timeout);
         if (timedOut) {
           connection.close();
         } else {
+          clearTimeout(timeout);
           const identificationMessage = composeMessage(
             'identification',
             0,
@@ -163,16 +171,23 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
             connection,
             nodeContactInfo,
           );
+          this.incompleteConnections.delete(connection);
+          connection.onerror = () => {
+            // Nothing
+          };
           resolve(connection);
         }
       };
       connection.onerror = () => {
         // TODO: Log in debug mode
+        clearTimeout(timeout);
+        this.incompleteConnections.delete(connection);
         reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed`));
       };
       connection.onclose = () => {
         this.connectionCloseHandler(connection);
       };
+      this.incompleteConnections.add(connection);
     });
   }
 
@@ -198,16 +213,31 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         connection.close();
         this.connectionCloseHandler(connection);
       }
+      for (const connection of this.incompleteConnections.values()) {
+        // Hack: See https://github.com/theturtle32/WebSocket-Node/issues/371
+        if (
+          // @ts-ignore
+          connection.readyState === websocket.w3cwebsocket.CONNECTING &&
+          // @ts-ignore
+          connection._client &&
+          // @ts-ignore
+          connection._client._req &&
+          // @ts-ignore
+          connection._client._req.socket
+        ) {
+          // @ts-ignore
+          connection._client._req.socket.destroy();
+        }
+        connection.close();
+      }
       if (this.wsServer) {
         this.wsServer.shutDown();
       }
       if (this.httpServer) {
         // There may be HTTP connections dangling, but we don't want to track them or wait, so resolve immediately
         this.httpServer.close();
-        resolve();
-      } else {
-        resolve();
       }
+      resolve();
     });
   }
 

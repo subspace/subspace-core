@@ -1,7 +1,7 @@
 import {randomBytes} from "crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {IPeerContactInfo} from "../main/interfaces";
-import {allocatePort, bin2Hex} from "../utils/utils";
+import {allocatePort, bin2Hex, createLogger} from "../utils/utils";
 import {INodeContactInfo} from "./INetwork";
 import {Network} from "./Network";
 
@@ -15,6 +15,8 @@ function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
     wsPort: nodeContactInfo.wsPort,
   });
 }
+
+const logger = createLogger('warn');
 
 const peer1: IPeerContactInfo = {
   address: 'localhost',
@@ -54,10 +56,10 @@ let networkClient3: Network;
 let networkClient4: Network;
 
 beforeEach(async () => {
-  networkClient1 = await Network.init(peer1, [peer2, peer3], false);
-  networkClient2 = await Network.init(peer2, [peer1], false);
-  networkClient3 = await Network.init(peer3, [peer1], false);
-  networkClient4 = await Network.init(peer4, [peer1], true);
+  networkClient1 = await Network.init(peer1, [peer2, peer3], false, logger);
+  networkClient2 = await Network.init(peer2, [peer1], false, logger);
+  networkClient3 = await Network.init(peer3, [peer1], false, logger);
+  networkClient4 = await Network.init(peer4, [peer1], true, logger);
 });
 
 describe('UDP', () => {
@@ -96,13 +98,15 @@ describe('TCP', () => {
   test('Send one-way reliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient2.once('ping', (payload, _, clientIdentification) => {
-        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-        expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
-        expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
-        resolve();
+      networkClient2.once('peer-connected', () => {
+        networkClient2.once('ping', (payload, _, clientIdentification) => {
+          expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+          expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+          expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
+          resolve();
+        });
+        networkClient1.sendRequestOneWay(['full'], 'ping', randomPayload);
       });
-      networkClient1.sendRequestOneWay(['full'], 'ping', randomPayload);
     });
   });
 
@@ -118,7 +122,11 @@ describe('TCP', () => {
           resolve();
         });
       }),
-      networkClient1.sendRequest(['full'], 'ping', randomPayload),
+      new Promise<Uint8Array>((resolve) => {
+        networkClient2.once('peer-connected', () => {
+          resolve(networkClient1.sendRequest(['full'], 'ping', randomPayload));
+        });
+      }),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
@@ -199,8 +207,10 @@ describe('Identification', () => {
         expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
-      setTimeout(() => {
-        networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
+      networkClient4.once('peer-connected', () => {
+        setTimeout(() => {
+          networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
+        });
       });
     });
   });
@@ -242,7 +252,7 @@ describe('Peers', () => {
           nodeType: 'client',
         };
         let networkClient: Network;
-        const networkServer = await Network.init(peerServer, [], false);
+        const networkServer = await Network.init(peerServer, [], false, logger);
         networkServer
           .once('peer-connected', (nodeContactInfo: INodeContactInfo) => {
             expect(serializeNodeContactInfo(nodeContactInfo)).toEqual(serializeNodeContactInfo(peerClient));
@@ -253,7 +263,7 @@ describe('Peers', () => {
             await networkServer.destroy();
             resolve();
           });
-        networkClient = await Network.init(peerClient, [peerServer], true);
+        networkClient = await Network.init(peerClient, [peerServer], true, logger);
       });
     });
   });

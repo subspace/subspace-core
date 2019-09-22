@@ -16,7 +16,7 @@ import { Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { Node } from '../node/node';
 import { Storage } from '../storage/storage';
-import { rmDirRecursiveSync } from '../utils/utils';
+import {createLogger, rmDirRecursiveSync} from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
@@ -51,6 +51,7 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
  * @param autostart       Whether to start the node role automatically or explicitly, default true
  * @param delay           Random farm/solve delay (for local testing) in milliseconds, following a poisson distribution around provided value
+ * @param logLevel
  */
 export const run = async (
   nodeType: 'full' | 'farmer' | 'validator' | 'client' | 'gateway',
@@ -66,8 +67,9 @@ export const run = async (
   reset = true,
   contactInfo: IPeerContactInfo = defaultContactInfo,
   bootstrapPeers: IPeerContactInfo[] = defaultBootstrapPeers,
+  logLevel: Parameters<typeof createLogger>[0] = 'debug',
 ): Promise<Node> => {
-
+  const logger = createLogger(logLevel);
   // initialize empty config params
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
@@ -275,7 +277,7 @@ export const run = async (
   if (!contactInfo.nodeId) {
     contactInfo.nodeId = crypto.randomBytes(32);
   }
-  const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
+  const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser', logger);
   rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {

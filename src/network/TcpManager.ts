@@ -63,6 +63,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   private readonly identificationMessage: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly connectionExpiration: number;
+  private readonly incompleteConnections = new Set<net.Socket>();
 
   /**
    * @param ownNodeContactInfo
@@ -118,13 +119,16 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   }
 
   public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
     if (message.length > this.messageSizeLimit) {
       throw new Error(
         `TCP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
       );
     }
-    if (!socket.destroyed) {
-      await new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
+      if (!socket.destroyed) {
         socket.write(composeMessageWithTcpHeader(message), (error) => {
           if (error) {
             reject(error);
@@ -132,8 +136,10 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
             resolve();
           }
         });
-      });
-    }
+      } else {
+        reject(new Error('Socket already destroyed'));
+      }
+    });
   }
 
   protected async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<net.Socket | null> {
@@ -156,6 +162,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           if (!socket.destroyed) {
             socket.destroy();
           }
+          this.incompleteConnections.delete(socket);
           reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
         },
         this.connectionTimeout * 1000,
@@ -163,26 +170,34 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       if (timeout.unref) {
         timeout.unref();
       }
+      const onError = (error: Error) => {
+        clearTimeout(timeout);
+        this.incompleteConnections.delete(socket);
+        reject(error);
+      };
       const socket = net.createConnection(
         nodeContactInfo.tcp4Port,
         nodeContactInfo.address,
         () => {
-          clearTimeout(timeout);
           if (timedOut) {
             socket.destroy();
           } else {
+            clearTimeout(timeout);
             socket.write(this.identificationMessage);
             this.registerTcpConnection(
               socket,
               nodeContactInfo,
             );
+            this.incompleteConnections.delete(socket);
+            socket.off('error', onError);
             resolve(socket);
           }
         },
       );
       socket
         .setTimeout(this.connectionTimeout)
-        .once('error', reject);
+        .once('error', onError);
+      this.incompleteConnections.add(socket);
     });
   }
 
@@ -201,21 +216,18 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   }
 
   protected destroyImplementation(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       for (const socket of this.nodeIdToConnectionMap.values()) {
         socket.destroy();
       }
-      if (this.tcp4Server) {
-        this.tcp4Server.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
+      for (const socket of this.incompleteConnections.values()) {
+        socket.destroy();
       }
+      if (this.tcp4Server) {
+        // There may be TCP connections dangling, but we don't want to track them or wait, so resolve immediately
+        this.tcp4Server.close();
+      }
+      resolve();
     });
   }
 
@@ -262,7 +274,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       const nodeId = nodeContactInfo.nodeId;
       this.nodeIdToConnectionMap.set(nodeId, socket);
       this.connectionToNodeIdMap.set(socket, nodeId);
-      this.emit('peer-connected', nodeContactInfo);
+      setTimeout(() => {
+        this.emit('peer-connected', nodeContactInfo);
+      });
     }
   }
 }

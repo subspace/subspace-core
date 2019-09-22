@@ -1,6 +1,6 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {areArraysEqual, randomElement} from "../utils/utils";
+import {areArraysEqual, bin2Hex, ILogger, randomElement} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {
   ICommandsKeysForSending,
@@ -27,6 +27,7 @@ export class Network extends EventEmitter implements INetwork {
     ownNodeContactInfo: INodeContactInfo,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
+    globalLogger: ILogger,
     routingTableMinSize: number = 10,
     routingTableMaxSize: number = 100,
     activeConnectionsMinNumber: number = 5,
@@ -34,6 +35,8 @@ export class Network extends EventEmitter implements INetwork {
   ): Promise<Network> {
     const identificationPayload = composeIdentificationPayload(ownNodeContactInfo);
     const nodeInfoPayload = composeNodeInfoPayload(ownNodeContactInfo);
+
+    const logger = globalLogger.child({subsystem: 'network'});
 
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
@@ -74,25 +77,20 @@ export class Network extends EventEmitter implements INetwork {
       this.GOSSIP_CACHE_TIMEOUT,
     );
 
-    return new Promise((resolve, reject) => {
-      const network = new Network(
-        ownNodeContactInfo,
-        udpManager,
-        tcpManager,
-        wsManager,
-        gossipManager,
-        bootstrapNodes,
-        browserNode,
-        () => {
-          resolve(network);
-        },
-        reject,
-        routingTableMinSize,
-        routingTableMaxSize,
-        activeConnectionsMinNumber,
-        activeConnectionsMaxNumber,
-      );
-    });
+    return new Network(
+      ownNodeContactInfo,
+      udpManager,
+      tcpManager,
+      wsManager,
+      gossipManager,
+      bootstrapNodes,
+      browserNode,
+      logger,
+      routingTableMinSize,
+      routingTableMaxSize,
+      activeConnectionsMinNumber,
+      activeConnectionsMaxNumber,
+    );
   }
 
   // In seconds
@@ -114,6 +112,11 @@ export class Network extends EventEmitter implements INetwork {
   private readonly tcpManager: TcpManager;
   private readonly wsManager: WsManager;
   private readonly gossipManager: GossipManager;
+  private readonly browserNode: boolean;
+  private readonly logger: ILogger;
+  private readonly activeConnectionsMinNumber: number;
+  private readonly activeConnectionsMaxNumber: number;
+
   private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
   private numberOfActiveConnections = 0;
   private readonly connectionMaintenanceInterval: ReturnType<typeof setInterval>;
@@ -128,13 +131,12 @@ export class Network extends EventEmitter implements INetwork {
     wsManager: WsManager,
     gossipManager: GossipManager,
     bootstrapNodes: INodeContactInfo[],
-    private readonly browserNode: boolean,
-    resolve: () => void,
-    reject: (error: Error) => void,
+    browserNode: boolean,
+    logger: ILogger,
     routingTableMinSize: number = 10,
     routingTableMaxSize: number = 100,
-    private readonly activeConnectionsMinNumber: number = 5,
-    private readonly activeConnectionsMaxNumber: number = 20,
+    activeConnectionsMinNumber: number = 5,
+    activeConnectionsMaxNumber: number = 20,
   ) {
     super();
     this.setMaxListeners(Infinity);
@@ -145,6 +147,10 @@ export class Network extends EventEmitter implements INetwork {
     this.tcpManager = tcpManager;
     this.wsManager = wsManager;
     this.gossipManager = gossipManager;
+    this.browserNode = browserNode;
+    this.logger = logger;
+    this.activeConnectionsMinNumber = activeConnectionsMinNumber;
+    this.activeConnectionsMaxNumber = activeConnectionsMaxNumber;
 
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {
       manager.on('command', this.emit.bind(this));
@@ -178,8 +184,9 @@ export class Network extends EventEmitter implements INetwork {
                 }
                 this.maintainNumberOfConnections();
               })
-              .catch(() => {
-                // TODO: Log in debug mode, maybe close connection
+              .catch((error: any) => {
+                const errorText = (error.stack || error) as string;
+                logger.debug(`Failed to request peers from ${bin2Hex(nodeContactInfo.nodeId)}: ${errorText}`);
               });
           }
         })
@@ -213,18 +220,11 @@ export class Network extends EventEmitter implements INetwork {
         );
     }
 
-    // TODO: We wait for them since otherwise concurrent connections to the same peer will cause issues; this should be
-    //  handled by protocol managers nicely
-    const bootstrapPromises: Array<Promise<any>> = [];
     // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
     for (const bootstrapNode of bootstrapNodes) {
-      bootstrapPromises.push(
-        this.establishConnectionToNode(bootstrapNode),
-      );
+      // noinspection JSIgnoredPromiseFromCall
+      this.establishConnectionToNode(bootstrapNode);
     }
-
-    Promise.all(bootstrapPromises)
-      .then(resolve, reject);
 
     this.connectionMaintenanceInterval = setInterval(
       () => {
@@ -455,8 +455,9 @@ export class Network extends EventEmitter implements INetwork {
 
     this.maintainingNumberOfConnectionsInProgress = true;
     this.maintainNumberOfConnectionsImplementation()
-      .catch(() => {
-        // TODO: Log in debug mode
+      .catch((error: any) => {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Error on maintain connection: ${errorText}`);
       })
       .finally(() => {
         this.maintainingNumberOfConnectionsInProgress = false;
@@ -488,13 +489,15 @@ export class Network extends EventEmitter implements INetwork {
   private establishConnectionToNode(nodeContactInfo: INodeContactInfo): Promise<any> {
     if (nodeContactInfo.tcp4Port && !this.browserNode) {
       return this.tcpManager.nodeIdToConnection(nodeContactInfo.nodeId)
-        .catch((_) => {
-          // TODO: Log in debug mode
+        .catch((error: any) => {
+          const errorText = (error.stack || error) as string;
+          this.logger.debug(`Error on connection establishment during connection maintenance: ${errorText}`);
         });
     } else if (nodeContactInfo.wsPort) {
       return this.wsManager.nodeIdToConnection(nodeContactInfo.nodeId)
-        .catch((_) => {
-          // TODO: Log in debug mode
+        .catch((error: any) => {
+          const errorText = (error.stack || error) as string;
+          this.logger.debug(`Error on connection establishment during connection maintenance: ${errorText}`);
         });
     }
 

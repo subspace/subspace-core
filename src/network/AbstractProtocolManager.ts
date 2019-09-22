@@ -20,6 +20,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   protected readonly nodeIdToAddressMap = ArrayMap<Uint8Array, Address>();
   protected readonly connectionToIdentificationMap = new WeakMap<Connection, INodeContactIdentification>();
   protected readonly connectionToNodeIdMap = new Map<Connection, Uint8Array>();
+  protected destroying = false;
   /**
    * Mapping from requestId to callback
    */
@@ -36,8 +37,6 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   private requestId = 0;
   // Will 2**32 be enough?
   private responseId = 0;
-
-  private destroying = false;
 
   /**
    * @param ownNodeId
@@ -339,12 +338,6 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       return;
     }
     this.destroying = true;
-    for (const connectionEstablishmentInProgress of this.connectionEstablishmentInProgress.values()) {
-      await connectionEstablishmentInProgress
-        .catch(() => {
-          // Just to avoid unhandled Promise exception
-        });
-    }
 
     return this.destroyImplementation();
   }

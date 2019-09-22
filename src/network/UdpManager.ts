@@ -97,6 +97,9 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
   }
 
   public async sendRawMessage(address: INodeContactInfoUdp, message: Uint8Array): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
     const udp4Socket = this.udp4Socket;
     if (!udp4Socket) {
       throw new Error(`UDP Socket is not running, can't send a message; are you trying to use UDP in the browser?`);
@@ -154,10 +157,9 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
   protected destroyImplementation(): Promise<void> {
     return new Promise((resolve) => {
       if (this.udp4Socket) {
-        this.udp4Socket.close(resolve);
-      } else {
-        resolve();
+        this.udp4Socket.close();
       }
+      resolve();
     });
   }
 
