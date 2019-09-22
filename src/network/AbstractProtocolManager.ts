@@ -28,6 +28,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
    * Mapping from responseId to callback
    */
   private readonly responseCallbacks = new Map<number, (payload: Uint8Array) => any>();
+  /**
+   * Mapping from nodeId to Promise that will potentially resolve to established connection
+   */
+  private readonly connectionEstablishmentInProgress = ArrayMap<Uint8Array, Promise<Connection | null>>();
   // Will 2**32 be enough?
   private requestId: number = 0;
   // Will 2**32 be enough?
@@ -251,7 +255,26 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     return this.nodeIdToConnectionMap.get(nodeId) || null;
   }
 
-  public abstract nodeIdToConnection(nodeId: Uint8Array): Promise<Connection | null>;
+  public nodeIdToConnection(nodeId: Uint8Array): Promise<Connection | null> {
+    const connectionEstablishmentInProgress = this.connectionEstablishmentInProgress;
+    const existingInProgressPromise = connectionEstablishmentInProgress.get(nodeId);
+    if (existingInProgressPromise) {
+      return existingInProgressPromise;
+    }
+
+    const connectionPromise = this.nodeIdToConnectionImplementation(nodeId);
+    connectionEstablishmentInProgress.set(nodeId, connectionPromise);
+    connectionPromise.then(
+      () => {
+        connectionEstablishmentInProgress.delete(nodeId);
+      },
+      () => {
+        connectionEstablishmentInProgress.delete(nodeId);
+      },
+    );
+
+    return connectionPromise;
+  }
 
   public setNodeAddress(nodeId: Uint8Array, nodeContactAddress: Address): void {
     this.nodeIdToAddressMap.set(nodeId, nodeContactAddress);
@@ -308,6 +331,8 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   public abstract sendRawMessage(connection: Connection, message: Uint8Array): Promise<void>;
 
   public abstract destroy(): Promise<void>;
+
+  protected abstract nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<Connection | null>;
 
   protected async handleIncomingMessage(
     connection: Connection,

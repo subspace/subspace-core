@@ -108,7 +108,43 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     }
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
+  public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
+    if (message.length > this.messageSizeLimit) {
+      throw new Error(
+        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
+      );
+    }
+    if ('sendBytes' in connection) {
+      connection.sendBytes(Buffer.from(message));
+    } else {
+      connection.send(message);
+    }
+  }
+
+  public destroy(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      for (const connection of this.connectionToNodeIdMap.keys()) {
+        connection.close();
+        this.connectionCloseHandler(connection);
+      }
+      if (this.wsServer) {
+        this.wsServer.shutDown();
+      }
+      if (this.httpServer) {
+        this.httpServer.close((error?: Error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  public async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
     const connection = this.nodeIdToConnectionMap.get(nodeId);
     if (connection) {
       return connection;
@@ -156,42 +192,6 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
       connection.onclose = () => {
         this.connectionCloseHandler(connection);
       };
-    });
-  }
-
-  public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
-    if (message.length > this.messageSizeLimit) {
-      throw new Error(
-        `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
-      );
-    }
-    if ('sendBytes' in connection) {
-      connection.sendBytes(Buffer.from(message));
-    } else {
-      connection.send(message);
-    }
-  }
-
-  public destroy(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      for (const connection of this.connectionToNodeIdMap.keys()) {
-        connection.close();
-        this.connectionCloseHandler(connection);
-      }
-      if (this.wsServer) {
-        this.wsServer.shutDown();
-      }
-      if (this.httpServer) {
-        this.httpServer.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
     });
   }
 

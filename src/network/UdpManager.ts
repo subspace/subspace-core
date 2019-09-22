@@ -96,18 +96,6 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     return connections;
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<INodeContactInfoUdp | null> {
-    if (this.browserNode) {
-      return null;
-    }
-    const address = this.nodeIdToAddressMap.get(nodeId);
-    if (address) {
-      return address;
-    }
-
-    return null;
-  }
-
   public async sendRawMessage(address: INodeContactInfoUdp, message: Uint8Array): Promise<void> {
     const udp4Socket = this.udp4Socket;
     if (!udp4Socket) {
@@ -145,6 +133,18 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
         resolve();
       }
     });
+  }
+
+  protected async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<INodeContactInfoUdp | null> {
+    if (this.browserNode) {
+      return null;
+    }
+    const address = this.nodeIdToAddressMap.get(nodeId);
+    if (address) {
+      return address;
+    }
+
+    return null;
   }
 
   protected sendMessageImplementation(

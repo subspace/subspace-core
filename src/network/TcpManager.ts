@@ -117,7 +117,45 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     }
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<net.Socket | null> {
+  public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
+    if (message.length > this.messageSizeLimit) {
+      throw new Error(
+        `TCP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
+      );
+    }
+    if (!socket.destroyed) {
+      await new Promise((resolve, reject) => {
+        socket.write(composeMessageWithTcpHeader(message), (error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+    }
+  }
+
+  public destroy(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      for (const socket of this.nodeIdToConnectionMap.values()) {
+        socket.destroy();
+      }
+      if (this.tcp4Server) {
+        this.tcp4Server.close((error?: Error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  protected async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<net.Socket | null> {
     if (this.browserNode) {
       return null;
     }
@@ -164,44 +202,6 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       socket
         .setTimeout(this.connectionTimeout)
         .once('error', reject);
-    });
-  }
-
-  public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
-    if (message.length > this.messageSizeLimit) {
-      throw new Error(
-        `TCP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
-      );
-    }
-    if (!socket.destroyed) {
-      await new Promise((resolve, reject) => {
-        socket.write(composeMessageWithTcpHeader(message), (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
-    }
-  }
-
-  public destroy(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      for (const socket of this.nodeIdToConnectionMap.values()) {
-        socket.destroy();
-      }
-      if (this.tcp4Server) {
-        this.tcp4Server.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
     });
   }
 
