@@ -1,4 +1,5 @@
 import * as dgram from "dgram";
+import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
 import {INodeContactInfo, INodeContactInfoUdp} from "./INetwork";
@@ -22,6 +23,7 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
+    parentLogger: ILogger,
   ): Promise<UdpManager> {
     return new Promise((resolve, reject) => {
       const instance = new UdpManager(
@@ -31,6 +33,7 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
         browserNode,
         messageSizeLimit,
         responseTimeout,
+        parentLogger,
         () => {
           resolve(instance);
         },
@@ -49,6 +52,7 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
+   * @param parentLogger
    * @param readyCallback
    * @param errorCallback
    */
@@ -59,10 +63,19 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
+    parentLogger: ILogger,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(ownNodeContactInfo.nodeId, bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, false);
+    super(
+      ownNodeContactInfo.nodeId,
+      bootstrapNodes,
+      browserNode,
+      messageSizeLimit,
+      responseTimeout,
+      false,
+      parentLogger.child({manager: 'UDP'}),
+    );
     this.setMaxListeners(Infinity);
 
     this.identificationPayload = identificationPayload;
@@ -176,7 +189,7 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
         (udpMessage: Buffer, remote: dgram.RemoteInfo) => {
           // Should be at least identification payload + command
           if (udpMessage.length < (IDENTIFICATION_PAYLOAD_LENGTH + 1)) {
-            // TODO: Log in debug mode
+            this.logger.debug(`Message size too small: ${udpMessage.length} bytes given, at least ${IDENTIFICATION_PAYLOAD_LENGTH + 1} expected`);
             return;
           }
           const {nodeId, nodeType} = parseIdentificationPayload(udpMessage.subarray(0, IDENTIFICATION_PAYLOAD_LENGTH));
@@ -191,13 +204,20 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
             udpMessage.subarray(IDENTIFICATION_PAYLOAD_LENGTH),
             {nodeId, nodeType},
           )
-            .catch((_) => {
-              // TODO: Handle errors
+            .catch((error: any) => {
+              const errorText = (error.stack || error) as string;
+              this.logger.debug(
+                `Error on handling incoming message: ${errorText}`,
+                {
+                  nodeId: bin2Hex(nodeContactInfo.nodeId),
+                },
+              );
             });
         },
       )
-      .on('error', () => {
-        // TODO: Handle errors
+      .on('error', (error: any) => {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Error on socket: ${errorText}`);
       });
     if (port) {
       udp4Socket

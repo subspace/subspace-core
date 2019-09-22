@@ -1,6 +1,6 @@
 import {ArrayMap, ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
-import {compareUint8Array} from "../utils/utils";
+import {bin2Hex, compareUint8Array, ILogger} from "../utils/utils";
 import {
   ICommandsKeys,
   ICommandsKeysForSending,
@@ -45,6 +45,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
+   * @param logger
    */
   protected constructor(
     protected ownNodeId: Uint8Array,
@@ -53,6 +54,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     protected readonly messageSizeLimit: number,
     private readonly responseTimeout: number,
     private readonly connectionBased: boolean,
+    protected readonly logger: ILogger,
   ) {
     super();
     this.setMaxListeners(Infinity);
@@ -74,7 +76,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       numberOfPeersBinary: Uint8Array,
       responseCallback: (peersBinary: Uint8Array) => void,
-      contactIdentification: INodeContactInfo,
+      contactIdentification: INodeContactIdentification,
     ) => void,
   ): this;
   public on(
@@ -104,7 +106,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       numberOfPeersBinary: Uint8Array,
       responseCallback: (peersBinary: Uint8Array) => void,
-      contactIdentification: INodeContactInfo,
+      contactIdentification: INodeContactIdentification,
     ) => void,
   ): this;
   public once(
@@ -134,7 +136,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       numberOfPeersBinary: Uint8Array,
       responseCallback: (peersBinary: Uint8Array) => void,
-      contactIdentification: INodeContactInfo,
+      contactIdentification: INodeContactIdentification,
     ) => void,
   ): this;
   public off(
@@ -164,7 +166,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     event: 'get-peers',
     numberOfPeersBinary: Uint8Array,
     responseCallback: (peersBinary: Uint8Array) => void,
-    contactIdentification: INodeContactInfo,
+    contactIdentification: INodeContactIdentification,
   ): boolean;
   public emit(
     event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
@@ -350,7 +352,12 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     contactIdentification?: INodeContactIdentification,
   ): Promise<void> {
     if (message.length > this.messageSizeLimit) {
-      // TODO: Log too big message in debug mode
+      this.logger.debug(
+        `Error on handling incoming message too big: ${message.length} bytes given, at most ${this.messageSizeLimit} bytes expected`,
+        {
+          nodeId: contactIdentification ? bin2Hex(contactIdentification.nodeId) : 'unknown',
+        },
+      );
       return;
     }
     const [command, requestId, payload] = parseMessage(message);
@@ -370,7 +377,12 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       const nodeContactInfo = parseNodeInfoPayload(payload);
       const existingConnection = this.nodeIdToConnectionMap.get(nodeContactInfo.nodeId);
       if (existingConnection) {
-        // TODO: Log in debug mode that node mapping is already present
+        this.logger.debug(
+          `Mapping between connection and nodeId already exists`,
+          {
+            nodeId: bin2Hex(nodeContactInfo.nodeId),
+          },
+        );
         switch (compareUint8Array(this.ownNodeId, nodeContactInfo.nodeId)) {
           case -1:
             // Our nodeId is smaller, close already existing connection and proceed with replacing it with incoming
@@ -381,7 +393,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
             this.destroyConnection(connection);
             return;
           default:
-            // TODO: We have no checks for this yet
+            this.logger.error(`Connection to itself, this should never happen!`);
             throw new Error('Connecting to itself, this should never happen');
         }
       }
@@ -395,7 +407,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     }
     const nodeId = this.connectionToNodeIdMap.get(connection);
     if (this.connectionBased && !nodeId) {
-      // TODO: Log in debug mode that non-identified node tried to send message
+      this.logger.debug(`Non-identified node tried to send command ${command}, ignored`);
       return;
     }
     if (!contactIdentification) {
@@ -475,7 +487,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
           }
         } else {
           if (command === 'get-peers') {
-            // TODO: Log incorrect command in debug mode
+            this.logger.debug(`get-peers is not a one-way command`);
             break;
           }
           this.emit('command', command, payload, noopResponseCallback, contactIdentification);

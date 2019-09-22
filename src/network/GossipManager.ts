@@ -1,7 +1,7 @@
 import {ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
 import {hash} from "../crypto/crypto";
-import {bin2Hex, compareUint8Array} from "../utils/utils";
+import {bin2Hex, compareUint8Array, ILogger} from "../utils/utils";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS_SET, ICommandsKeysForSending} from "./constants";
 import {INodeContactIdentification} from "./INetwork";
 import {TcpManager} from "./TcpManager";
@@ -12,6 +12,7 @@ import {WsManager} from "./WsManager";
 export class GossipManager extends EventEmitter {
   private readonly gossipCache = new Set<string>();
   private readonly maxMessageSizeLimit: number;
+  private readonly logger: ILogger;
 
   constructor(
     private readonly ownNodeId: Uint8Array,
@@ -20,9 +21,12 @@ export class GossipManager extends EventEmitter {
     private readonly tcpManager: TcpManager,
     private readonly wsManager: WsManager,
     private readonly gossipCacheTimeout: number,
+    parentLogger: ILogger,
   ) {
     super();
     this.setMaxListeners(Infinity);
+
+    this.logger = parentLogger.child({manager: 'gossip'});
 
     let maxMessageSizeLimit = 0;
     for (const protocolManager of [udpManager, tcpManager, wsManager]) {
@@ -141,8 +145,9 @@ export class GossipManager extends EventEmitter {
       const socket = this.tcpManager.nodeIdToActiveConnection(nodeId);
       if (socket) {
         this.tcpManager.sendRawMessage(socket, message)
-          .catch((_) => {
-            // TODO: Log in debug mode
+          .catch((error: any) => {
+            const errorText = (error.stack || error) as string;
+            this.logger.debug(`Error on sending raw message over TCP: ${errorText}`);
           });
         continue;
       }
@@ -154,7 +159,8 @@ export class GossipManager extends EventEmitter {
         )
           .catch((error) => {
             if (error) {
-              // TODO: Log in debug mode
+              const errorText = (error.stack || error) as string;
+              this.logger.debug(`Error on sending raw message over UDP: ${errorText}`);
             }
           });
         continue;
@@ -163,8 +169,9 @@ export class GossipManager extends EventEmitter {
       if (wsConnection) {
         // Node likely doesn't have any other way to communicate besides WebSocket
         this.wsManager.sendRawMessage(wsConnection, message)
-          .catch((_) => {
-            // TODO: Log in debug mode
+          .catch((error: any) => {
+            const errorText = (error.stack || error) as string;
+            this.logger.debug(`Error on sending raw message over WebSocket: ${errorText}`);
           });
       }
 
@@ -181,8 +188,9 @@ export class GossipManager extends EventEmitter {
 
           throw new Error(`Node ${bin2Hex(nodeId)} unreachable`);
         })
-        .catch((_) => {
-          // TODO: Log in debug mode
+        .catch((error: any) => {
+          const errorText = (error.stack || error) as string;
+          this.logger.debug(`Error on sending raw message over TCP or WebSocket: ${errorText}`);
         });
     }
   }
@@ -193,7 +201,7 @@ export class GossipManager extends EventEmitter {
   ): void {
     const command = COMMANDS_INVERSE[gossipMessage[0]];
     if (!GOSSIP_COMMANDS_SET.has(command)) {
-      // TODO: Log in debug mode
+      this.logger.debug(`Received command ${command} that is not allowed for gossip from node ${bin2Hex(contactIdentification.nodeId)}`);
       return;
     }
     const messageHash = hash(gossipMessage).join(',');
@@ -212,8 +220,9 @@ export class GossipManager extends EventEmitter {
       contactIdentification,
     );
     this.gossipInternal(gossipMessage, contactIdentification.nodeId)
-      .catch((_) => {
-        // TODO: Log in debug mode
+      .catch((error: any) => {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Error when sending internal gossip: ${errorText}`);
       });
   }
 }

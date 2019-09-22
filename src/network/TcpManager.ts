@@ -1,5 +1,5 @@
 import * as net from "net";
-import {bin2Hex} from "../utils/utils";
+import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
 import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
@@ -40,6 +40,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     responseTimeout: number,
     connectionTimeout: number,
     connectionExpiration: number,
+    parentLogger: ILogger,
   ): Promise<TcpManager> {
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
@@ -51,6 +52,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         responseTimeout,
         connectionTimeout,
         connectionExpiration,
+        parentLogger,
         () => {
           resolve(instance);
         },
@@ -74,6 +76,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
    * @param responseTimeout In seconds
    * @param connectionTimeout In seconds
    * @param connectionExpiration In seconds
+   * @param parentLogger
    * @param readyCallback
    * @param errorCallback
    */
@@ -86,10 +89,19 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     responseTimeout: number,
     connectionTimeout: number,
     connectionExpiration: number,
+    parentLogger: ILogger,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(ownNodeContactInfo.nodeId, bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(
+      ownNodeContactInfo.nodeId,
+      bootstrapNodes,
+      browserNode,
+      messageSizeLimit,
+      responseTimeout,
+      true,
+      parentLogger.child({manager: 'TCP'}),
+    );
     this.setMaxListeners(Infinity);
 
     this.identificationMessage = composeMessageWithTcpHeader(
@@ -244,8 +256,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           }
           const message = receivedBuffer.slice(4, 4 + messageLength);
           this.handleIncomingMessage(socket, message)
-            .catch((_) => {
-              // TODO: Handle errors
+            .catch((error: any) => {
+              const errorText = (error.stack || error) as string;
+              this.logger.debug(`Error on handling incoming message: ${errorText}`);
             });
           receivedBuffer = receivedBuffer.slice(4 + messageLength);
         }

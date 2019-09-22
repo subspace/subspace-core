@@ -27,7 +27,7 @@ export class Network extends EventEmitter implements INetwork {
     ownNodeContactInfo: INodeContactInfo,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
-    globalLogger: ILogger,
+    parentLogger: ILogger,
     routingTableMinSize: number = 10,
     routingTableMaxSize: number = 100,
     activeConnectionsMinNumber: number = 5,
@@ -36,7 +36,7 @@ export class Network extends EventEmitter implements INetwork {
     const identificationPayload = composeIdentificationPayload(ownNodeContactInfo);
     const nodeInfoPayload = composeNodeInfoPayload(ownNodeContactInfo);
 
-    const logger = globalLogger.child({subsystem: 'network'});
+    const logger = parentLogger.child({subsystem: 'network'});
 
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
@@ -46,6 +46,7 @@ export class Network extends EventEmitter implements INetwork {
         browserNode,
         Network.UDP_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
+        logger,
       ),
       TcpManager.init(
         ownNodeContactInfo,
@@ -56,6 +57,7 @@ export class Network extends EventEmitter implements INetwork {
         Network.DEFAULT_TIMEOUT,
         Network.DEFAULT_TIMEOUT,
         Network.DEFAULT_CONNECTION_EXPIRATION,
+        logger,
       ),
       WsManager.init(
         ownNodeContactInfo,
@@ -65,6 +67,7 @@ export class Network extends EventEmitter implements INetwork {
         Network.WS_MESSAGE_SIZE_LIMIT,
         Network.DEFAULT_TIMEOUT,
         Network.DEFAULT_TIMEOUT,
+        logger,
       ),
     ]);
 
@@ -75,6 +78,7 @@ export class Network extends EventEmitter implements INetwork {
       tcpManager,
       wsManager,
       this.GOSSIP_CACHE_TIMEOUT,
+      logger,
     );
 
     return new Network(
@@ -159,9 +163,11 @@ export class Network extends EventEmitter implements INetwork {
     for (const manager of [udpManager, tcpManager, wsManager]) {
       manager
         .on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
+          logger.info('peer-contact-info', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           this.addPeer(nodeContactInfo);
         })
         .on('peer-connected', (nodeContactInfo: INodeContactInfo) => {
+          logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           ++this.numberOfActiveConnections;
           this.emit('peer-connected', nodeContactInfo);
           if (this.peers.size < routingTableMinSize) {
@@ -191,6 +197,7 @@ export class Network extends EventEmitter implements INetwork {
           }
         })
         .on('peer-disconnected', (nodeContactInfo: INodeContactInfo) => {
+          logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           --this.numberOfActiveConnections;
           this.emit('peer-disconnected', nodeContactInfo);
           this.maintainNumberOfConnections();
@@ -200,9 +207,9 @@ export class Network extends EventEmitter implements INetwork {
           (
             numberOfPeersBinary: Uint8Array,
             responseCallback: (peersBinary: Uint8Array) => void,
-            contactInfo: INodeContactInfo,
+            contactIdentification: INodeContactIdentification,
           ) => {
-            const requesterNodeId = contactInfo.nodeId;
+            const requesterNodeId = contactIdentification.nodeId;
             responseCallback(
               composePeersBinary(
                 Array.from(this.peers.values())
