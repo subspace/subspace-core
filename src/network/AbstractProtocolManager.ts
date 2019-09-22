@@ -33,9 +33,11 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
    */
   private readonly connectionEstablishmentInProgress = ArrayMap<Uint8Array, Promise<Connection | null>>();
   // Will 2**32 be enough?
-  private requestId: number = 0;
+  private requestId = 0;
   // Will 2**32 be enough?
-  private responseId: number = 0;
+  private responseId = 0;
+
+  private destroying = false;
 
   /**
    * @param ownNodeId
@@ -73,7 +75,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       numberOfPeersBinary: Uint8Array,
       responseCallback: (peersBinary: Uint8Array) => void,
-      contactIdentification: INodeContactIdentification,
+      contactIdentification: INodeContactInfo,
     ) => void,
   ): this;
   public on(
@@ -103,7 +105,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       numberOfPeersBinary: Uint8Array,
       responseCallback: (peersBinary: Uint8Array) => void,
-      contactIdentification: INodeContactIdentification,
+      contactIdentification: INodeContactInfo,
     ) => void,
   ): this;
   public once(
@@ -133,7 +135,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       numberOfPeersBinary: Uint8Array,
       responseCallback: (peersBinary: Uint8Array) => void,
-      contactIdentification: INodeContactIdentification,
+      contactIdentification: INodeContactInfo,
     ) => void,
   ): this;
   public off(
@@ -163,7 +165,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     event: 'get-peers',
     numberOfPeersBinary: Uint8Array,
     responseCallback: (peersBinary: Uint8Array) => void,
-    contactIdentification: INodeContactIdentification,
+    contactIdentification: INodeContactInfo,
   ): boolean;
   public emit(
     event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
@@ -256,6 +258,9 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   }
 
   public nodeIdToConnection(nodeId: Uint8Array): Promise<Connection | null> {
+    if (this.destroying) {
+      return Promise.resolve(null);
+    }
     const connectionEstablishmentInProgress = this.connectionEstablishmentInProgress;
     const existingInProgressPromise = connectionEstablishmentInProgress.get(nodeId);
     if (existingInProgressPromise) {
@@ -264,14 +269,13 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
 
     const connectionPromise = this.nodeIdToConnectionImplementation(nodeId);
     connectionEstablishmentInProgress.set(nodeId, connectionPromise);
-    connectionPromise.then(
-      () => {
+    connectionPromise
+      .finally(() => {
         connectionEstablishmentInProgress.delete(nodeId);
-      },
-      () => {
-        connectionEstablishmentInProgress.delete(nodeId);
-      },
-    );
+      })
+      .catch(() => {
+        // Just to avoid unhandled Promise exception
+      });
 
     return connectionPromise;
   }
@@ -330,7 +334,20 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
 
   public abstract sendRawMessage(connection: Connection, message: Uint8Array): Promise<void>;
 
-  public abstract destroy(): Promise<void>;
+  public async destroy(): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
+    this.destroying = true;
+    for (const connectionEstablishmentInProgress of this.connectionEstablishmentInProgress.values()) {
+      await connectionEstablishmentInProgress
+        .catch(() => {
+          // Just to avoid unhandled Promise exception
+        });
+    }
+
+    return this.destroyImplementation();
+  }
 
   protected abstract nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<Connection | null>;
 
@@ -488,4 +505,6 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   ): Promise<void>;
 
   protected abstract destroyConnection(connection: Connection): void;
+
+  protected abstract destroyImplementation(): Promise<void>;
 }

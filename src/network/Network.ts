@@ -76,6 +76,7 @@ export class Network extends EventEmitter implements INetwork {
 
     return new Promise((resolve, reject) => {
       const network = new Network(
+        ownNodeContactInfo,
         udpManager,
         tcpManager,
         wsManager,
@@ -100,6 +101,8 @@ export class Network extends EventEmitter implements INetwork {
   private static readonly DEFAULT_CONNECTION_EXPIRATION = 60;
   // In seconds
   private static readonly GOSSIP_CACHE_TIMEOUT = 60;
+  // In seconds
+  private static readonly CONNECTION_MAINTENANCE_INTERVAL = 30;
   // In bytes
   private static readonly UDP_MESSAGE_SIZE_LIMIT = 8192;
   // In bytes, excluding 4-bytes header with message length
@@ -112,8 +115,14 @@ export class Network extends EventEmitter implements INetwork {
   private readonly wsManager: WsManager;
   private readonly gossipManager: GossipManager;
   private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
+  private numberOfActiveConnections = 0;
+  private readonly connectionMaintenanceInterval: ReturnType<typeof setInterval>;
+
+  private maintainingNumberOfConnectionsInProgress = false;
+  private destroying = false;
 
   constructor(
+    ownNodeContactInfo: INodeContactInfo,
     udpManager: UdpManager,
     tcpManager: TcpManager,
     wsManager: WsManager,
@@ -124,13 +133,13 @@ export class Network extends EventEmitter implements INetwork {
     reject: (error: Error) => void,
     routingTableMinSize: number = 10,
     routingTableMaxSize: number = 100,
-    // @ts-ignore Will be used later
-    activeConnectionsMinNumber: number = 5,
-    // @ts-ignore Will be used later
-    activeConnectionsMaxNumber: number = 20,
+    private readonly activeConnectionsMinNumber: number = 5,
+    private readonly activeConnectionsMaxNumber: number = 20,
   ) {
     super();
     this.setMaxListeners(Infinity);
+
+    const ownNodeId = ownNodeContactInfo.nodeId;
 
     this.udpManager = udpManager;
     this.tcpManager = tcpManager;
@@ -147,6 +156,7 @@ export class Network extends EventEmitter implements INetwork {
           this.addPeer(nodeContactInfo);
         })
         .on('peer-connected', (nodeContactInfo: INodeContactInfo) => {
+          ++this.numberOfActiveConnections;
           this.emit('peer-connected', nodeContactInfo);
           if (this.peers.size < routingTableMinSize) {
             const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId) as Exclude<ReturnType<typeof manager.nodeIdToActiveConnection>, null>;
@@ -157,9 +167,16 @@ export class Network extends EventEmitter implements INetwork {
               Uint8Array.of(routingTableMaxSize - this.peers.size),
             )
               .then((peersBinary: Uint8Array) => {
+                const requestedNodeId = nodeContactInfo.nodeId;
                 for (const peer of parsePeersBinary(peersBinary)) {
-                  this.addPeer(peer);
+                  if (!(
+                    areArraysEqual(peer.nodeId, requestedNodeId) ||
+                    areArraysEqual(peer.nodeId, ownNodeId)
+                  )) {
+                    this.addPeer(peer);
+                  }
                 }
+                this.maintainNumberOfConnections();
               })
               .catch(() => {
                 // TODO: Log in debug mode, maybe close connection
@@ -167,22 +184,28 @@ export class Network extends EventEmitter implements INetwork {
           }
         })
         .on('peer-disconnected', (nodeContactInfo: INodeContactInfo) => {
+          --this.numberOfActiveConnections;
           this.emit('peer-disconnected', nodeContactInfo);
+          this.maintainNumberOfConnections();
         })
         .on(
           'get-peers',
           (
             numberOfPeersBinary: Uint8Array,
             responseCallback: (peersBinary: Uint8Array) => void,
-            contactIdentification: INodeContactIdentification,
+            contactInfo: INodeContactInfo,
           ) => {
-            const requesterNodeId = contactIdentification.nodeId;
+            const requesterNodeId = contactInfo.nodeId;
             responseCallback(
               composePeersBinary(
                 Array.from(this.peers.values())
                   .filter((peer) => {
-                    return !areArraysEqual(peer.nodeId, requesterNodeId);
+                    return !(
+                      areArraysEqual(peer.nodeId, requesterNodeId) ||
+                      areArraysEqual(peer.nodeId, ownNodeId)
+                    );
                   })
+                  // TODO: Randomize
                   .slice(0, numberOfPeersBinary[0]),
               ),
             );
@@ -195,25 +218,23 @@ export class Network extends EventEmitter implements INetwork {
     const bootstrapPromises: Array<Promise<any>> = [];
     // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
     for (const bootstrapNode of bootstrapNodes) {
-      if (bootstrapNode.tcp4Port && !browserNode) {
-        bootstrapPromises.push(
-          tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
-            .catch((_) => {
-              // TODO: Log in debug mode
-            }),
-        );
-      } else if (bootstrapNode.wsPort) {
-        bootstrapPromises.push(
-          wsManager.nodeIdToConnection(bootstrapNode.nodeId)
-            .catch((_) => {
-              // TODO: Log in debug mode
-            }),
-        );
-      }
+      bootstrapPromises.push(
+        this.establishConnectionToNode(bootstrapNode),
+      );
     }
 
     Promise.all(bootstrapPromises)
       .then(resolve, reject);
+
+    this.connectionMaintenanceInterval = setInterval(
+      () => {
+        if (this.destroying) {
+          return;
+        }
+        this.maintainNumberOfConnections();
+      },
+      Network.CONNECTION_MAINTENANCE_INTERVAL * 1000,
+    );
   }
 
   /**
@@ -221,6 +242,10 @@ export class Network extends EventEmitter implements INetwork {
    */
   public getPeers(): INodeContactInfo[] {
     return Array.from(this.peers.values());
+  }
+
+  public getNumberOfActiveConnections(): number {
+    return this.numberOfActiveConnections;
   }
 
   public async sendRequestOneWay(
@@ -282,6 +307,12 @@ export class Network extends EventEmitter implements INetwork {
   }
 
   public async destroy(): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
+    this.destroying = true;
+
+    clearInterval(this.connectionMaintenanceInterval);
     await Promise.all([
       this.udpManager.destroy(),
       this.tcpManager.destroy(),
@@ -415,5 +446,58 @@ export class Network extends EventEmitter implements INetwork {
     if (nodeContactInfo.wsPort) {
       this.wsManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoWs);
     }
+  }
+
+  private maintainNumberOfConnections(): void {
+    if (this.maintainingNumberOfConnectionsInProgress) {
+      return;
+    }
+
+    this.maintainingNumberOfConnectionsInProgress = true;
+    this.maintainNumberOfConnectionsImplementation()
+      .catch(() => {
+        // TODO: Log in debug mode
+      })
+      .finally(() => {
+        this.maintainingNumberOfConnectionsInProgress = false;
+      });
+  }
+
+  private async maintainNumberOfConnectionsImplementation(): Promise<void> {
+    if (this.numberOfActiveConnections >= this.activeConnectionsMinNumber) {
+      return;
+    }
+    // TODO: Randomize
+    const peersToConnectTo = Array.from(this.peers.values())
+      .filter((peer) => {
+        return !(
+          this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
+          this.wsManager.nodeIdToActiveConnection(peer.nodeId)
+        );
+      })
+      .slice(0, this.activeConnectionsMaxNumber);
+
+    for (const peer of peersToConnectTo) {
+      if (this.destroying) {
+        return;
+      }
+      await this.establishConnectionToNode(peer);
+    }
+  }
+
+  private establishConnectionToNode(nodeContactInfo: INodeContactInfo): Promise<any> {
+    if (nodeContactInfo.tcp4Port && !this.browserNode) {
+      return this.tcpManager.nodeIdToConnection(nodeContactInfo.nodeId)
+        .catch((_) => {
+          // TODO: Log in debug mode
+        });
+    } else if (nodeContactInfo.wsPort) {
+      return this.wsManager.nodeIdToConnection(nodeContactInfo.nodeId)
+        .catch((_) => {
+          // TODO: Log in debug mode
+        });
+    }
+
+    return Promise.resolve();
   }
 }

@@ -15,6 +15,7 @@ function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
     wsPort: nodeContactInfo.wsPort,
   });
 }
+
 const peer1: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('1'.repeat(NODE_ID_LENGTH * 2), 'hex'),
@@ -216,14 +217,14 @@ describe('Peers', () => {
         // nodes list
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer4));
 
-        setTimeout(() => {
-          // WebSocket peer should get to know about other peers from gateway too
-          const peer4Peers = networkClient4.getPeers().map(serializeNodeContactInfo);
-          expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer2));
-          expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer3));
-          resolve();
-        });
-      });
+        // WebSocket peer should get to know about other peers from gateway too
+        const peer4Peers = networkClient4.getPeers().map(serializeNodeContactInfo);
+        expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer2));
+        expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer3));
+        // And establish some connections too
+        expect(networkClient4.getNumberOfActiveConnections()).toBeGreaterThan(1);
+        resolve();
+      }, 100);
     });
   });
 
@@ -259,8 +260,16 @@ describe('Peers', () => {
 });
 
 afterEach(async () => {
-  await networkClient1.destroy();
-  await networkClient2.destroy();
-  await networkClient3.destroy();
-  await networkClient4.destroy();
+  if (networkClient1) {
+    await networkClient1.destroy();
+  }
+  if (networkClient2) {
+    await networkClient2.destroy();
+  }
+  if (networkClient3) {
+    await networkClient3.destroy();
+  }
+  if (networkClient4) {
+    await networkClient4.destroy();
+  }
 });

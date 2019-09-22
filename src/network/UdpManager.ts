@@ -125,16 +125,6 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     });
   }
 
-  public destroy(): Promise<void> {
-    return new Promise((resolve) => {
-      if (this.udp4Socket) {
-        this.udp4Socket.close(resolve);
-      } else {
-        resolve();
-      }
-    });
-  }
-
   protected async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<INodeContactInfoUdp | null> {
     if (this.browserNode) {
       return null;
@@ -159,6 +149,16 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
 
   protected destroyConnection(): void {
     // Not used by non-connection-based manager
+  }
+
+  protected destroyImplementation(): Promise<void> {
+    return new Promise((resolve) => {
+      if (this.udp4Socket) {
+        this.udp4Socket.close(resolve);
+      } else {
+        resolve();
+      }
+    });
   }
 
   private createUdp4Socket(

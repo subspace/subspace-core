@@ -136,25 +136,6 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     }
   }
 
-  public destroy(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      for (const socket of this.nodeIdToConnectionMap.values()) {
-        socket.destroy();
-      }
-      if (this.tcp4Server) {
-        this.tcp4Server.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
-    });
-  }
-
   protected async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<net.Socket | null> {
     if (this.browserNode) {
       return null;
@@ -217,6 +198,25 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
 
   protected destroyConnection(socket: net.Socket): void {
     socket.destroy();
+  }
+
+  protected destroyImplementation(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      for (const socket of this.nodeIdToConnectionMap.values()) {
+        socket.destroy();
+      }
+      if (this.tcp4Server) {
+        this.tcp4Server.close((error?: Error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
+    });
   }
 
   private registerTcpConnection(socket: net.Socket, nodeContactInfo?: INodeContactInfo): void {

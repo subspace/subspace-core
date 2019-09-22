@@ -121,29 +121,6 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     }
   }
 
-  public destroy(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      for (const connection of this.connectionToNodeIdMap.keys()) {
-        connection.close();
-        this.connectionCloseHandler(connection);
-      }
-      if (this.wsServer) {
-        this.wsServer.shutDown();
-      }
-      if (this.httpServer) {
-        this.httpServer.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
-    });
-  }
-
   public async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
     const connection = this.nodeIdToConnectionMap.get(nodeId);
     if (connection) {
@@ -158,7 +135,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
       const timeout = setTimeout(
         () => {
           timedOut = true;
-          reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
+          reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed`));
         },
         this.connectionTimeout * 1000,
       );
@@ -189,6 +166,10 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
           resolve(connection);
         }
       };
+      connection.onerror = () => {
+        // TODO: Log in debug mode
+        reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed`));
+      };
       connection.onclose = () => {
         this.connectionCloseHandler(connection);
       };
@@ -209,6 +190,25 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     connection.close();
     // Because https://github.com/theturtle32/WebSocket-Node/issues/354
     this.connectionCloseHandler(connection);
+  }
+
+  protected destroyImplementation(): Promise<void> {
+    return new Promise((resolve) => {
+      for (const connection of this.connectionToNodeIdMap.keys()) {
+        connection.close();
+        this.connectionCloseHandler(connection);
+      }
+      if (this.wsServer) {
+        this.wsServer.shutDown();
+      }
+      if (this.httpServer) {
+        // There may be HTTP connections dangling, but we don't want to track them or wait, so resolve immediately
+        this.httpServer.close();
+        resolve();
+      } else {
+        resolve();
+      }
+    });
   }
 
   private connectionCloseHandler(connection: WebSocketConnection): void {
