@@ -145,14 +145,13 @@ export function parseNodeInfoPayload(nodeInfoPayload: Uint8Array): INodeContactI
 export function composePeersBinary(peers: INodeContactInfo[]): Uint8Array {
   const numberOfPeers = peers.length;
   // First byte is number of peers followed by their contact info
-  const peersBinary = new Uint8Array(1 + numberOfPeers * NODE_CONTACT_INFO_PAYLOAD_LENGTH);
-  peersBinary.set([numberOfPeers]);
+  const peersBinary = new Uint8Array(numberOfPeers * NODE_CONTACT_INFO_PAYLOAD_LENGTH);
   for (let i = 0; i < numberOfPeers; ++i) {
     composeNodeInfoPayload(
       peers[i],
       peersBinary.subarray(
-        1 + NODE_CONTACT_INFO_PAYLOAD_LENGTH * i,
-        1 + NODE_CONTACT_INFO_PAYLOAD_LENGTH * (i + 1),
+        NODE_CONTACT_INFO_PAYLOAD_LENGTH * i,
+        NODE_CONTACT_INFO_PAYLOAD_LENGTH * (i + 1),
       ),
     );
   }
@@ -161,20 +160,17 @@ export function composePeersBinary(peers: INodeContactInfo[]): Uint8Array {
 }
 
 export function parsePeersBinary(peersBinary: Uint8Array): INodeContactInfo[] {
-  if (!peersBinary.length) {
-    throw new Error('Peers binary should be at least one byte length');
+  if (peersBinary.length % NODE_CONTACT_INFO_PAYLOAD_LENGTH) {
+    throw new Error('Peers binary should be multiple of node contact info payloads');
   }
-  const numberOfPeers = peersBinary[0];
-  if (peersBinary.length < (1 + numberOfPeers * NODE_CONTACT_INFO_PAYLOAD_LENGTH)) {
-    throw new Error(`Too few data for peers binary, ${peersBinary.length} bytes given, at least ${1 + numberOfPeers * NODE_CONTACT_INFO_PAYLOAD_LENGTH} bytes expected`);
-  }
+  const numberOfPeers = peersBinary.length / NODE_CONTACT_INFO_PAYLOAD_LENGTH;
   const peers: INodeContactInfo[] = [];
   for (let i = 0; i < numberOfPeers; ++i) {
     peers.push(
       parseNodeInfoPayload(
         peersBinary.subarray(
-          1 + NODE_CONTACT_INFO_PAYLOAD_LENGTH * i,
-          1 + NODE_CONTACT_INFO_PAYLOAD_LENGTH * (i + 1),
+          NODE_CONTACT_INFO_PAYLOAD_LENGTH * i,
+          NODE_CONTACT_INFO_PAYLOAD_LENGTH * (i + 1),
         ),
       ),
     );
