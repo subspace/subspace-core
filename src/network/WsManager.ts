@@ -72,7 +72,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(ownNodeContactInfo.nodeId, bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
     this.nodeInfoPayload = nodeInfoPayload;

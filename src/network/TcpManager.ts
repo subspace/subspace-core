@@ -88,7 +88,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(ownNodeContactInfo.nodeId, bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
     this.setMaxListeners(Infinity);
 
     this.identificationMessage = composeMessageWithTcpHeader(

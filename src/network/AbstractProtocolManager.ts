@@ -1,5 +1,6 @@
 import {ArrayMap, ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
+import {compareUint8Array} from "../utils/utils";
 import {
   ICommandsKeys,
   ICommandsKeysForSending,
@@ -33,6 +34,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   private responseId: number = 0;
 
   /**
+   * @param ownNodeId
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -40,6 +42,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
    * @param connectionBased Whether there is a concept of persistent connection (like in TCP and unlike UDP)
    */
   protected constructor(
+    protected ownNodeId: Uint8Array,
     bootstrapNodes: Address[],
     protected readonly browserNode: boolean,
     protected readonly messageSizeLimit: number,
@@ -330,16 +333,29 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       }
       const nodeContactIdentification = parseIdentificationPayload(payload);
       const nodeContactInfo = parseNodeInfoPayload(payload);
-      if (this.nodeIdToConnectionMap.has(nodeContactInfo.nodeId)) {
+      const existingConnection = this.nodeIdToConnectionMap.get(nodeContactInfo.nodeId);
+      if (existingConnection) {
         // TODO: Log in debug mode that node mapping is already present
-        this.destroyConnection(connection);
-      } else {
-        this.nodeIdToConnectionMap.set(nodeContactInfo.nodeId, connection);
-        this.connectionToNodeIdMap.set(connection, nodeContactInfo.nodeId);
-        this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
-        this.emit('peer-contact-info', nodeContactInfo);
-        this.emit('peer-connected', nodeContactInfo);
+        switch (compareUint8Array(this.ownNodeId, nodeContactInfo.nodeId)) {
+          case -1:
+            // Our nodeId is smaller, close already existing connection and proceed with replacing it with incoming
+            this.destroyConnection(existingConnection);
+            break;
+          case 1:
+            // Our nodeId is bigger, close incoming connection
+            this.destroyConnection(connection);
+            return;
+          default:
+            // TODO: We have no checks for this yet
+            throw new Error('Connecting to itself, this should never happen');
+        }
       }
+
+      this.nodeIdToConnectionMap.set(nodeContactInfo.nodeId, connection);
+      this.connectionToNodeIdMap.set(connection, nodeContactInfo.nodeId);
+      this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
+      this.emit('peer-contact-info', nodeContactInfo);
+      this.emit('peer-connected', nodeContactInfo);
       return;
     }
     const nodeId = this.connectionToNodeIdMap.get(connection);

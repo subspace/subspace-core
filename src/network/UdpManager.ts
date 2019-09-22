@@ -62,12 +62,17 @@ export class UdpManager extends AbstractProtocolManager<INodeContactInfoUdp, INo
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, false);
+    super(ownNodeContactInfo.nodeId, bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, false);
     this.setMaxListeners(Infinity);
 
     this.identificationPayload = identificationPayload;
     if (!browserNode) {
-      this.udp4Socket = this.createUdp4Socket(ownNodeContactInfo.address, ownNodeContactInfo.udp4Port, readyCallback, errorCallback);
+      this.udp4Socket = this.createUdp4Socket(
+        ownNodeContactInfo.address,
+        ownNodeContactInfo.udp4Port,
+        readyCallback,
+        errorCallback,
+      );
     } else if (readyCallback) {
       setTimeout(readyCallback);
     }
