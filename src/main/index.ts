@@ -2,7 +2,7 @@
 // tslint:disable: object-literal-sort-keys
 
 import * as crypto from '../crypto/crypto';
-import { INodeContactInfo } from '../network/INetwork';
+import { INodeContactInfo } from '../network/Network';
 import {run} from "./run";
 
 /**

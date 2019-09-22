@@ -2,7 +2,7 @@ import * as net from "net";
 import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoTcp} from "./Network";
 import {composeMessage} from "./utils";
 
 function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {

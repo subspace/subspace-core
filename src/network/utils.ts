@@ -8,7 +8,7 @@ import {
   IDENTIFICATION_PAYLOAD_LENGTH, NODE_CONTACT_INFO_PAYLOAD_LENGTH, NODE_TYPES,
   NODE_TYPES_INVERSE,
 } from "./constants";
-import {INodeContactAddress, INodeContactIdentification, INodeContactInfo} from "./INetwork";
+import {INodeContactAddress, INodeContactIdentification, INodeContactInfo} from "./Network";
 
 export function noopResponseCallback(): void {
   // Do nothing

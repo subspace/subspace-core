@@ -3,7 +3,7 @@ import * as websocket from "websocket";
 import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoWs} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;

@@ -2,8 +2,7 @@ import {randomBytes} from "crypto";
 import {NODE_ID_LENGTH} from "../main/constants";
 import {IPeerContactInfo} from "../main/interfaces";
 import {allocatePort, bin2Hex, createLogger} from "../utils/utils";
-import {INodeContactInfo} from "./INetwork";
-import {Network} from "./Network";
+import {INodeContactInfo, Network} from "./Network";
 
 function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
   return JSON.stringify({

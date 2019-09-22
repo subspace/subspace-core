@@ -7,22 +7,43 @@ import {
   INodeTypesKeys,
 } from "./constants";
 import {GossipManager} from "./GossipManager";
-import {
-  INetwork,
-  INodeContactIdentification,
-  INodeContactInfo,
-  INodeContactInfoTcp,
-  INodeContactInfoUdp,
-  INodeContactInfoWs,
-} from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {composeIdentificationPayload, composeNodeInfoPayload, composePeersBinary, parsePeersBinary} from "./utils";
 import {WsManager} from "./WsManager";
 
+export interface INodeContactAddress {
+  address?: string;
+  tcp4Port?: number;
+  udp4Port?: number;
+  wsPort?: number;
+}
+
+export interface INodeContactIdentification {
+  nodeId: Uint8Array;
+  nodeType: INodeTypesKeys;
+}
+
+export type INodeContactInfo = INodeContactAddress & INodeContactIdentification;
+
+export interface INodeContactInfoUdp extends INodeContactInfo {
+  address: string;
+  udp4Port: number;
+}
+
+export interface INodeContactInfoTcp extends INodeContactInfo {
+  address: string;
+  tcp4Port: number;
+}
+
+export interface INodeContactInfoWs extends INodeContactInfo {
+  address: string;
+  wsPort: number;
+}
+
 const emptyPayload = new Uint8Array(0);
 
-export class Network extends EventEmitter implements INetwork {
+export class Network extends EventEmitter {
   public static async init(
     ownNodeContactInfo: INodeContactInfo,
     bootstrapNodes: INodeContactInfo[],

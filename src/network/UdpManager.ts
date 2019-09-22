@@ -2,7 +2,7 @@ import * as dgram from "dgram";
 import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys, IDENTIFICATION_PAYLOAD_LENGTH, INodeTypesKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoUdp} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoUdp} from "./Network";
 import {composeMessage, parseIdentificationPayload} from "./utils";
 
 function extractUdpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoUdp[] {

@@ -3,7 +3,7 @@
 
 import * as os from 'os';
 import * as crypto from '../../crypto/crypto';
-import { INodeContactInfo } from '../../network/INetwork';
+import {INodeContactInfo} from "../../network/Network";
 import { run } from '../run';
 
 /**

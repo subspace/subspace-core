@@ -7,7 +7,7 @@ import {
   INodeTypesKeys,
   NODE_CONTACT_INFO_PAYLOAD_LENGTH,
 } from "./constants";
-import {INodeContactIdentification, INodeContactInfo} from "./INetwork";
+import {INodeContactIdentification, INodeContactInfo} from "./Network";
 import {
   noopResponseCallback,
   parseIdentificationPayload,

@@ -3,7 +3,7 @@ import {EventEmitter} from "events";
 import {hash} from "../crypto/crypto";
 import {bin2Hex, compareUint8Array, ILogger} from "../utils/utils";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS_SET, ICommandsKeysForSending} from "./constants";
-import {INodeContactIdentification} from "./INetwork";
+import {INodeContactIdentification} from "./Network";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
 import {composeMessage, noopResponseCallback} from "./utils";
