@@ -215,7 +215,14 @@ describe('Peers', () => {
         // WebSocket peer will take time to show up, hence setTimeout, but it will be here even though not in bootstrap
         // nodes list
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer4));
-        resolve();
+
+        setTimeout(() => {
+          // WebSocket peer should get to know about other peers from gateway too
+          const peer4Peers = networkClient4.getPeers().map(serializeNodeContactInfo);
+          expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer2));
+          expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer3));
+          resolve();
+        });
       });
     });
   });

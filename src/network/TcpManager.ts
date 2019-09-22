@@ -33,7 +33,7 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
-    extendedIdentificationPayload: Uint8Array,
+    nodeInfoPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -44,7 +44,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
         ownNodeContactInfo,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
         extractTcpBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
@@ -66,7 +66,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
 
   /**
    * @param ownNodeContactInfo
-   * @param extendedIdentificationPayload
+   * @param nodeInfoPayload
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
@@ -78,7 +78,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
    */
   public constructor(
     ownNodeContactInfo: INodeContactInfo,
-    extendedIdentificationPayload: Uint8Array,
+    nodeInfoPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoTcp[],
     browserNode: boolean,
     messageSizeLimit: number,
@@ -95,7 +95,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       composeMessage(
         'identification',
         0,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
       ),
     );
     this.connectionTimeout = connectionTimeout;

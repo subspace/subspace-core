@@ -1,15 +1,18 @@
 import {ArrayMap, ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
 import {
-  ADDRESS_PAYLOAD_LENGTH,
-  EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH,
   ICommandsKeys,
   ICommandsKeysForSending,
-  IDENTIFICATION_PAYLOAD_LENGTH,
   INodeTypesKeys,
+  NODE_CONTACT_INFO_PAYLOAD_LENGTH,
 } from "./constants";
 import {INodeContactIdentification, INodeContactInfo} from "./INetwork";
-import {noopResponseCallback, parseAddressPayload, parseIdentificationPayload, parseMessage} from "./utils";
+import {
+  noopResponseCallback,
+  parseIdentificationPayload,
+  parseMessage,
+  parseNodeInfoPayload,
+} from "./utils";
 
 export abstract class AbstractProtocolManager<Connection extends object, Address extends INodeContactInfo> extends EventEmitter {
   protected readonly nodeIdToConnectionMap = ArrayMap<Uint8Array, Connection>();
@@ -59,6 +62,14 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public on(
+    event: 'get-peers',
+    listener: (
+      numberOfPeersBinary: Uint8Array,
+      responseCallback: (peersBinary: Uint8Array) => void,
+      contactIdentification: INodeContactIdentification,
+    ) => void,
+  ): this;
+  public on(
     event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
@@ -68,7 +79,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       command: ICommandsKeysForSending,
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra: INodeContactIdentification,
+      contactIdentification: INodeContactIdentification,
     ) => void,
   ): this;
   public on(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
@@ -81,6 +92,14 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public once(
+    event: 'get-peers',
+    listener: (
+      numberOfPeersBinary: Uint8Array,
+      responseCallback: (peersBinary: Uint8Array) => void,
+      contactIdentification: INodeContactIdentification,
+    ) => void,
+  ): this;
+  public once(
     event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
@@ -90,7 +109,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
       command: ICommandsKeysForSending,
       payload: Uint8Array,
       responseCallback: (responsePayload: Uint8Array) => void,
-      extra: INodeContactIdentification,
+      contactIdentification: INodeContactIdentification,
     ) => void,
   ): this;
   public once(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
@@ -103,6 +122,14 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
   public off(
+    event: 'get-peers',
+    listener: (
+      numberOfPeersBinary: Uint8Array,
+      responseCallback: (peersBinary: Uint8Array) => void,
+      contactIdentification: INodeContactIdentification,
+    ) => void,
+  ): this;
+  public off(
     event: 'peer-contact-info' | 'peer-connected' | 'peer-disconnected',
     listener: (nodeContactInfo: INodeContactInfo) => void,
   ): this;
@@ -111,8 +138,8 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     listener: (
       command: ICommandsKeysForSending,
       payload: Uint8Array,
-      responseCallback: (responsePayload: Uint8Array) => void,
-      extra: INodeContactIdentification,
+      responseCallback: (peersBinary: Uint8Array) => void,
+      contactIdentification: INodeContactIdentification,
     ) => void,
   ): this;
   public off(event: string, listener: (arg1: any, arg2?: any, arg3?: any, arg4?: any) => void): this {
@@ -122,7 +149,13 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
 
   public emit(
     event: 'gossip',
-    gossipMessage: Uint8Array,
+    gossipMessageOrNumberOfPeersBinary: Uint8Array,
+    contactIdentification: INodeContactIdentification,
+  ): boolean;
+  public emit(
+    event: 'get-peers',
+    numberOfPeersBinary: Uint8Array,
+    responseCallback: (peersBinary: Uint8Array) => void,
     contactIdentification: INodeContactIdentification,
   ): boolean;
   public emit(
@@ -134,7 +167,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     command: ICommandsKeysForSending,
     payload: Uint8Array,
     responseCallback: (responsePayload: Uint8Array) => void,
-    extra: INodeContactIdentification,
+    contactIdentification: INodeContactIdentification,
   ): boolean;
   public emit(
     event: string,
@@ -289,27 +322,20 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
         this.destroyConnection(connection);
         throw new Error('Identification is not supported by protocol');
       }
-      if (payload.length !== EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH) {
+      if (payload.length !== NODE_CONTACT_INFO_PAYLOAD_LENGTH) {
         this.destroyConnection(connection);
         throw new Error(
-          `Identification payload length is incorrect, expected ${EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
+          `Identification payload length is incorrect, expected ${NODE_CONTACT_INFO_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
         );
       }
-      // TODO: nodeType is not used
-      const nodeContactIdentification = parseIdentificationPayload(payload.subarray(0, IDENTIFICATION_PAYLOAD_LENGTH));
-      const nodeContactAddress = parseAddressPayload(
-        payload.subarray(
-          IDENTIFICATION_PAYLOAD_LENGTH,
-          IDENTIFICATION_PAYLOAD_LENGTH + ADDRESS_PAYLOAD_LENGTH,
-        ),
-      );
-      const nodeContactInfo: INodeContactInfo = {...nodeContactIdentification, ...nodeContactAddress};
-      if (this.nodeIdToConnectionMap.has(nodeContactIdentification.nodeId)) {
+      const nodeContactIdentification = parseIdentificationPayload(payload);
+      const nodeContactInfo = parseNodeInfoPayload(payload);
+      if (this.nodeIdToConnectionMap.has(nodeContactInfo.nodeId)) {
         // TODO: Log in debug mode that node mapping is already present
         this.destroyConnection(connection);
       } else {
-        this.nodeIdToConnectionMap.set(nodeContactIdentification.nodeId, connection);
-        this.connectionToNodeIdMap.set(connection, nodeContactIdentification.nodeId);
+        this.nodeIdToConnectionMap.set(nodeContactInfo.nodeId, connection);
+        this.connectionToNodeIdMap.set(connection, nodeContactInfo.nodeId);
         this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
         this.emit('peer-contact-info', nodeContactInfo);
         this.emit('peer-connected', nodeContactInfo);
@@ -370,19 +396,37 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
           if (timeout.unref) {
             timeout.unref();
           }
-          this.emit(
-            'command',
-            command,
-            payload,
-            (responsePayload: Uint8Array) => {
-              const responseCallback = this.responseCallbacks.get(responseId);
-              if (responseCallback) {
-                responseCallback(responsePayload);
-              }
-            },
-            contactIdentification,
-          );
+          if (command === 'get-peers') {
+            this.emit(
+              'get-peers',
+              payload,
+              (responsePayload: Uint8Array) => {
+                const responseCallback = this.responseCallbacks.get(responseId);
+                if (responseCallback) {
+                  responseCallback(responsePayload);
+                }
+              },
+              contactIdentification,
+            );
+          } else {
+            this.emit(
+              'command',
+              command,
+              payload,
+              (responsePayload: Uint8Array) => {
+                const responseCallback = this.responseCallbacks.get(responseId);
+                if (responseCallback) {
+                  responseCallback(responsePayload);
+                }
+              },
+              contactIdentification,
+            );
+          }
         } else {
+          if (command === 'get-peers') {
+            // TODO: Log incorrect command in debug mode
+            break;
+          }
           this.emit('command', command, payload, noopResponseCallback, contactIdentification);
         }
         break;

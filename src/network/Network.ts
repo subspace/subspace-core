@@ -1,12 +1,10 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {randomElement} from "../utils/utils";
+import {areArraysEqual, randomElement} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {
   ICommandsKeysForSending,
-  IDENTIFICATION_PAYLOAD_LENGTH,
   INodeTypesKeys,
-  NODE_TYPES,
 } from "./constants";
 import {GossipManager} from "./GossipManager";
 import {
@@ -19,7 +17,7 @@ import {
 } from "./INetwork";
 import {TcpManager} from "./TcpManager";
 import {UdpManager} from "./UdpManager";
-import {composeAddressPayload} from "./utils";
+import {composeIdentificationPayload, composeNodeInfoPayload, composePeersBinary, parsePeersBinary} from "./utils";
 import {WsManager} from "./WsManager";
 
 const emptyPayload = new Uint8Array(0);
@@ -29,16 +27,11 @@ export class Network extends EventEmitter implements INetwork {
     ownNodeContactInfo: INodeContactInfo,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
+    routingTableMinSize: number = 10,
+    routingTableMaxSize: number = 20,
   ): Promise<Network> {
-    const identificationPayload = new Uint8Array(IDENTIFICATION_PAYLOAD_LENGTH);
-    identificationPayload.set([NODE_TYPES[ownNodeContactInfo.nodeType]]);
-    identificationPayload.set(ownNodeContactInfo.nodeId, 1);
-
-    const addressPayload = composeAddressPayload(ownNodeContactInfo);
-
-    const extendedIdentificationPayload = new Uint8Array(identificationPayload.length + addressPayload.length);
-    extendedIdentificationPayload.set(identificationPayload);
-    extendedIdentificationPayload.set(addressPayload, identificationPayload.length);
+    const identificationPayload = composeIdentificationPayload(ownNodeContactInfo);
+    const nodeInfoPayload = composeNodeInfoPayload(ownNodeContactInfo);
 
     const [udpManager, tcpManager, wsManager] = await Promise.all([
       UdpManager.init(
@@ -51,7 +44,7 @@ export class Network extends EventEmitter implements INetwork {
       ),
       TcpManager.init(
         ownNodeContactInfo,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
         bootstrapNodes,
         browserNode,
         Network.TCP_MESSAGE_SIZE_LIMIT,
@@ -61,7 +54,7 @@ export class Network extends EventEmitter implements INetwork {
       ),
       WsManager.init(
         ownNodeContactInfo,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
         bootstrapNodes,
         browserNode,
         Network.WS_MESSAGE_SIZE_LIMIT,
@@ -79,31 +72,22 @@ export class Network extends EventEmitter implements INetwork {
       this.GOSSIP_CACHE_TIMEOUT,
     );
 
-    // TODO: We wait for them since otherwise concurrent connections to the same peer will cause issues; this should be
-    //  handled by protocol managers nicely
-    const bootstrapPromises: Array<Promise<any>> = [];
-    // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
-    for (const bootstrapNode of bootstrapNodes) {
-      if (bootstrapNode.tcp4Port && !browserNode) {
-        bootstrapPromises.push(
-          tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
-            .catch((_) => {
-              // TODO: Log in debug mode
-            }),
-        );
-      } else if (bootstrapNode.wsPort) {
-        bootstrapPromises.push(
-          wsManager.nodeIdToConnection(bootstrapNode.nodeId)
-            .catch((_) => {
-              // TODO: Log in debug mode
-            }),
-        );
-      }
-    }
-
-    await Promise.all(bootstrapPromises);
-
-    return new Network(udpManager, tcpManager, wsManager, gossipManager, bootstrapNodes, browserNode);
+    return new Promise((resolve, reject) => {
+      const network = new Network(
+        udpManager,
+        tcpManager,
+        wsManager,
+        gossipManager,
+        bootstrapNodes,
+        browserNode,
+        () => {
+          resolve(network);
+        },
+        reject,
+        routingTableMinSize,
+        routingTableMaxSize,
+      );
+    });
   }
 
   // In seconds
@@ -132,6 +116,10 @@ export class Network extends EventEmitter implements INetwork {
     gossipManager: GossipManager,
     bootstrapNodes: INodeContactInfo[],
     private readonly browserNode: boolean,
+    resolve: () => void,
+    reject: (error: Error) => void,
+    routingTableMinSize: number = 10,
+    routingTableMaxSize: number = 20,
   ) {
     super();
     this.setMaxListeners(Infinity);
@@ -148,28 +136,76 @@ export class Network extends EventEmitter implements INetwork {
     for (const manager of [udpManager, tcpManager, wsManager]) {
       manager
         .on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
-          this.peers.set(nodeContactInfo.nodeId, nodeContactInfo);
-          if (nodeContactInfo.udp4Port) {
-            udpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoUdp);
-          }
-          if (nodeContactInfo.tcp4Port) {
-            tcpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoTcp);
-          }
-          if (nodeContactInfo.wsPort) {
-            wsManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoWs);
-          }
+          this.addPeer(nodeContactInfo);
         })
         .on('peer-connected', (nodeContactInfo: INodeContactInfo) => {
           this.emit('peer-connected', nodeContactInfo);
+          if (this.peers.size < routingTableMinSize) {
+            const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId) as Exclude<ReturnType<typeof manager.nodeIdToActiveConnection>, null>;
+            manager.sendMessage(
+              // @ts-ignore We have type corresponding to manager, but it is hard to explain to TypeScript
+              connection,
+              'get-peers',
+              Uint8Array.of(routingTableMaxSize - this.peers.size),
+            )
+              .then((peersBinary: Uint8Array) => {
+                for (const peer of parsePeersBinary(peersBinary)) {
+                  this.addPeer(peer);
+                }
+              })
+              .catch(() => {
+                // TODO: Log in debug mode, maybe close connection
+              });
+          }
         })
         .on('peer-disconnected', (nodeContactInfo: INodeContactInfo) => {
           this.emit('peer-disconnected', nodeContactInfo);
-        });
+        })
+        .on(
+          'get-peers',
+          (
+            numberOfPeersBinary: Uint8Array,
+            responseCallback: (peersBinary: Uint8Array) => void,
+            contactIdentification: INodeContactIdentification,
+          ) => {
+            const requesterNodeId = contactIdentification.nodeId;
+            responseCallback(
+              composePeersBinary(
+                Array.from(this.peers.values())
+                  .filter((peer) => {
+                    return !areArraysEqual(peer.nodeId, requesterNodeId);
+                  })
+                  .slice(0, numberOfPeersBinary[0]),
+              ),
+            );
+          },
+        );
     }
 
+    // TODO: We wait for them since otherwise concurrent connections to the same peer will cause issues; this should be
+    //  handled by protocol managers nicely
+    const bootstrapPromises: Array<Promise<any>> = [];
+    // Initiate connection establishment to bootstrap nodes in case they are TCP or WebSocket
     for (const bootstrapNode of bootstrapNodes) {
-      this.peers.set(bootstrapNode.nodeId, bootstrapNode);
+      if (bootstrapNode.tcp4Port && !browserNode) {
+        bootstrapPromises.push(
+          tcpManager.nodeIdToConnection(bootstrapNode.nodeId)
+            .catch((_) => {
+              // TODO: Log in debug mode
+            }),
+        );
+      } else if (bootstrapNode.wsPort) {
+        bootstrapPromises.push(
+          wsManager.nodeIdToConnection(bootstrapNode.nodeId)
+            .catch((_) => {
+              // TODO: Log in debug mode
+            }),
+        );
+      }
     }
+
+    Promise.all(bootstrapPromises)
+      .then(resolve, reject);
   }
 
   /**
@@ -357,5 +393,19 @@ export class Network extends EventEmitter implements INetwork {
     }
 
     throw new Error(`Can't find any node that is in node types list: ${nodeTypes.join(', ')}`);
+  }
+
+  private addPeer(nodeContactInfo: INodeContactInfo): void {
+    // TODO: No cleanup and check whether peers are still reachable
+    this.peers.set(nodeContactInfo.nodeId, nodeContactInfo);
+    if (nodeContactInfo.udp4Port) {
+      this.udpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoUdp);
+    }
+    if (nodeContactInfo.tcp4Port) {
+      this.tcpManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoTcp);
+    }
+    if (nodeContactInfo.wsPort) {
+      this.wsManager.setNodeAddress(nodeContactInfo.nodeId, nodeContactInfo as INodeContactInfoWs);
+    }
   }
 }
