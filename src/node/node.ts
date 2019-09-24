@@ -7,12 +7,14 @@ import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Block } from '../ledger/block';
+import { Content } from '../ledger/content';
 import { Ledger } from '../ledger/ledger';
 import { Proof } from '../ledger/proof';
+import { State } from '../ledger/state';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings, IPiece } from '../main/interfaces';
-import { RPC } from '../network/rpc';
+import { Rpc } from '../rpc/Rpc';
 import { areArraysEqual, bin2Hex, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
@@ -28,7 +30,7 @@ export class Node extends EventEmitter {
     public readonly type: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
     public readonly config: INodeConfig,
     public readonly settings: INodeSettings,
-    private rpc: RPC,
+    private rpc: Rpc,
     private ledger: Ledger,
     private wallet: Wallet | undefined,
     private farm: Farm | undefined,
@@ -42,6 +44,10 @@ export class Node extends EventEmitter {
     this.rpc.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onBlockRequest(blockId, responseCallback));
     this.rpc.on('block-request-by-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onBlockRequestByIndex(index, responseCallback));
     this.rpc.on('piece-request', (pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onPieceRequest(pieceId, responseCallback));
+    this.rpc.on('proof-request', (proofId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onProofRequest(proofId, responseCallback));
+    this.rpc.on('content-request', (contentId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onContentRequest(contentId, responseCallback));
+    this.rpc.on('state-request', (stateId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onStateRequest(stateId, responseCallback));
+    this.rpc.on('state-request-by-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onStateRequestByIndex(index, responseCallback));
 
     /**
      * A new level has been confirmed and encoded into a piece set.
@@ -365,7 +371,11 @@ export class Node extends EventEmitter {
    */
   private async onTxRequest(txId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const txData = await this.ledger.getTx(txId);
-    txData ? responseCallback(txData) : responseCallback(new Uint8Array());
+    if (txData) {
+      responseCallback(txData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -390,7 +400,11 @@ export class Node extends EventEmitter {
    */
   private async onBlockRequest(blockId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlock(blockId);
-    blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
+    if (blockData) {
+      responseCallback(blockData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -417,7 +431,129 @@ export class Node extends EventEmitter {
    */
   private async onBlockRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlockByIndex(index);
-    blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
+    if (blockData) {
+      responseCallback(blockData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
+  }
+
+  /**
+   * Request a proof over the network from an existing peer.
+   *
+   * @param proofId
+   *
+   * @return proof instance or not found
+   */
+  public async requestProof(proofId: Uint8Array): Promise<Proof> {
+    return this.rpc.requestProof(proofId);
+    // TODO
+      // apply tx, error specify error callback
+  }
+
+  /**
+   * Received a proof request over the network, reply with proof or not found.
+   *
+   * @param proofId
+   * @param responseCallback
+   *
+   */
+  private async onProofRequest(proofId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const proofData = await this.ledger.getProof(proofId);
+    if (proofData) {
+      responseCallback(proofData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
+  }
+
+  /**
+   * Request a content record over the network from an existing peer.
+   *
+   * @param contentId
+   *
+   * @return content instance or not found
+   */
+  public async requestContent(contentId: Uint8Array): Promise<Content> {
+    return this.rpc.requestContent(contentId);
+    // TODO
+      // apply content, error specify error callback
+  }
+
+  /**
+   * Received a content request over the network, reply with content or not found.
+   *
+   * @param contentId
+   * @param responseCallback
+   *
+   */
+  private async onContentRequest(contentId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const contentData = await this.ledger.getContent(contentId);
+    if (contentData) {
+      responseCallback(contentData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
+  }
+
+  /**
+   * Request a state record over the network from an existing peer.
+   *
+   * @param stateId
+   *
+   * @return state instance or not found
+   */
+  public async requestState(stateId: Uint8Array): Promise<State> {
+    return this.rpc.requestState(stateId);
+    // TODO
+      // apply state, error specify error callback
+  }
+
+  /**
+   * Received a state request over the network, reply with state or not found.
+   *
+   * @param stateId
+   * @param responseCallback
+   *
+   */
+  private async onStateRequest(stateId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const stateData = await this.ledger.getContent(stateId);
+    if (stateData) {
+      responseCallback(stateData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
+  }
+
+  /**
+   * Request a state record by index from an existing peer, used to sync the state chain (from 0)
+   *
+   * @param index the sequence number the state appears in the state chain
+   *
+   * @return state instance or not found
+   */
+  public async requestStateByIndex(index: number): Promise<State | void> {
+    const state = await this.rpc.requestStateByIndex(index);
+    if (state) {
+      console.log('Received state at index', index);
+    }
+    return state;
+  }
+
+  /**
+   * Received a state request over the network, reply with state or not found.
+   *
+   * @param stateIndex
+   * @param responseCallback
+   *
+   */
+  private async onStateRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
+    const stateData = await this.ledger.getStateByIndex(index);
+    if (stateData) {
+      responseCallback(stateData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
