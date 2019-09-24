@@ -2,7 +2,7 @@
 
 The Remote Procedure Call (RPC) module provides an abstraction interface between the `Network` and `Node` modules. While `Network` is concerned with abstract messages and binary data, `Node` is concerned with generic methods and objects. The `RPC` module manages this translation layer in a manner that allows the other modules to focus on what they do best, in the data format that makes the most sense. The goal is to reduce the amount of networking implementation logic that resides in `Node` to make it conceptually simpler to orchestrate the different facets of the protocol.
 
-When called, `RPC` takes a JSON payload for a message (gossip, request, or response), serializes it to binary, and calls the appropriate `Network` method with the appropriate arguments. On receipt of a new binary message from `Network`, `RPC` will deserialize the payload back to JSON, validate the payload, and return the payload to `Node` as either a promise or event.
+When called, `RPC` takes an object payload for a message (gossip, request, or response), serializes it to binary, and calls the appropriate `Network` method with the appropriate arguments. On receipt of a new binary message from `Network`, `RPC` will deserialize the payload back to an object, validate the payload, and return the payload to `Node` as either a promise or event.
 
 Importantly, neither `Node` nor `RPC` need worry about which peer or what transport layer (socket) a message is sent to or received from. This logic is handled entirely at the `Network` level. However, `RPC` does track and expose the basic peer routing table info for visibility and debug purposes.
 
@@ -36,11 +36,11 @@ Request a `Block`, `Tx `, `Proof`, `Content`, `State` or `Piece` record by its c
 
 ### Get Network Stats Methods
 
-Request some info on the network status from one or more peers, such as the height of the ledger or the current work difficulty target. Typically a string argument is provided in the request and a a JSON or Integer response is returned.
+Request some info on the network status from one or more peers, such as the height of the ledger or the current work difficulty target. Typically a string argument is provided in the request and an object or Integer response is returned.
 
 ### Get Node Stats Methods
 
-These are the only methods that require a `Node ID` argument and must match a valid node in the peer routing table. These allow the `Node` to query a neighbor for some specific stats such as the size of its farm or how many plots it has. Typically a string argument is provided in the request and a JSON or Integer response is returned.
+These are the only methods that require a `Node ID` argument and must match a valid node in the peer routing table. These allow the `Node` to query a neighbor for some specific stats such as the size of its farm or how many plots it has. Typically a string argument is provided in the request and an object or Integer response is returned.
 
 ## Notes on Validation, Error Handling, and Security.
 
