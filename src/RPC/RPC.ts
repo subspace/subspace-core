@@ -10,6 +10,7 @@ import { Tx } from "../ledger/tx";
 import { IPiece } from "../main/interfaces";
 import { Network } from '../network/Network';
 import { bin2Hex, bin2Num, num2Bin, smallBin2Num } from "../utils/utils";
+import { INodeContactInfo } from "network/INetwork";
 
 // ToDo
   // track peers (here or in node?)
@@ -26,6 +27,14 @@ export class RPC extends EventEmitter {
 
   constructor(private readonly network: Network, private readonly blsSignatures: BlsSignatures) {
       super();
+
+      this.network.on('peer-connected', (nodeContactInfo: INodeContactInfo) => {
+        this.
+      });
+
+      this.network.on('peer-disconnected', (nodeContactInfo: INodeContactInfo) => {
+
+      });
 
       // received a ping from another node
       this.network.on('ping', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
@@ -140,7 +149,7 @@ export class RPC extends EventEmitter {
         this.emit('state-request', payload, responseCallback);
       });
 
-      // received a block request by index from another node
+      // received a state request by index from another node
       this.network.on('state-request-by-index', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
         if (payload.length !== 4) {
           // TODO
