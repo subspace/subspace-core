@@ -11,13 +11,15 @@ import { Block } from '../ledger/block';
 import { Tx } from '../ledger/tx';
 import { IPeerContactInfo, IPiece } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { allocatePort, smallNum2Bin } from '../utils/utils';
+import {allocatePort, createLogger, smallNum2Bin} from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { Network } from './Network';
 import { RPC } from './rpc';
 
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
+
+const logger = createLogger('warn');
 
 const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
@@ -55,8 +57,8 @@ beforeAll(async () => {
   wallet = new Wallet(blsSignatures, storage);
   const account = await wallet.createAccount();
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
-  network1 = await Network.init(peer1, [peer2], false);
-  network2 = await Network.init(peer2, [peer1], false);
+  network1 = await Network.init(peer1, [peer2], false, logger);
+  network2 = await Network.init(peer2, [peer1], false, logger);
   rpc1 = new RPC(network1, blsSignatures);
   rpc2 = new RPC(network2, blsSignatures);
 });

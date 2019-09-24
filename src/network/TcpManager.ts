@@ -1,8 +1,8 @@
 import * as net from "net";
-import {bin2Hex} from "../utils/utils";
+import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoTcp} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoTcp} from "./Network";
 import {composeMessage} from "./utils";
 
 function extractTcpBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeContactInfoTcp[] {
@@ -33,24 +33,26 @@ const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
-    extendedIdentificationPayload: Uint8Array,
+    nodeInfoPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
     connectionExpiration: number,
+    parentLogger: ILogger,
   ): Promise<TcpManager> {
     return new Promise((resolve, reject) => {
       const instance = new TcpManager(
         ownNodeContactInfo,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
         extractTcpBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
         connectionTimeout,
         connectionExpiration,
+        parentLogger,
         () => {
           resolve(instance);
         },
@@ -63,39 +65,50 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   private readonly identificationMessage: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly connectionExpiration: number;
+  private readonly incompleteConnections = new Set<net.Socket>();
 
   /**
    * @param ownNodeContactInfo
-   * @param extendedIdentificationPayload
+   * @param nodeInfoPayload
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param connectionTimeout In seconds
    * @param connectionExpiration In seconds
+   * @param parentLogger
    * @param readyCallback
    * @param errorCallback
    */
   public constructor(
     ownNodeContactInfo: INodeContactInfo,
-    extendedIdentificationPayload: Uint8Array,
+    nodeInfoPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoTcp[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
     connectionExpiration: number,
+    parentLogger: ILogger,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(
+      ownNodeContactInfo.nodeId,
+      bootstrapNodes,
+      browserNode,
+      messageSizeLimit,
+      responseTimeout,
+      true,
+      parentLogger.child({manager: 'TCP'}),
+    );
     this.setMaxListeners(Infinity);
 
     this.identificationMessage = composeMessageWithTcpHeader(
       composeMessage(
         'identification',
         0,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
       ),
     );
     this.connectionTimeout = connectionTimeout;
@@ -117,7 +130,31 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     }
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<net.Socket | null> {
+  public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
+    if (message.length > this.messageSizeLimit) {
+      throw new Error(
+        `TCP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
+      );
+    }
+    await new Promise((resolve, reject) => {
+      if (!socket.destroyed) {
+        socket.write(composeMessageWithTcpHeader(message), (error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      } else {
+        reject(new Error('Socket already destroyed'));
+      }
+    });
+  }
+
+  protected async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<net.Socket | null> {
     if (this.browserNode) {
       return null;
     }
@@ -137,6 +174,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           if (!socket.destroyed) {
             socket.destroy();
           }
+          this.incompleteConnections.delete(socket);
           reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
         },
         this.connectionTimeout * 1000,
@@ -144,64 +182,34 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       if (timeout.unref) {
         timeout.unref();
       }
+      const onError = (error: Error) => {
+        clearTimeout(timeout);
+        this.incompleteConnections.delete(socket);
+        reject(error);
+      };
       const socket = net.createConnection(
         nodeContactInfo.tcp4Port,
         nodeContactInfo.address,
         () => {
-          clearTimeout(timeout);
           if (timedOut) {
             socket.destroy();
           } else {
+            clearTimeout(timeout);
             socket.write(this.identificationMessage);
             this.registerTcpConnection(
               socket,
               nodeContactInfo,
             );
+            this.incompleteConnections.delete(socket);
+            socket.off('error', onError);
             resolve(socket);
           }
         },
       );
       socket
         .setTimeout(this.connectionTimeout)
-        .once('error', reject);
-    });
-  }
-
-  public async sendRawMessage(socket: net.Socket, message: Uint8Array): Promise<void> {
-    if (message.length > this.messageSizeLimit) {
-      throw new Error(
-        `TCP message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
-      );
-    }
-    if (!socket.destroyed) {
-      await new Promise((resolve, reject) => {
-        socket.write(composeMessageWithTcpHeader(message), (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
-    }
-  }
-
-  public destroy(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      for (const socket of this.nodeIdToConnectionMap.values()) {
-        socket.destroy();
-      }
-      if (this.tcp4Server) {
-        this.tcp4Server.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
+        .once('error', onError);
+      this.incompleteConnections.add(socket);
     });
   }
 
@@ -219,6 +227,22 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     socket.destroy();
   }
 
+  protected destroyImplementation(): Promise<void> {
+    return new Promise((resolve) => {
+      for (const socket of this.nodeIdToConnectionMap.values()) {
+        socket.destroy();
+      }
+      for (const socket of this.incompleteConnections.values()) {
+        socket.destroy();
+      }
+      if (this.tcp4Server) {
+        // There may be TCP connections dangling, but we don't want to track them or wait, so resolve immediately
+        this.tcp4Server.close();
+      }
+      resolve();
+    });
+  }
+
   private registerTcpConnection(socket: net.Socket, nodeContactInfo?: INodeContactInfo): void {
     let receivedBuffer: Buffer = Buffer.allocUnsafe(0);
     socket
@@ -232,8 +256,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           }
           const message = receivedBuffer.slice(4, 4 + messageLength);
           this.handleIncomingMessage(socket, message)
-            .catch((_) => {
-              // TODO: Handle errors
+            .catch((error: any) => {
+              const errorText = (error.stack || error) as string;
+              this.logger.debug(`Error on handling incoming message: ${errorText}`);
             });
           receivedBuffer = receivedBuffer.slice(4 + messageLength);
         }
@@ -262,7 +287,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       const nodeId = nodeContactInfo.nodeId;
       this.nodeIdToConnectionMap.set(nodeId, socket);
       this.connectionToNodeIdMap.set(socket, nodeId);
-      this.emit('peer-connected', nodeContactInfo);
+      setTimeout(() => {
+        this.emit('peer-connected', nodeContactInfo);
+      });
     }
   }
 }

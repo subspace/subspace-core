@@ -12,12 +12,11 @@ import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Ledger } from '../ledger/ledger';
-import { INodeContactInfo } from '../network/INetwork';
-import { Network } from '../network/Network';
+import { INodeContactInfo, Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { Node } from '../node/node';
 import { Storage } from '../storage/storage';
-import { allocatePort, rmDirRecursiveSync } from '../utils/utils';
+import { allocatePort, createLogger, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
@@ -43,6 +42,7 @@ import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
  * @param autostart       Whether to start the node role automatically or explicitly, default true
  * @param delay           Random farm/solve delay (for local testing) in milliseconds, following a poisson distribution around provided value
+ * @param logLevel
  */
 export default async function run(
   net: 'dev' | 'test' | 'main',
@@ -59,7 +59,9 @@ export default async function run(
   trustRecords: boolean,
   contactInfo: IPeerContactInfo | undefined,
   bootstrapPeers: IPeerContactInfo[] = [],
+  logLevel: Parameters<typeof createLogger>[0] = 'debug',
 ): Promise<Node> {
+  const logger = createLogger(logLevel);
 
   // initialize empty config params
   let env: 'browser' | 'node';
@@ -313,7 +315,7 @@ export default async function run(
 
   // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
-  const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
+  const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser', logger);
   rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {

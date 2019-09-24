@@ -1,7 +1,7 @@
 import { Content } from "../ledger/content";
 import { Proof } from "../ledger/proof";
 import { Tx } from '../ledger/tx';
-import {INodeContactInfo} from "../network/INetwork";
+import {INodeContactInfo} from "../network/Network";
 
 /**
  * Summary of all Blocks in a Level, compressed into a State Block that is tracked within a single State Chain by light clients.
