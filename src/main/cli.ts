@@ -12,6 +12,7 @@ const program = new commander.Command();
   // -n network: 'dev'
   // -m mode: 'full'
   // -f farm: 'disk'
+  // -d directory must incorporate node id
 
 // integer args
   // -c chains: 32
@@ -19,9 +20,6 @@ const program = new commander.Command();
   // -s size    1000000
   // -e rounds  3
   // -w wait    300
-
-// string args
-  // -d directory must incorporate node id
 
 // boolean args
   // -g genesis: sets from genesis to true  false

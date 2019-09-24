@@ -117,8 +117,7 @@ export default async function run(
         storagePath = path.join(os.homedir(), `\\AppData\\Subspace\\${nodeId}`);
         break;
       default:
-        storagePath = path.join(os.homedir(), `/subspace${nodeId}`);
-        break;
+        storagePath = path.join(os.homedir(), `/subspace/${nodeId}`);
     }
   }
 

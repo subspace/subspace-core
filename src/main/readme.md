@@ -79,18 +79,23 @@ Startup a farmer (it will crash soon...)
 ### Gateway Node Setup
 
 > Note -- the Gateway node is already setup -- you just need to SSH into it and run a gateway.
+> These instructions are for first-time setup only.
 
-Download the private key file from AWS and add permissions
-Then remote in
+Create a new EC2 Instance from the AWS Console. Choose an existing key or create a new one. On creation you must download the private key to your local machine, as it will not be saved by AWS. 
 
+Add permission to the key.
 ```bash
 cd /dir/where/key/is
 chmod 400 gateway.pem 
+```
+
+Remote into the instance.
+```bash
 ssh -i "gateway.pem" ubuntu@ec2-54-191-145-133.us-west-2.compute.amazonaws.com
 ```
 
 Configure the server
-```
+```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
 . ~/.nvm/nvm.sh
 nvm install node
@@ -99,7 +104,7 @@ node -e "console.log('Running Node.js ' + process.version)"
 ```
 
 Setup the repository
-```
+```bash
 git clone https://www.github.com/subspace/subspace-core.git
 cd subspace-core
 npm ci
@@ -109,8 +114,8 @@ npm run build
 
 ### Start the Gateway
 
-Start the Gateway
-```
+Once you have remoted in to the Gateway Node:
+```bash
 ./bin/subspace.js run -g -n test -c 16 -w 1000
 ```
 
