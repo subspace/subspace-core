@@ -258,6 +258,24 @@
       node: null,
     },
     methods: {
+      /**
+       * Args for createNode (also look at src/main/run.ts)
+       * 
+       * network: 'dev' | 'test' | 'main'
+       * nodeType: 'full' | 'validator' | 'farmer' | 'client' | 'gateway'
+       * farmMode: 'memory' | 'disk'
+       * directory: path | undefined
+       * chainCount: number
+       * plotCount: number
+       * farmSize: number
+       * encodingRounds: number
+       * delay: number
+       * genesis: true | false
+       * reset: true | false
+       * trust: true | false
+       * contactInfo: INodeContactInfo | undefined
+       * bootstrapPeers: INodeContactInfo[] | []
+       */
       async startSingleNode() {
         this.node = await this.createNode(
           'dev',
