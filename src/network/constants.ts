@@ -5,6 +5,7 @@ export const COMMANDS = {
   'response': 0,
   'identification': 1,
   'gossip': 2,
+  'get-peers': 3,
   'tx-gossip': 10,
   'block-gossip': 11,
   'ping': 12,
@@ -21,7 +22,10 @@ export const COMMANDS = {
 // tslint:enable:object-literal-sort-keys
 
 export type ICommandsKeys = keyof typeof COMMANDS;
-export type ICommandsKeysForSending = keyof Omit<Omit<Omit<typeof COMMANDS, 'gossip'>, 'response'>, 'identification'>;
+export type ICommandsKeysForSending = keyof Omit<
+  typeof COMMANDS,
+  'gossip' | 'get-peers' | 'response' | 'identification'
+>;
 
 export const COMMANDS_INVERSE: { [commandNumber: number]: ICommandsKeys } = {};
 // tslint:disable-next-line:forin
@@ -56,7 +60,8 @@ for (const nodeType in NODE_TYPES) {
 
 // Node type + node ID
 export const IDENTIFICATION_PAYLOAD_LENGTH = 1 + NODE_ID_LENGTH;
+export const ADDRESS_LENGTH = 64;
 // 3 ports 2 bytes each + 64 bytes for node address (IP or domain name)
-export const ADDRESS_PAYLOAD_LENGTH = 2 + 2 + 2 + 64;
+export const ADDRESS_PAYLOAD_LENGTH = 2 + 2 + 2 + ADDRESS_LENGTH;
 
-export const EXTENDED_IDENTIFICATION_PAYLOAD_LENGTH = IDENTIFICATION_PAYLOAD_LENGTH + ADDRESS_PAYLOAD_LENGTH;
+export const NODE_CONTACT_INFO_PAYLOAD_LENGTH = IDENTIFICATION_PAYLOAD_LENGTH + ADDRESS_PAYLOAD_LENGTH;

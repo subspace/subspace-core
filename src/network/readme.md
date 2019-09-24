@@ -27,10 +27,18 @@ Gossip Manager is different, it uses protocol managers to receive gossip message
 When Network class is instantiated, its configuration can be tailored to server or browser environment.
 In browser environment UDP and TCP protocols will be replaced with WebSocket for outgoing connections and there will be no server running for either protocol for obvious reasons.
 
-Connection-based protocols like TCP and WebSocket always start with identification message consisting node ID, no other messages are allowed before identification message.
-UDP doesn't have this limitation, any identification must be provided inside of payload or in some other way.
+Connection-based protocols like TCP and WebSocket always start communication with message containing full information about node (nodeId, type, TCP/UDP/WS addresses), no other messages are allowed before this.
+UDP doesn't have this limitation, any identification must be provided inside of payload at the beginning of the message and only includes nodeId and nodeType.
 
 WebRTC is not supported (yet?)
+
+### Connection and discovery
+Network instance contains parameters that limit size of routing table and active established connections.
+
+If routing table is smaller that minimum configured size, network instance will try to proactively connect to known nodes from routing table.
+This procedure is triggered periodically as well as new peers are added or disconnection from one of previously connected peers happen.
+
+Routing table size is checked upon new connection to some peer and nodes are requested from this peer using `get-peers` command.
 
 ### Messages format
 All messages for all protocols are sent in binary.
@@ -45,7 +53,15 @@ This is done by packing messages in TCP into one more layer like this:
 * message_length - 4 bytes unsigned integer in big-endian encoding
 * message - following `message_length` bytes
 
-There are 2 special message commands: `response` and `gossip`.
+UDP messages are stateless, which is why every message contains following identification header:
+* nodeType - 1 byte unsigned integer
+* nodeId - 32 bytes
+
+There are several special message commands:
+* `response`
+* `gossip`
+* `get-peers`
+* `identification`
 
 #### Response message
 While in request messages `requestId` is, well, identifier for the request, in response messages `requestId` corresponds to `requestId` that was sent in request earlier.
@@ -57,6 +73,30 @@ Gossip message has a special payload format, since despite gossiping, it carries
 For this reason `payload` for gossip command has following structure:
 * command - 1 byte unsigned integer
 * command_payload - other bytes in a payload are payload for `command`
+
+#### Get peers message
+Get peers message is a request for more peers from known peer in case routing table is not sufficiently full.
+
+Request payload only contains 1 byte with number of peers requested would like to receive.
+
+Response contains following payload repeated as many times as there are peers in the response:
+* nodeType - 1 byte unsigned integer
+* nodeId - 32 bytes
+* tcp4Port - 2 bytes unsigned integer in big-endian encoding
+* udp4Port - 2 bytes unsigned integer in big-endian encoding
+* wsPort - 2 bytes unsigned integer in big-endian encoding
+* address - 64 bytes utf8 string with 0-bytes at the end
+
+#### Identification message
+Message is sent by connection initiator for TCP and WebSocket protocols.
+
+Request contains following payload:
+* nodeType - 1 byte unsigned integer
+* nodeId - 32 bytes
+* tcp4Port - 2 bytes unsigned integer in big-endian encoding
+* udp4Port - 2 bytes unsigned integer in big-endian encoding
+* wsPort - 2 bytes unsigned integer in big-endian encoding
+* address - 64 bytes utf8 string with 0-bytes at the end
 
 ### Handling responses
 Every request sent results in `Promise` being returned to the calling code.

@@ -1,9 +1,9 @@
 import * as http from "http";
 import * as websocket from "websocket";
-import {bin2Hex} from "../utils/utils";
+import {bin2Hex, ILogger} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {ICommandsKeys} from "./constants";
-import {INodeContactInfo, INodeContactInfoWs} from "./INetwork";
+import {INodeContactInfo, INodeContactInfoWs} from "./Network";
 import {composeMessage} from "./utils";
 
 type WebSocketConnection = websocket.w3cwebsocket | websocket.connection;
@@ -21,22 +21,24 @@ function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeConta
 export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
-    extendedIdentificationPayload: Uint8Array,
+    nodeInfoPayload: Uint8Array,
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
+    parentLogger: ILogger,
   ): Promise<WsManager> {
     return new Promise((resolve, reject) => {
       const instance = new WsManager(
         ownNodeContactInfo,
-        extendedIdentificationPayload,
+        nodeInfoPayload,
         extractWsBootstrapNodes(bootstrapNodes),
         browserNode,
         messageSizeLimit,
         responseTimeout,
         connectionTimeout,
+        parentLogger,
         () => {
           resolve(instance);
         },
@@ -45,37 +47,48 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     });
   }
 
-  private readonly extendedIdentificationPayload: Uint8Array;
+  private readonly nodeInfoPayload: Uint8Array;
   private readonly connectionTimeout: number;
   private readonly wsServer: websocket.server | undefined;
   private readonly httpServer: http.Server | undefined;
+  private readonly incompleteConnections = new Set<WebSocketConnection>();
 
   /**
    * @param ownNodeContactInfo
-   * @param extendedIdentificationPayload
+   * @param nodeInfoPayload
    * @param bootstrapNodes
    * @param browserNode
    * @param messageSizeLimit In bytes
    * @param responseTimeout In seconds
    * @param connectionTimeout
+   * @param parentLogger
    * @param readyCallback
    * @param errorCallback
    */
   public constructor(
     ownNodeContactInfo: INodeContactInfo,
-    extendedIdentificationPayload: Uint8Array,
+    nodeInfoPayload: Uint8Array,
     bootstrapNodes: INodeContactInfoWs[],
     browserNode: boolean,
     messageSizeLimit: number,
     responseTimeout: number,
     connectionTimeout: number,
+    parentLogger: ILogger,
     readyCallback?: () => void,
     errorCallback?: (error: Error) => void,
   ) {
-    super(bootstrapNodes, browserNode, messageSizeLimit, responseTimeout, true);
+    super(
+      ownNodeContactInfo.nodeId,
+      bootstrapNodes,
+      browserNode,
+      messageSizeLimit,
+      responseTimeout,
+      true,
+      parentLogger.child({manager: 'UDP'}),
+    );
     this.setMaxListeners(Infinity);
 
-    this.extendedIdentificationPayload = extendedIdentificationPayload;
+    this.nodeInfoPayload = nodeInfoPayload;
     this.connectionTimeout = connectionTimeout;
 
     if (!browserNode && ownNodeContactInfo.wsPort) {
@@ -108,58 +121,10 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     }
   }
 
-  public async nodeIdToConnection(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
-    const connection = this.nodeIdToConnectionMap.get(nodeId);
-    if (connection) {
-      return connection;
-    }
-    const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId);
-    if (!nodeContactInfo) {
-      return null;
-    }
-    return new Promise((resolve, reject) => {
-      let timedOut = false;
-      const timeout = setTimeout(
-        () => {
-          timedOut = true;
-          reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
-        },
-        this.connectionTimeout * 1000,
-      );
-      if (timeout.unref) {
-        timeout.unref();
-      }
-      if (!this.browserNode) {
-        resolve(null);
-        return;
-      }
-      const connection = new websocket.w3cwebsocket(`ws://${nodeContactInfo.address}:${nodeContactInfo.wsPort}`);
-      connection.binaryType = 'arraybuffer';
-      connection.onopen = () => {
-        clearTimeout(timeout);
-        if (timedOut) {
-          connection.close();
-        } else {
-          const identificationMessage = composeMessage(
-            'identification',
-            0,
-            this.extendedIdentificationPayload,
-          );
-          connection.send(identificationMessage);
-          this.registerBrowserWsConnection(
-            connection,
-            nodeContactInfo,
-          );
-          resolve(connection);
-        }
-      };
-      connection.onclose = () => {
-        this.connectionCloseHandler(connection);
-      };
-    });
-  }
-
   public async sendRawMessage(connection: WebSocketConnection, message: Uint8Array): Promise<void> {
+    if (this.destroying) {
+      return;
+    }
     if (message.length > this.messageSizeLimit) {
       throw new Error(
         `WebSocket message too big, ${message.length} bytes specified, but only ${this.messageSizeLimit} bytes allowed`,
@@ -172,26 +137,71 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     }
   }
 
-  public destroy(): Promise<void> {
+  public async nodeIdToConnectionImplementation(nodeId: Uint8Array): Promise<WebSocketConnection | null> {
+    const connection = this.nodeIdToConnectionMap.get(nodeId);
+    if (connection) {
+      return connection;
+    }
+    const nodeContactInfo = this.nodeIdToAddressMap.get(nodeId);
+    if (!nodeContactInfo) {
+      return null;
+    }
     return new Promise((resolve, reject) => {
-      for (const connection of this.connectionToNodeIdMap.keys()) {
-        connection.close();
+      if (this.destroying) {
+        return;
+      }
+      if (!this.browserNode) {
+        resolve(null);
+        return;
+      }
+      let timedOut = false;
+      const timeout = setTimeout(
+        () => {
+          timedOut = true;
+          this.incompleteConnections.delete(connection);
+          reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed`));
+        },
+        this.connectionTimeout * 1000,
+      );
+      if (timeout.unref) {
+        timeout.unref();
+      }
+      const connection = new websocket.w3cwebsocket(`ws://${nodeContactInfo.address}:${nodeContactInfo.wsPort}`);
+      connection.binaryType = 'arraybuffer';
+      connection.onopen = () => {
+        if (timedOut) {
+          connection.close();
+        } else {
+          clearTimeout(timeout);
+          const identificationMessage = composeMessage(
+            'identification',
+            0,
+            this.nodeInfoPayload,
+          );
+          connection.send(identificationMessage);
+          this.registerBrowserWsConnection(
+            connection,
+            nodeContactInfo,
+          );
+          this.incompleteConnections.delete(connection);
+          connection.onerror = () => {
+            // Nothing
+          };
+          resolve(connection);
+        }
+      };
+      connection.onerror = (error: Error) => {
+        const errorText = (error.stack || error) as string;
+        const baseMessage = `Connection to node ${bin2Hex(nodeId)} failed`;
+        this.logger.debug(`${baseMessage}: ${errorText}`);
+        clearTimeout(timeout);
+        this.incompleteConnections.delete(connection);
+        reject(new Error(baseMessage));
+      };
+      connection.onclose = () => {
         this.connectionCloseHandler(connection);
-      }
-      if (this.wsServer) {
-        this.wsServer.shutDown();
-      }
-      if (this.httpServer) {
-        this.httpServer.close((error?: Error) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      } else {
-        resolve();
-      }
+      };
+      this.incompleteConnections.add(connection);
     });
   }
 
@@ -211,6 +221,40 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     this.connectionCloseHandler(connection);
   }
 
+  protected destroyImplementation(): Promise<void> {
+    return new Promise((resolve) => {
+      for (const connection of this.connectionToNodeIdMap.keys()) {
+        connection.close();
+        this.connectionCloseHandler(connection);
+      }
+      for (const connection of this.incompleteConnections.values()) {
+        // Hack: See https://github.com/theturtle32/WebSocket-Node/issues/371
+        if (
+          // @ts-ignore
+          connection.readyState === websocket.w3cwebsocket.CONNECTING &&
+          // @ts-ignore
+          connection._client &&
+          // @ts-ignore
+          connection._client._req &&
+          // @ts-ignore
+          connection._client._req.socket
+        ) {
+          // @ts-ignore
+          connection._client._req.socket.destroy();
+        }
+        connection.close();
+      }
+      if (this.wsServer) {
+        this.wsServer.shutDown();
+      }
+      if (this.httpServer) {
+        // There may be HTTP connections dangling, but we don't want to track them or wait, so resolve immediately
+        this.httpServer.close();
+      }
+      resolve();
+    });
+  }
+
   private connectionCloseHandler(connection: WebSocketConnection): void {
     const nodeId = this.connectionToNodeIdMap.get(connection);
     if (nodeId) {
@@ -226,17 +270,24 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   private registerServerWsConnection(connection: websocket.connection): void {
     connection
       .on('message', (message: websocket.IMessage) => {
+        const nodeId = this.connectionToNodeIdMap.get(connection);
+        const localLogger = this.logger.child(
+          {
+            nodeId: nodeId ? bin2Hex(nodeId) : 'unknown',
+          },
+        );
         if (message.type !== 'binary') {
           connection.close();
           // Because https://github.com/theturtle32/WebSocket-Node/issues/354
           this.connectionCloseHandler(connection);
-          // TODO: Log in debug mode that only binary messages are supported
+          localLogger.debug(`Only binary messages supported`);
           return;
         }
         const buffer = message.binaryData as Buffer;
         this.handleIncomingMessage(connection, new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength))
-          .catch((_) => {
-            // TODO: Handle errors
+          .catch((error: any) => {
+            const errorText = (error.stack || error) as string;
+            localLogger.debug(`Error on handling incoming message: ${errorText}`);
           });
       });
   }
@@ -246,14 +297,20 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     nodeContactInfo?: INodeContactInfo,
   ): void {
     connection.onmessage = (event: MessageEvent) => {
+      const localLogger = this.logger.child(
+        {
+          nodeId: bin2Hex(this.connectionToNodeIdMap.get(connection) as Uint8Array),
+        },
+      );
       if (!(event.data instanceof ArrayBuffer)) {
         connection.close();
-        // TODO: Log in debug mode that only binary messages are supported
+        localLogger.debug(`Only binary messages supported`);
         return;
       }
       this.handleIncomingMessage(connection, new Uint8Array(event.data))
-        .catch((_) => {
-          // TODO: Handle errors
+        .catch((error: any) => {
+          const errorText = (error.stack || error) as string;
+          localLogger.debug(`Error on handling incoming message: ${errorText}`);
         });
     };
     // TODO: Connection expiration for cleanup

@@ -20,7 +20,7 @@ import { Rpc } from './Rpc';
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
 
-const logger = createLogger('debug');
+const logger = createLogger('warn');
 
 const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
@@ -72,10 +72,10 @@ beforeAll(async () => {
   wallet = new Wallet(blsSignatures, storage);
   const account = await wallet.createAccount();
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
-  network1 = await Network.init(peer1, [peer2], false);
-  network2 = await Network.init(peer2, [peer1], false);
-  rpc1 = new Rpc(network1, blsSignatures, logger);
-  rpc2 = new Rpc(network2, blsSignatures, logger);
+  network1 = await Network.init(peer1, [], false, logger); // gateway
+  network2 = await Network.init(peer2, [peer1], false, logger); // client
+  rpc1 = new Rpc(network1, blsSignatures, logger); // gateway
+  rpc2 = new Rpc(network2, blsSignatures, logger); // client
 });
 
 // test('ping-pong', async () => {
@@ -85,13 +85,6 @@ beforeAll(async () => {
 //   expect(sentPayload.join(', ')).toEqual(receivedPayload.join(', '));
 //
 // });
-
-test('get-peers', async () => {
-  const rpc1Peers = await rpc1.getPeers();
-  const rpc2Peers = await rpc2.getPeers();
-  expect(rpc1Peers.length).toBe(1);
-  expect(rpc2Peers.length).toBe(1);
-});
 
 test('gossip-tx', async () => {
   rpc2.on('tx-gossip', (payload: Uint8Array) => {
@@ -218,6 +211,13 @@ test('request-piece', async () => {
     pieceResponse.data.proof,
   ]);
   expect(pieceResponseData.join(',')).toEqual(pieceData.join(','));
+});
+
+test('get-peers', async () => {
+  const rpc1Peers = await rpc1.getPeers();
+  const rpc2Peers = await rpc2.getPeers();
+  expect(rpc1Peers.length).toBe(1);
+  expect(rpc2Peers.length).toBe(1);
 });
 
 afterAll(async () => {

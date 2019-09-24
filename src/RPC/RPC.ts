@@ -9,8 +9,7 @@ import { Proof } from "../ledger/proof";
 import { State } from "../ledger/state";
 import { Tx } from "../ledger/tx";
 import { IPiece } from "../main/interfaces";
-import { INodeContactInfo } from "../network/INetwork";
-import { Network } from '../network/Network';
+import { INodeContactInfo, Network } from "../network/Network";
 import { bin2Hex, bin2Num, ILogger, num2Bin, smallBin2Num } from "../utils/utils";
 
 // ToDo
