@@ -3,10 +3,24 @@
 import { EventEmitter } from "events";
 import {BlsSignatures} from "../crypto/BlsSignatures";
 import { Block } from "../ledger/block";
+import { Content } from "../ledger/content";
+import { Proof } from "../ledger/proof";
+import { State } from "../ledger/state";
 import { Tx } from "../ledger/tx";
 import { IPiece } from "../main/interfaces";
+import { Network } from '../network/Network';
 import { bin2Hex, bin2Num, num2Bin, smallBin2Num } from "../utils/utils";
-import { Network } from './Network';
+
+// ToDo
+  // track peers (here or in node?)
+  // add get peers method
+  // listen for peer connected
+  // listen for peer disconnected
+  // Add remaining basic RPC methods
+    // getProof
+    // getContent
+    // getState
+    // getStateByIndex
 
 export class RPC extends EventEmitter {
 
@@ -92,6 +106,51 @@ export class RPC extends EventEmitter {
         }
         this.emit('piece-request', payload, responseCallback);
       });
+
+      // received a block request from another node
+      this.network.on('proof-request', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+        if (payload.length !== 32) {
+          // TODO
+            // Drop the node who sent response from peer table
+            // Add to blacklisted nodes
+          throw new Error('Invalid proof-request, proof-id is not 32 bytes');
+        }
+        this.emit('proof-request', payload, responseCallback);
+      });
+
+      // received a block request from another node
+      this.network.on('content-request', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+        if (payload.length !== 32) {
+          // TODO
+            // Drop the node who sent response from peer table
+            // Add to blacklisted nodes
+          throw new Error('Invalid content-request, content-id is not 32 bytes');
+        }
+        this.emit('content-request', payload, responseCallback);
+      });
+
+      // received a block request from another node
+      this.network.on('state-request', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+        if (payload.length !== 32) {
+          // TODO
+            // Drop the node who sent response from peer table
+            // Add to blacklisted nodes
+          throw new Error('Invalid state-request, state-id is not 32 bytes');
+        }
+        this.emit('state-request', payload, responseCallback);
+      });
+
+      // received a block request by index from another node
+      this.network.on('state-request-by-index', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+        if (payload.length !== 4) {
+          // TODO
+            // Drop the node who sent response from peer table
+            // Add to blacklisted nodes
+          throw new Error('Invalid state-request by index, state-index is not 4 bytes');
+        }
+        const index = bin2Num(payload);
+        this.emit('state-request-by-index', index, responseCallback);
+      });
   }
 
   public async ping(): Promise<void> {
@@ -163,7 +222,7 @@ export class RPC extends EventEmitter {
   }
 
   /**
-   * Request a block over the network by id
+   * Request a block over the network by index
    *
    * @param index sequence in which the block appears in the ledger
    *
@@ -211,6 +270,92 @@ export class RPC extends EventEmitter {
     return piece;
   }
 
+  /**
+   * Request a proof record over the network by id
+   *
+   * @param proofId content-addressed id of proof
+   *
+   * @return A valid proof instance
+   */
+  public async requestProof(proofId: Uint8Array): Promise<Proof> {
+    const binaryProof = await this.network.sendRequest(['gateway', 'full', 'validator'], 'proof-request', proofId);
+    const proof = Proof.fromBytes(binaryProof);
+    if (!proof.isValid(this.blsSignatures)) {
+      // TODO
+        // Drop the node who sent response from peer table
+        // Add to blacklisted nodes
+        // Request from another node
+      throw new Error('Received invalid proof response from peer');
+    }
+    return proof;
+  }
+
+  /**
+   * Request a content record over the network by id
+   *
+   * @param contentId content-addressed id of content
+   *
+   * @return A valid content instance
+   */
+  public async requestContent(contentId: Uint8Array): Promise<Content> {
+    const binaryContent = await this.network.sendRequest(['gateway', 'full', 'validator'], 'content-request', contentId);
+    const content = Content.fromBytes(binaryContent);
+    if (!content.isValid()) {
+      // TODO
+        // Drop the node who sent response from peer table
+        // Add to blacklisted nodes
+        // Request from another node
+      throw new Error('Received invalid content response from peer');
+    }
+    return content;
+  }
+
+  /**
+   * Request a state record over the network by id
+   *
+   * @param stateId content-addressed id of state record
+   *
+   * @return A valid state instance
+   */
+  public async requestState(stateId: Uint8Array): Promise<State> {
+    const binaryState = await this.network.sendRequest(['gateway', 'full', 'validator'], 'state-request', stateId);
+    const state = State.fromBytes(binaryState);
+    if (!state.isValid()) {
+      // TODO
+        // Drop the node who sent response from peer table
+        // Add to blacklisted nodes
+        // Request from another node
+      throw new Error('Received invalid state response from peer');
+    }
+    return state;
+  }
+
+  /**
+   * Request a state block over the network by index
+   *
+   * @param index sequence in which the state appears in the ledger
+   *
+   * @return A valid state instance
+   */
+  public async requestStateByIndex(stateIndex: number): Promise<State | void> {
+    const binaryIndex = num2Bin(stateIndex);
+    const binaryState = await this.network.sendRequest(['gateway', 'full', 'validator'], 'state-request-by-index', binaryIndex);
+    if (binaryState.length > 0) {
+      const state = State.fromBytes(binaryState);
+      if (!state.isValid()) {
+        // TODO
+          // Drop the node who sent response from peer table
+          // Add to blacklisted nodes
+          // Request from another node
+        throw new Error('Received invalid state response from peer');
+      }
+      return state;
+    }
+  }
+
+  /**
+   * Called on graceful shutdown. Close the underlying network instance and all sockets.
+   */
   public async destroy(): Promise<void> {
     await this.network.destroy();
   }

@@ -8,13 +8,14 @@ if (!globalThis.indexedDB) {
 
 import * as crypto from '../crypto/crypto';
 import { Block } from '../ledger/block';
+import { State } from '../ledger/state';
 import { Tx } from '../ledger/tx';
 import { IPeerContactInfo, IPiece } from '../main/interfaces';
+import { Network } from '../network/Network';
 import { Storage } from '../storage/storage';
 import { allocatePort, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
-import { Network } from './Network';
-import { RPC } from './rpc';
+import { RPC } from './RPC';
 
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
@@ -47,6 +48,17 @@ let tx: Tx;
 let wallet: Wallet;
 
 const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomBytes(32));
+const proof = block.value.proof;
+const content = block.value.content;
+const state = State.create(
+  crypto.randomBytes(32),
+  crypto.randomBytes(32),
+  crypto.randomBytes(32),
+  Date.now(),
+  1,
+  1,
+  crypto.randomBytes(32),
+);
 const encoding = crypto.randomBytes(4096);
 
 beforeAll(async () => {
@@ -113,6 +125,48 @@ test('request-block-by-index', async () => {
   const payload = await rpc2.requestBlockByIndex(0);
   if (payload) {
     expect(payload.toBytes().join(',')).toEqual(block.toBytes().join(','));
+  } else {
+    fail(true);
+  }
+});
+
+test('request-proof', async () => {
+  rpc1.on('proof-request', (proofId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+    expect(proofId.join(',')).toEqual(proof.key.join(','));
+    responseCallback(proof.toBytes());
+  });
+  const payload = await rpc2.requestProof(proof.key);
+  expect(payload.toBytes().join(',')).toEqual(proof.toBytes().join(','));
+
+});
+
+test('request-content', async () => {
+  rpc1.on('content-request', (contentId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+    expect(contentId.join(',')).toEqual(content.key.join(','));
+    responseCallback(content.toBytes());
+  });
+  const payload = await rpc2.requestContent(content.key);
+  expect(payload.toBytes().join(',')).toEqual(content.toBytes().join(','));
+
+});
+
+test('request-state', async () => {
+  rpc1.on('state-request', (stateId: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+    expect(stateId.join(',')).toEqual(state.key.join(','));
+    responseCallback(state.toBytes());
+  });
+  const payload = await rpc2.requestState(state.key);
+  expect(payload.toBytes().join(',')).toEqual(state.toBytes().join(','));
+});
+
+test('request-state-by-index', async () => {
+  rpc1.on('state-request-by-index', (stateIndex: number, responseCallback: (response: Uint8Array) => void) => {
+    expect(stateIndex).toEqual(0);
+    responseCallback(state.toBytes());
+  });
+  const payload = await rpc2.requestStateByIndex(0);
+  if (payload) {
+    expect(payload.toBytes().join(',')).toEqual(state.toBytes().join(','));
   } else {
     fail(true);
   }

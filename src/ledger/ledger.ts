@@ -93,6 +93,7 @@ export class Ledger extends EventEmitter {
   private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
   public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
   public blockIndex: Map<number, Uint8Array> = new Map();
+  public stateIndex: Map<number, Uint8Array> = new Map();
 
   constructor(
     blsSignatures: BlsSignatures,
@@ -256,6 +257,7 @@ export class Ledger extends EventEmitter {
     };
 
     this.stateMap.set(state.key, state.toBytes());
+    this.stateIndex.set(this.stateIndex.size, state.key);
     // console.log('Added state', state.key);
     this.lastStateHash = state.key;
     return [pieceData];
@@ -775,10 +777,32 @@ export class Ledger extends EventEmitter {
     return stateData;
   }
 
+  /**
+   * Returns the block record for a given index in the ledger.
+   *
+   * @param index the sequence in which the block  appears in the ledger
+   *
+   * @return a valid block record or null if not found
+   */
   public async getBlockByIndex(index: number): Promise <Uint8Array | null | undefined> {
     const blockId = this.blockIndex.get(index);
     if (blockId) {
       return this.getBlock(blockId);
+    }
+    return;
+  }
+
+  /**
+   * Returns the state record for a given index in the state chain.
+   *
+   * @param index the sequence in which the state block appears in the state chain
+   *
+   * @return a valid state record or null if not found
+   */
+  public async getStateByIndex(index: number): Promise <Uint8Array | null | undefined> {
+    const stateId = this.stateIndex.get(index);
+    if (stateId) {
+      return this.getState(stateId);
     }
     return;
   }
