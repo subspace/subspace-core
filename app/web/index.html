@@ -48,7 +48,7 @@
                 <a class="button is-primary" @click='startSingleNode()'>Start Single Node</a>
                 <a class="button is-info" @click='joinLocalNetwork()'>Join Local Network</a>
                 <a class="button is-success" @click='joinTestNetwork()'>Join Test Network</a>
-                <!-- <a class="button is-danger" @click='stopNode()'>Stop Node</a> -->
+                <a class="button is-danger" @click='stopNode()'>Stop Node</a>
               </div>              
             </div>
             <div v-if='activeTab === "network"'>
@@ -282,11 +282,11 @@
           'full',
           'disk',
           undefined,
-          32,
+          1,
           1,
           10000000,
           3,
-          100,
+          1000,
           true,
           true,
           true,
