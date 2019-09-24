@@ -15,7 +15,7 @@ import { Network } from '../network/Network';
 import { Storage } from '../storage/storage';
 import { allocatePort, createLogger, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
-import { RPC } from './RPC';
+import { Rpc } from './Rpc';
 
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
@@ -43,8 +43,8 @@ const peer2: IPeerContactInfo = {
 let network1: Network;
 let network2: Network;
 
-let rpc1: RPC;
-let rpc2: RPC;
+let rpc1: Rpc;
+let rpc2: Rpc;
 
 let tx: Tx;
 let wallet: Wallet;
@@ -74,8 +74,8 @@ beforeAll(async () => {
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
   network1 = await Network.init(peer1, [peer2], false);
   network2 = await Network.init(peer2, [peer1], false);
-  rpc1 = new RPC(network1, blsSignatures, logger);
-  rpc2 = new RPC(network2, blsSignatures, logger);
+  rpc1 = new Rpc(network1, blsSignatures, logger);
+  rpc2 = new Rpc(network2, blsSignatures, logger);
 });
 
 // test('ping-pong', async () => {

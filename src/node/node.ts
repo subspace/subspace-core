@@ -14,7 +14,7 @@ import { State } from '../ledger/state';
 import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings, IPiece } from '../main/interfaces';
-import { RPC } from '../RPC/RPC';
+import { Rpc } from '../rpc/Rpc';
 import { areArraysEqual, bin2Hex, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
@@ -30,7 +30,7 @@ export class Node extends EventEmitter {
     public readonly type: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
     public readonly config: INodeConfig,
     public readonly settings: INodeSettings,
-    private rpc: RPC,
+    private rpc: Rpc,
     private ledger: Ledger,
     private wallet: Wallet | undefined,
     private farm: Farm | undefined,

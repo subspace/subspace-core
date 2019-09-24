@@ -15,7 +15,7 @@ import { Ledger } from '../ledger/ledger';
 import { INodeContactInfo } from '../network/INetwork';
 import { Network } from '../network/Network';
 import { Node } from '../node/node';
-import { RPC } from '../RPC/RPC';
+import { Rpc } from '../rpc/Rpc';
 import { Storage } from '../storage/storage';
 import { allocatePort, createLogger, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
@@ -66,7 +66,7 @@ export default async function run(
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
   let plotAdapter: 'mem-db' | 'disk-db' | 'indexed-db';
-  let rpc: RPC;
+  let rpc: Rpc;
   let ledger: Ledger;
   let wallet: Wallet | undefined;
   let farm: Farm | undefined;
@@ -317,7 +317,7 @@ export default async function run(
   // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
   const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
-  rpc = new RPC(network, blsSignatures, logger);
+  rpc = new Rpc(network, blsSignatures, logger);
 
   const settings: INodeSettings = {
     network: net,

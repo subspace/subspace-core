@@ -31,7 +31,7 @@ import { bin2Hex, bin2Num, ILogger, num2Bin, smallBin2Num } from "../utils/utils
   // requestContent
   // requestState
 
-export class RPC extends EventEmitter {
+export class Rpc extends EventEmitter {
 
   public peers: Map<Uint8Array, INodeContactInfo> = ArrayMap<Uint8Array, INodeContactInfo>();
   public readonly logger: ILogger;
