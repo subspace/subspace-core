@@ -1,6 +1,6 @@
 {
   "name": "@subspace/subspace-core",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Subspace Network Core Blockchain",
   "main": "dist/index.js",
   "browser": {
