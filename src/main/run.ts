@@ -17,7 +17,7 @@ import { Network } from '../network/Network';
 import { Node } from '../node/node';
 import { RPC } from '../RPC/RPC';
 import { Storage } from '../storage/storage';
-import { allocatePort, rmDirRecursiveSync } from '../utils/utils';
+import { allocatePort, createLogger, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
@@ -59,6 +59,7 @@ export default async function run(
   trustRecords: boolean,
   contactInfo: IPeerContactInfo | undefined,
   bootstrapPeers: IPeerContactInfo[] = [],
+  logLevel: 'info' | 'warn' | 'debug' | 'error' | 'verbose' = 'info',
 ): Promise<Node> {
 
   // initialize empty config params
@@ -245,6 +246,8 @@ export default async function run(
   env === 'node' && config.farm && isPersistingStorage ? plotAdapter = 'disk-db' : plotAdapter = 'mem-db';
   env === 'browser' && config.farm && isPersistingStorage ? plotAdapter = 'indexed-db' : plotAdapter = 'mem-db';
 
+  const logger = createLogger(logLevel);
+
   const blsSignatures = await BlsSignatures.init();
   const storage = new Storage(storageAdapter, storagePath, 'storage');
 
@@ -314,7 +317,7 @@ export default async function run(
   // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
   const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser');
-  rpc = new RPC(network, blsSignatures);
+  rpc = new RPC(network, blsSignatures, logger);
 
   const settings: INodeSettings = {
     network: net,

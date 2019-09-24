@@ -13,12 +13,14 @@ import { Tx } from '../ledger/tx';
 import { IPeerContactInfo, IPiece } from '../main/interfaces';
 import { Network } from '../network/Network';
 import { Storage } from '../storage/storage';
-import { allocatePort, smallNum2Bin } from '../utils/utils';
+import { allocatePort, createLogger, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { RPC } from './RPC';
 
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
+
+const logger = createLogger('debug');
 
 const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
@@ -47,7 +49,10 @@ let rpc2: RPC;
 let tx: Tx;
 let wallet: Wallet;
 
-const block = Block.createGenesisBlock(crypto.randomBytes(32), crypto.randomBytes(32));
+const block = Block.createGenesisBlock(
+  crypto.randomBytes(32),
+  crypto.randomBytes(32),
+);
 const proof = block.value.proof;
 const content = block.value.content;
 const state = State.create(
@@ -69,8 +74,8 @@ beforeAll(async () => {
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
   network1 = await Network.init(peer1, [peer2], false);
   network2 = await Network.init(peer2, [peer1], false);
-  rpc1 = new RPC(network1, blsSignatures);
-  rpc2 = new RPC(network2, blsSignatures);
+  rpc1 = new RPC(network1, blsSignatures, logger);
+  rpc2 = new RPC(network2, blsSignatures, logger);
 });
 
 // test('ping-pong', async () => {
@@ -80,6 +85,13 @@ beforeAll(async () => {
 //   expect(sentPayload.join(', ')).toEqual(receivedPayload.join(', '));
 //
 // });
+
+test('get-peers', async () => {
+  const rpc1Peers = await rpc1.getPeers();
+  const rpc2Peers = await rpc2.getPeers();
+  expect(rpc1Peers.length).toBe(1);
+  expect(rpc2Peers.length).toBe(1);
+});
 
 test('gossip-tx', async () => {
   rpc2.on('tx-gossip', (payload: Uint8Array) => {
