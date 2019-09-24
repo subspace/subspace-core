@@ -276,6 +276,13 @@ export class Network extends EventEmitter {
     return this.numberOfActiveConnections;
   }
 
+  /**
+   * Send request without expecting response
+   *
+   * @param nodeTypes
+   * @param command
+   * @param payload
+   */
   public async sendRequestOneWay(
     nodeTypes: INodeTypesKeys[],
     command: ICommandsKeysForSending,
@@ -285,6 +292,13 @@ export class Network extends EventEmitter {
     return protocolManager.sendMessageOneWay(connection, command, payload);
   }
 
+  /**
+   * Same as `sendRequestOneWay()`, but without guaranteed delivery (more efficient)
+   *
+   * @param nodeTypes
+   * @param command
+   * @param payload
+   */
   public async sendRequestOneWayUnreliable(
     nodeTypes: INodeTypesKeys[],
     command: ICommandsKeysForSending,
@@ -303,6 +317,15 @@ export class Network extends EventEmitter {
     return this.sendRequestOneWay(nodeTypes, command, payload);
   }
 
+  /**
+   * Send request and wait for response
+   *
+   * @param nodeTypes
+   * @param command
+   * @param payload
+   *
+   * @return Resolves with response contents
+   */
   public async sendRequest(
     nodeTypes: INodeTypesKeys[],
     command: ICommandsKeysForSending,
@@ -312,6 +335,13 @@ export class Network extends EventEmitter {
     return protocolManager.sendMessage(connection, command, payload);
   }
 
+  /**
+   * Same as `sendRequest()`, but without guaranteed delivery (more efficient)
+   *
+   * @param nodeTypes
+   * @param command
+   * @param payload
+   */
   public async sendRequestUnreliable(
     nodeTypes: INodeTypesKeys[],
     command: ICommandsKeysForSending,
@@ -330,6 +360,12 @@ export class Network extends EventEmitter {
     return this.sendRequest(nodeTypes, command, payload);
   }
 
+  /**
+   * Gossip command across the network
+   *
+   * @param command
+   * @param payload
+   */
   public async gossip(command: ICommandsKeysForSending, payload: Uint8Array): Promise<void> {
     return this.gossipManager.gossip(command, payload);
   }
