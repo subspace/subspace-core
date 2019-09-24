@@ -214,10 +214,12 @@ test('request-piece', async () => {
 });
 
 test('get-peers', async () => {
-  const rpc1Peers = await rpc1.getPeers();
-  const rpc2Peers = await rpc2.getPeers();
-  expect(rpc1Peers.length).toBe(1);
-  expect(rpc2Peers.length).toBe(1);
+  setTimeout(async () => {
+    const rpc1Peers = await rpc1.getPeers();
+    const rpc2Peers = await rpc2.getPeers();
+    expect(rpc1Peers.length).toBe(1);
+    expect(rpc2Peers.length).toBe(1);
+  }, 1000);
 });
 
 afterAll(async () => {
