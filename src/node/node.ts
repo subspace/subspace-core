@@ -371,7 +371,11 @@ export class Node extends EventEmitter {
    */
   private async onTxRequest(txId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const txData = await this.ledger.getTx(txId);
-    txData ? responseCallback(txData) : responseCallback(new Uint8Array());
+    if (txData) {
+      responseCallback(txData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -396,7 +400,11 @@ export class Node extends EventEmitter {
    */
   private async onBlockRequest(blockId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlock(blockId);
-    blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
+    if (blockData) {
+      responseCallback(blockData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -423,7 +431,11 @@ export class Node extends EventEmitter {
    */
   private async onBlockRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const blockData = await this.ledger.getBlockByIndex(index);
-    blockData ? responseCallback(blockData) : responseCallback(new Uint8Array());
+    if (blockData) {
+      responseCallback(blockData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -448,7 +460,11 @@ export class Node extends EventEmitter {
    */
   private async onProofRequest(proofId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const proofData = await this.ledger.getProof(proofId);
-    proofData ? responseCallback(proofData) : responseCallback(new Uint8Array());
+    if (proofData) {
+      responseCallback(proofData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -473,7 +489,11 @@ export class Node extends EventEmitter {
    */
   private async onContentRequest(contentId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const contentData = await this.ledger.getContent(contentId);
-    contentData ? responseCallback(contentData) : responseCallback(new Uint8Array());
+    if (contentData) {
+      responseCallback(contentData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -498,7 +518,11 @@ export class Node extends EventEmitter {
    */
   private async onStateRequest(stateId: Uint8Array, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const stateData = await this.ledger.getContent(stateId);
-    stateData ? responseCallback(stateData) : responseCallback(new Uint8Array());
+    if (stateData) {
+      responseCallback(stateData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
@@ -525,7 +549,11 @@ export class Node extends EventEmitter {
    */
   private async onStateRequestByIndex(index: number, responseCallback: (response: Uint8Array) => void): Promise<void> {
     const stateData = await this.ledger.getStateByIndex(index);
-    stateData ? responseCallback(stateData) : responseCallback(new Uint8Array());
+    if (stateData) {
+      responseCallback(stateData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
   }
 
   /**
