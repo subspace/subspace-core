@@ -12,6 +12,10 @@ import {UdpManager} from "./UdpManager";
 import {composeIdentificationPayload, composeNodeInfoPayload, composePeersBinary, parsePeersBinary} from "./utils";
 import {WsManager} from "./WsManager";
 
+// TODO: Major improvements that need to be done in nearest future
+// * Periodically get peers if necessary (in addition to establishing connections)
+// * Maintain health state of peers even if active connections are missing
+
 export interface INodeContactAddress {
   address?: string;
   tcp4Port?: number;
