@@ -62,7 +62,7 @@ export class RPC extends EventEmitter {
         // TODO
           // how do we know who the ping is from?
         // tslint:disable: no-console
-        this.logger.info('ping-received');
+        this.logger.verbose('ping-received');
         this.emit('ping', payload, responseCallback);
       });
 
@@ -75,13 +75,12 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Received an invalid tx via gossip');
         }
-        this.logger.info('tx-gossip-received', {txId: bin2Hex(tx.key)});
+        this.logger.verbose('tx-gossip-received', {txId: bin2Hex(tx.key)});
         this.emit('tx-gossip', tx);
       });
 
       // received a new block and encoding via gossip
       this.network.on('block-gossip', (payload: Uint8Array) => {
-        console.log('Received a block via gossip');
         const encoding = payload.subarray(0, 4096);
         const blockData = payload.subarray(4096);
         const block = Block.fromFullBytes(blockData);
@@ -91,7 +90,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Received an invalid block via gossip');
         }
-        this.logger.info('block-gossip-received', {blockId: bin2Hex(block.key)});
+        this.logger.verbose('block-gossip-received', {blockId: bin2Hex(block.key)});
         this.emit('block-gossip', block, encoding);
       });
 
@@ -103,7 +102,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Received an invalid tx request, tx-id is not 32 bytes');
         }
-        this.logger.info('tx-request-received', {txId: bin2Hex(payload)});
+        this.logger.verbose('tx-request-received', {txId: bin2Hex(payload)});
         this.emit('tx-request', payload, responseCallback);
       });
 
@@ -115,7 +114,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Invalid block request, block-id is not 32 bytes');
         }
-        this.logger.info('block-request-received', {blockId: bin2Hex(payload)});
+        this.logger.verbose('block-request-received', {blockId: bin2Hex(payload)});
         this.emit('block-request', payload, responseCallback);
       });
 
@@ -128,7 +127,7 @@ export class RPC extends EventEmitter {
           this.logger.debug('Invalid block-request-by-index, block-index is not 4 bytes');
         }
         const index = bin2Num(payload);
-        this.logger.info('block-request-by-index-received', index);
+        this.logger.verbose('block-request-by-index-received', index);
         this.emit('block-request-by-index', index, responseCallback);
       });
 
@@ -140,7 +139,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Invalid piece-request, piece-id is not 32 bytes');
         }
-        this.logger.info('piece-request-received', {pieceId: bin2Hex(payload)});
+        this.logger.verbose('piece-request-received', {pieceId: bin2Hex(payload)});
         this.emit('piece-request', payload, responseCallback);
       });
 
@@ -152,7 +151,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Invalid proof-request, proof-id is not 32 bytes');
         }
-        this.logger.info('proof-request-received', {proofId: bin2Hex(payload)});
+        this.logger.verbose('proof-request-received', {proofId: bin2Hex(payload)});
         this.emit('proof-request', payload, responseCallback);
       });
 
@@ -164,7 +163,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Invalid content-request, content-id is not 32 bytes');
         }
-        this.logger.info('content-request-received', {contentId: bin2Hex(payload)});
+        this.logger.verbose('content-request-received', {contentId: bin2Hex(payload)});
         this.emit('content-request', payload, responseCallback);
       });
 
@@ -176,7 +175,7 @@ export class RPC extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Invalid state request, state-id is not 32 bytes');
         }
-        this.logger.info('state-request-received', {stateId: bin2Hex(payload)});
+        this.logger.verbose('state-request-received', {stateId: bin2Hex(payload)});
         this.emit('state-request', payload, responseCallback);
       });
 
@@ -189,7 +188,7 @@ export class RPC extends EventEmitter {
           this.logger.debug('Invalid state-request-by-index, state-index is not 4 bytes');
         }
         const index = bin2Num(payload);
-        this.logger.info('state-request-by-index-received', index);
+        this.logger.verbose('state-request-by-index-received', index);
         this.emit('state-request-by-index', index, responseCallback);
       });
   }
@@ -214,7 +213,7 @@ export class RPC extends EventEmitter {
   public async gossipTx(tx: Tx): Promise<void> {
     const binaryTx = tx.toBytes();
     await this.network.gossip('tx-gossip', binaryTx);
-    this.logger.info('sent-tx-gossip', {txId: bin2Hex(tx.key)});
+    this.logger.verbose('sent-tx-gossip', {txId: bin2Hex(tx.key)});
   }
 
   /**
@@ -227,7 +226,7 @@ export class RPC extends EventEmitter {
     const blockData = block.toFullBytes();
     const payload = Buffer.concat([encoding, blockData]);
     await this.network.gossip('block-gossip', payload);
-    this.logger.info('sent-block-gossip', {blockId: bin2Hex(block.key)});
+    this.logger.verbose('sent-block-gossip', {blockId: bin2Hex(block.key)});
   }
 
   /**
@@ -247,7 +246,7 @@ export class RPC extends EventEmitter {
         // Request from another node
       this.logger.debug('Received invalid response from peer');
     }
-    this.logger.info('tx-response-received', {txId: bin2Hex(tx.key)});
+    this.logger.verbose('tx-response-received', {txId: bin2Hex(tx.key)});
     return tx;
   }
 
@@ -268,7 +267,7 @@ export class RPC extends EventEmitter {
         // Request from another node
       this.logger.debug('Received invalid block response from peer');
     }
-    this.logger.info('block-response-received', {blockId: bin2Hex(block.key)});
+    this.logger.verbose('block-response-received', {blockId: bin2Hex(block.key)});
     return block;
   }
 
@@ -291,10 +290,10 @@ export class RPC extends EventEmitter {
           // Request from another node
         this.logger.debug('Received invalid block response from peer');
       }
-      this.logger.info('block-response-from-index-received', {blockId: bin2Hex(block.key)});
+      this.logger.verbose('block-response-from-index-received', {blockId: bin2Hex(block.key)});
       return block;
     }
-    this.logger.info('null-block-response-from-index-received', {blockIndex});
+    this.logger.verbose('null-block-response-from-index-received', {blockIndex});
   }
 
   /**
@@ -320,7 +319,7 @@ export class RPC extends EventEmitter {
       },
     };
 
-    this.logger.info('piece-response-received', {pieceId: bin2Hex(piece.data.pieceHash)});
+    this.logger.verbose('piece-response-received', {pieceId: bin2Hex(piece.data.pieceHash)});
     return piece;
   }
 
@@ -341,7 +340,7 @@ export class RPC extends EventEmitter {
         // Request from another node
       this.logger.debug('Received invalid proof response from peer');
     }
-    this.logger.info('proof-response-received', {proofId: bin2Hex(proof.key)});
+    this.logger.verbose('proof-response-received', {proofId: bin2Hex(proof.key)});
     return proof;
   }
 
@@ -362,7 +361,7 @@ export class RPC extends EventEmitter {
         // Request from another node
       this.logger.debug('Received invalid content response from peer');
     }
-    this.logger.info('content-response-received', {contentId: bin2Hex(content.key)});
+    this.logger.verbose('content-response-received', {contentId: bin2Hex(content.key)});
     return content;
   }
 
@@ -383,7 +382,7 @@ export class RPC extends EventEmitter {
         // Request from another node
       this.logger.debug('Received invalid state response from peer');
     }
-    this.logger.info('state-response-received', {stateId: bin2Hex(state.key)});
+    this.logger.verbose('state-response-received', {stateId: bin2Hex(state.key)});
     return state;
   }
 
@@ -406,10 +405,10 @@ export class RPC extends EventEmitter {
           // Request from another node
         this.logger.debug('Received invalid state response fro peer');
       }
-      this.logger.info('state-response-by-index-received', {stateId: bin2Hex(state.key)});
+      this.logger.verbose('state-response-by-index-received', {stateId: bin2Hex(state.key)});
       return state;
     }
-    this.logger.info('null-state-response-by-index-received', stateIndex);
+    this.logger.verbose('null-state-response-by-index-received', stateIndex);
   }
 
   /**
