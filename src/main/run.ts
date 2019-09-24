@@ -12,24 +12,13 @@ import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/farm';
 import { Ledger } from '../ledger/ledger';
-import { Network } from '../network/Network';
+import { INodeContactInfo, Network } from '../network/Network';
 import { RPC } from '../network/rpc';
 import { Node } from '../node/node';
 import { Storage } from '../storage/storage';
-import {createLogger, rmDirRecursiveSync} from '../utils/utils';
+import { allocatePort, createLogger, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
-
-const defaultContactInfo: IPeerContactInfo = {
-  nodeId: new Uint8Array(),
-  nodeType: 'full',
-  address: 'localhost',
-  udp4Port: 10888,
-  tcp4Port: 10889,
-  wsPort: 10890,
-};
-
-const defaultBootstrapPeers: IPeerContactInfo[] = [];
 
 /**
  * Init Params
@@ -38,6 +27,7 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * plotMode: mem-db or disk-db -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
  * validateRecords: true or false -- whether to validate new blocks and tx on receipt, default false for DevNet testing -- since BLS signature validation is slow, it takes a long time to plot
  *
+ * @param network         Which network the node is joining (local testing, cloud testing, production network)
  * @param nodeType        Functional configuration for this node (full node, farmer, validator, light client, gateway)
  * @param numberOfChains      Number of chains for the ledger (1 -- 1024)
  * @param plotMode        How encoded pieces are persisted (js-memory, rocks db, raw disk)
@@ -46,30 +36,33 @@ const defaultBootstrapPeers: IPeerContactInfo[] = [];
  * @param validateRecords If new records are validated (set to false for testing)
  * @param encodingRounds  How many rounds of encoding are applied when plotting (1 to 512)
  * @param storageDir      The path on disk for where to store all persistent data, defaults to homedir
- * @param reset
+ * @param genesis         If the node will create a new chain from genesis or sync an existing chain
+ * @param reset           If to reset storage on the node after each run
  * @param contactInfo     IP and ports to expose for this node, defaults provided.
  * @param bootstrapPeers  Array of contact info for bootstrap peers, no defaults provided yet
  * @param autostart       Whether to start the node role automatically or explicitly, default true
  * @param delay           Random farm/solve delay (for local testing) in milliseconds, following a poisson distribution around provided value
  * @param logLevel
  */
-export const run = async (
+export default async function run(
+  net: 'dev' | 'test' | 'main',
   nodeType: 'full' | 'farmer' | 'validator' | 'client' | 'gateway',
-  numberOfChains: number,
-  plotMode: 'memory' | 'disk',
-  numberOfPlots: number,
-  sizeOfFarm: number,
-  validateRecords: boolean,
-  encodingRounds: number,
-  storageDir?: string,
+  farmMode: 'memory' | 'disk',
+  storageDir: string | undefined,
+  numberOfChains = 1,
+  numberOfPlots = 1,
+  sizeOfFarm = 1000000,
+  encodingRounds = 3,
   delay = 0,
-  autostart = true,
-  reset = true,
-  contactInfo: IPeerContactInfo = defaultContactInfo,
-  bootstrapPeers: IPeerContactInfo[] = defaultBootstrapPeers,
+  genesis: boolean,
+  reset: boolean,
+  trustRecords: boolean,
+  contactInfo: IPeerContactInfo | undefined,
+  bootstrapPeers: IPeerContactInfo[] = [],
   logLevel: Parameters<typeof createLogger>[0] = 'debug',
-): Promise<Node> => {
+): Promise<Node> {
   const logger = createLogger(logLevel);
+
   // initialize empty config params
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
@@ -96,8 +89,19 @@ export const run = async (
   // determine the basic system env
   env = typeof window === 'undefined' ? 'node' : 'browser';
 
+  const nodeContactInfo: IPeerContactInfo = {
+    nodeId: crypto.randomBytes(32),
+    nodeType,
+    address: 'localhost',
+    udp4Port: allocatePort(),
+    tcp4Port: allocatePort(),
+    wsPort: allocatePort(),
+  };
+
+  const nodeId = Buffer.from(nodeContactInfo.nodeId).toString('hex');
+
   // are we persisting storage?
-  const isPersistingStorage = plotMode === 'disk';
+  const isPersistingStorage = farmMode === 'disk';
 
   // set storage path
   let storagePath: string;
@@ -106,17 +110,16 @@ export const run = async (
   } else {
     switch (os.platform()) {
       case 'linux':
-        storagePath = path.join(os.homedir(), '/.local/share/data/subspace');
+        storagePath = path.join(os.homedir(), `/.local/share/data/subspace/${nodeId}`);
         break;
       case 'darwin':
-        storagePath = path.join(os.homedir(), '/subspace');
+        storagePath = path.join(os.homedir(), `/subspace/${nodeId}`);
         break;
       case 'win32':
-        storagePath = path.join(os.homedir(), '\\AppData\\Subspace');
+        storagePath = path.join(os.homedir(), `\\AppData\\Subspace\\${nodeId}`);
         break;
       default:
-        storagePath = path.join(os.homedir(), '/subspace');
-        break;
+        storagePath = path.join(os.homedir(), `/subspace/${nodeId}`);
     }
   }
 
@@ -234,6 +237,10 @@ export const run = async (
     config.krpc = false;
     config.srpc = false;
     config.jrpc = false;
+
+    // browser cannot have TCP or UDP ports
+    nodeContactInfo.udp4Port = undefined;
+    nodeContactInfo.tcp4Port = undefined;
   }
 
   // set plot adapter for farming
@@ -270,28 +277,60 @@ export const run = async (
   }
 
   // instantiate a ledger for all nodes
-  ledger = new Ledger(blsSignatures, storage, numberOfChains, validateRecords, encodingRounds);
+  ledger = new Ledger(blsSignatures, storage, numberOfChains, trustRecords, encodingRounds);
+
+  // set the gateway node based on env
+  let gatewayNodeId: string;
+  let gatewayAddress: string;
+  switch (net) {
+    case 'dev':
+      gatewayNodeId = 'devnet-gateway';
+      gatewayAddress = 'localhost';
+      break;
+    case 'test':
+      gatewayNodeId = 'testnet-gateway';
+      gatewayAddress = 'ec2-54-191-145-133.us-west-2.compute.amazonaws.com';
+      break;
+    case 'main':
+      gatewayNodeId = 'mainnet-gateway';
+      gatewayAddress = '...';
+      break;
+    default:
+      gatewayNodeId = 'devnet-gateway';
+      gatewayAddress = 'localhost';
+  }
+
+  const gatewayContactInfo: INodeContactInfo = {
+    nodeId: crypto.hash(Buffer.from(gatewayNodeId)),
+    nodeType: 'gateway',
+    address: gatewayAddress,
+    udp4Port: 10888,
+    tcp4Port: 10889,
+    wsPort: 10890,
+  };
+
+  // if genesis, there is no gateway
+  bootstrapPeers = genesis ? [] : [gatewayContactInfo];
+  contactInfo = genesis ? gatewayContactInfo : nodeContactInfo;
 
   // instantiate the network & rpc interface for all nodes
   // TODO: replace with ECDSA network keys
-  if (!contactInfo.nodeId) {
-    contactInfo.nodeId = crypto.randomBytes(32);
-  }
   const network = await Network.init(contactInfo, bootstrapPeers, env === 'browser', logger);
   rpc = new RPC(network, blsSignatures);
 
   const settings: INodeSettings = {
+    network: net,
     storagePath,
     numberOfChains,
     numberOfPlots,
     sizeOfFarm,
     encodingRounds,
-    validateRecords,
+    genesis,
+    trustRecords,
     contactInfo,
     bootstrapPeers,
-    autostart,
     delay,
   };
 
   return new Node(nodeType, config, settings, rpc, ledger, wallet, farm);
-};
+}
