@@ -219,7 +219,7 @@ test('get-peers', async () => {
     const rpc2Peers = await rpc2.getPeers();
     expect(rpc1Peers.length).toBe(1);
     expect(rpc2Peers.length).toBe(1);
-  }, 1000);
+  }, 100);
 });
 
 afterAll(async () => {
