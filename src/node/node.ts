@@ -30,7 +30,7 @@ export class Node extends EventEmitter {
     public readonly type: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
     public readonly config: INodeConfig,
     public readonly settings: INodeSettings,
-    private rpc: Rpc,
+    public rpc: Rpc,
     private ledger: Ledger,
     private wallet: Wallet | undefined,
     private farm: Farm | undefined,

@@ -24,7 +24,8 @@
             </div>
             <div class="navbar-end">
               <a href="#" class="navbar-item" style='padding-right: 25px'>
-                {{ nodeId }}
+                {{ node ? node.settings.contactInfo.nodeType : '' }}
+                {{ node ? Buffer.from(node.settings.contactInfo.nodeId).toString('hex').substring(0, 12) : ''  }}
               </a>
             </div>
           </div>
@@ -32,6 +33,12 @@
 
       <div class="section" style='padding: 0rem'>
         <div class="container">
+            <div class="buttons has-addons is-centered">
+                <a class="button is-primary is-outlined" @click='startSingleNode()'>Start Single Node</a>
+                <a class="button is-primary is-outlined" @click='joinLocalNetwork()'>Join Local Network</a>
+                <a class="button is-primary is-outlined" @click='joinTestNetwork()'>Join Test Network</a>
+                <a class="button is-primary is-outlined" @click='stopNode()'>Stop Farming</a>
+              </div>   
           <div class="tabs">
             <ul>
               <li v-bind:class="{ 'is-active': activeTab == 'subspace' }" @click="activeTab = 'subspace'"><a>Subspace</a></li>
@@ -44,53 +51,73 @@
           </div>
           <div class="content">
             <div v-if='activeTab === "subspace"'>
-              <div class="buttons">
-                <a class="button is-primary" @click='startSingleNode()'>Start Single Node</a>
-                <a class="button is-info" @click='joinLocalNetwork()'>Join Local Network</a>
-                <a class="button is-success" @click='joinTestNetwork()'>Join Test Network</a>
-                <a class="button is-danger" @click='stopNode()'>Stop Node</a>
-              </div>              
+              <nav class="level">
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Peers</p>
+                    <p class="title"> {{ node ? node.rpc.peers.size : 0 }}</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Chains</p>
+                    <p class="title"> {{ node ? node.ledger.chainCount : 0 }}</p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Blocks</p>
+                    <p class="title"> {{ node ? node.ledger.confirmedBlocks : 0 }} </p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Txs</p>
+                    <p class="title"> {{ node ? node.ledger.confirmedTxs : 0 }} </p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Levels</p>
+                    <p class="title"> {{ node ? node.ledger.confirmedLevels : 0 }} </p>
+                  </div>
+                </div>
+                <div class="level-item has-text-centered">
+                  <div>
+                    <p class="heading">Pieces</p>
+                    <p class="title"> {{ node && node.farm ? node.farm.pieceOffset : 0 }}</p>
+                  </div>
+                </div>
+              </nav>
+              
+                       
             </div>
             <div v-if='activeTab === "network"'>
-                <nav class="level">
-                  <div class="level-item has-text-centered">
-                    <div>
-                      <p class="heading">Nodes</p>
-                      <p class="title">16</p>
-                    </div>
-                  </div>
-                  <div class="level-item has-text-centered">
-                    <div>
-                      <p class="heading">Space Pledged</p>
-                      <p class="title">16 TB</p>
-                    </div>
-                  </div>
-                  <div class="level-item has-text-centered">
-                    <div>
-                      <p class="heading">Ledger Size</p>
-                      <p class="title">1 GB</p>
-                    </div>
-                  </div>
-                  <div class="level-item has-text-centered">
-                    <div>
-                      <p class="heading">Load Factor</p>
-                      <p class="title">16k</p>
-                    </div>
-                  </div>
-                  <div class="level-item has-text-centered">
-                    <div>
-                      <p class="heading">Pieces</p>
-                      <p class="title">250k</p>
-                    </div>
-                  </div>
-                </nav>
-                <div class="content">
-                  <ul>
-                    <li>Activity Log</li>
-                    <li>Network Map</li>
-                  </ul>
-                </div>              
-              </div>
+              <!-- <div class="table" v-if='node'>
+                <thead>
+                  <tr>
+                    <th>Peer</th>
+                    <th>Node ID</th>
+                    <th>Type</th>
+                    <th>Address</th>
+                    <th>UDP Port</th>
+                    <th>TCP Port</th>
+                    <th>WS Port</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for='(peer, index) in ...node.rpc.peers.values()'>
+                    <th> {{ index }} </th>
+                    <th> {{ Buffer.from(peer.nodeId).toString('hex') }} </th>
+                    <th> {{ peer.nodeType }} </th>
+                    <th> {{ peer.address }} </th>
+                    <th> {{ peer.udp4port }} </th>
+                    <th> {{ peer.tcp4port }} </th>
+                    <th> {{ peer.wsPort }} </th>
+                  </tr>
+                </tbody>
+              </div>         -->
+            </div>
 
             <div v-else-if='activeTab === "ledger"'>
               <nav class="level">
@@ -176,7 +203,103 @@
               Wallet Content
             </div>
             <div v-else-if='activeTab === "settings"'>
-              Settings Content
+              <div class="columns">
+                <div class="column">
+                  <div class="field">
+                    <label class="label">Network</label>
+                    <div class="control">
+                      <div class="select">
+                        <select>
+                          <option value="dev">Dev</option>
+                          <option value="test">Test</option>
+                          <option value="main" disabled>Main</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Node Type</label>
+                    <div class="control">
+                      <div class="select">
+                        <select>
+                          <option value="full">Full</option>
+                          <option value="farmer">Farmer</option>
+                          <option value="validator">Validator</option>
+                          <option value="light-client" disabled>Light Client</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Farm Mode</label>
+                    <div class="control">
+                      <div class="select">
+                        <select>
+                          <option value="memory">Memory</option>
+                          <option value="disk">Disk</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Chain Count</label>
+                    <div class="control">
+                      <input v-model='chainCount' type="number" class="input" placeholder="Integer between 1 and 1024">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Number of Plots</label>
+                    <div class="control">
+                      <input v-model='numberOfPlots' type="number" class="input" placeholder="Integer between 1 and 1024">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Size of Farm (bytes)</label>
+                    <div class="control">
+                      <input type="number" class="input" placeholder="Integer between 1 and 1024^4">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label">Encoding Rounds</label>
+                    <div class="control">
+                      <input v-model='encodingRounds' type="number" class="input" placeholder="Integer between 1 and 512">
+                    </div>
+                  </div> 
+                  <div class="field">
+                    <label class="label">Delay (ms)</label>
+                    <div class="control">
+                      <input v-model='delay' type="number" class="input" placeholder="Integer between 1 and 10000">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="control">
+                      <label class="checkbox">
+                        <input type="checkbox">
+                        From Genesis
+                      </label>
+                    </div>
+                  </div> 
+                  <div class="field">
+                    <div class="control">
+                      <label class="checkbox">
+                        <input type="checkbox">
+                        Reset State
+                      </label>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <div class="control">
+                      <label class="checkbox">
+                        <input type="checkbox">
+                        Trust Records
+                      </label>
+                    </div>
+                  </div>
+                  
+                </div>
+                <div class="column"></div>
+                <div class="column"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -203,7 +326,9 @@
     // Space Pledged
     // Credits
   // Network Tab
-    // Number of peers
+    // Number of active connections
+    // Number of contacts
+    // DHT Size
     // Peer graph (and their peers)
     // Peer map (geo-ip)
     // My network info
@@ -252,10 +377,13 @@
   var app = new Vue({
     el: '#app',
     data: {
-      nodeId: 'myNodeId',
       activeTab: 'subspace',
       createNode: null,
       node: null,
+      chainCount: 16,
+      numberOfPlots: 1,
+      encodingRounds: 3,
+      delay: 100,
     },
     methods: {
       /**
@@ -282,11 +410,11 @@
           'full',
           'disk',
           undefined,
-          1,
-          1,
+          this.chainCount,
+          this.numberOfPlots,
           10000000,
-          3,
-          1000,
+          this.encodingRounds,
+          this.delay,
           true,
           true,
           true,
@@ -300,11 +428,11 @@
           'validator',
           'memory',
           undefined,
-          16,
+          this.chainCount,
+          this.numberOfPlots,
           0,
-          0,
-          3,
-          0,
+          this.encodingRounds,
+          this.delay,
           false,
           true,
           false,
@@ -318,23 +446,23 @@
           'validator',
           'memory',
           undefined,
-          16,
+          this.chainCount,
+          this.numberOfPlots,
           0,
-          0,
-          3,
-          0,
+          this.encodingRounds,
+          this.delay,
           false,
           true,
           false,
           undefined,
           [],
         )
-      }
+      },
+      async stopNode() {
+        this.node.config.farm = false;
+      },
     },
-    async stopNode() {
-      //ToDo
-        // Pause or kill the node
-    },
+   
     async mounted() {
       this.createNode = await Subspace;
     }

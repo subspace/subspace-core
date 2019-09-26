@@ -37,11 +37,11 @@ export class Farm {
   public static readonly MODE_INDEXED_DB = 'indexed-db';
 
   public readonly plots: Plot[];
+  public pieceOffset: number;
   private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB;
   private readonly encodingRounds: number;
   private readonly metadataStore: Storage;
   private readonly pieceIndex: Tree<Uint8Array, number>;
-  private pieceOffset: number;
 
   /**
    * Returns a new farm instance for use by parent node.
