@@ -42,7 +42,6 @@ export class Farm {
   private readonly encodingRounds: number;
   private readonly metadataStore: Storage;
   private readonly pieceIndex: Tree<Uint8Array, number>;
-  
 
   /**
    * Returns a new farm instance for use by parent node.
