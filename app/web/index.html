@@ -25,7 +25,7 @@
             <div class="navbar-end">
               <a href="#" class="navbar-item" style='padding-right: 25px'>
                 {{ node ? node.settings.contactInfo.nodeType : '' }}
-                {{ node ? Buffer.from(node.settings.contactInfo.nodeId).toString('hex').substring(0, 12) : ''  }}
+                {{ node ? byteToHexString(node.settings.contactInfo.nodeId) : ''  }}
               </a>
             </div>
           </div>
@@ -209,7 +209,7 @@
                     <label class="label">Network</label>
                     <div class="control">
                       <div class="select">
-                        <select>
+                        <select disabled>
                           <option value="dev">Dev</option>
                           <option value="test">Test</option>
                           <option value="main" disabled>Main</option>
@@ -221,7 +221,7 @@
                     <label class="label">Node Type</label>
                     <div class="control">
                       <div class="select">
-                        <select>
+                        <select disabled>
                           <option value="full">Full</option>
                           <option value="farmer">Farmer</option>
                           <option value="validator">Validator</option>
@@ -234,7 +234,7 @@
                     <label class="label">Farm Mode</label>
                     <div class="control">
                       <div class="select">
-                        <select>
+                        <select disabled>
                           <option value="memory">Memory</option>
                           <option value="disk">Disk</option>
                         </select>
@@ -256,7 +256,7 @@
                   <div class="field">
                     <label class="label">Size of Farm (bytes)</label>
                     <div class="control">
-                      <input type="number" class="input" placeholder="Integer between 1 and 1024^4">
+                      <input type="number" class="input" placeholder="Integer between 1 and 1024^4" disabled>
                     </div>
                   </div>
                   <div class="field">
@@ -274,7 +274,7 @@
                   <div class="field">
                     <div class="control">
                       <label class="checkbox">
-                        <input type="checkbox">
+                        <input type="checkbox" disabled>
                         From Genesis
                       </label>
                     </div>
@@ -282,7 +282,7 @@
                   <div class="field">
                     <div class="control">
                       <label class="checkbox">
-                        <input type="checkbox">
+                        <input type="checkbox" disabled>
                         Reset State
                       </label>
                     </div>
@@ -290,7 +290,7 @@
                   <div class="field">
                     <div class="control">
                       <label class="checkbox">
-                        <input type="checkbox">
+                        <input type="checkbox" disabled>
                         Trust Records
                       </label>
                     </div>
@@ -386,6 +386,20 @@
       delay: 100,
     },
     methods: {
+      byteToHexString(uint8arr) {
+        if (!uint8arr) {
+          return '';
+        }
+        
+        var hexStr = '';
+        for (var i = 0; i < uint8arr.length; i++) {
+          var hex = (uint8arr[i] & 0xff).toString(16);
+          hex = (hex.length === 1) ? '0' + hex : hex;
+          hexStr += hex;
+        }
+        
+        return hexStr.substring(0, 12);
+      },
       /**
        * Args for createNode (also look at src/main/run.ts)
        * 
