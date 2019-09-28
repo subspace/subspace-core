@@ -11,7 +11,7 @@ import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, DIFFICULTY, PIECE_SIZE, VERSION } from '../main/constants';
 import { IFullBlockValue, IPiece} from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { areArraysEqual, bin2Hex, print, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, ILogger, print, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
@@ -21,18 +21,23 @@ import { State } from './state';
 import { Tx } from './tx';
 
 // ToDo
+  // remove branches from code
+    // genesis level is just like any other level
+    // genesis block is just like any other block
+    // genesis content is just like any other content
+    // coinbase tx is just like any other tx
+  // handle validation where one farmer computes the next level and adds pieces before another
+  // handle chain forks
+  // handle level forks
+  // set minimum work difficulty
+  // work difficulty resets
   // fix memory leak
   // run in farmer mode, pruning chain state after each new level
   // separate levels from state, such that state is constant sized
   // normalize level encoding
   // decode levels
-  // handle chain forks
-  // handle level forks
-  // set minimum work difficulty
-  // work difficulty resets
   // Refactor Level into a separate class
   // handle tx fees
-  // handle validation where one farmer computes the next level and adds pieces before another
   // enforce a maximum block size of 4096 bytes
 
 // Basic Modes
@@ -94,6 +99,7 @@ export class Ledger extends EventEmitter {
   public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
   public blockIndex: Map<number, Uint8Array> = new Map();
   public stateIndex: Map<number, Uint8Array> = new Map();
+  public readonly logger: ILogger;
 
   constructor(
     blsSignatures: BlsSignatures,
@@ -101,9 +107,11 @@ export class Ledger extends EventEmitter {
     chainCount: number,
     trustRecords: boolean,
     encodingRounds: number,
+    parentLogger: ILogger,
   ) {
     super();
     this.blsSignatures = blsSignatures;
+    this.logger = parentLogger.child({subsystem: 'ledger'});
     this.storage = storage;
     this.accounts = new Account();
     this.isValidating = !trustRecords;
@@ -122,11 +130,51 @@ export class Ledger extends EventEmitter {
     }
   }
 
+  // create a new ledger
+  // open an existing ledger and sync (full ledger or state chain)
+  // sync a ledger from genesis (full ledger or state chain)
+
+  public async init(): Promise<void> {
+    // case 0: start a new ledger from genesis
+    // case 1A: sync an existing ledger from genesis
+    // case 1B: sync an existing state chain from genesis
+    // case 2A: sync an existing ledger from saved state
+    // case 2B: sync an existing state chain from saved state
+
+    // once the ledger is synced
+      // farm
+        // attempt to solve from last state
+        // if a solution is found create the block
+        // gossip and apply the block
+        // check if level is confirmed
+        // if confirmed, check if state is ready
+        // if state is ready, encode state
+        // compress into state chain
+        // discard confirmed state
+        // plot pieces in farm
+      // validate
+        // receive a new block
+        // validate the block
+        // apply the block
+        // check if level is confirmed
+        // check if state is confirmed
+        // compress into state chain
+        // discard confirmed state
+        // encode state
+
+    return;
+  }
+
   /**
    * Creates a new genesis level.
    * Returns the initial erasure coded piece set with metadata.
    */
   public async createGenesisLevel(): Promise<void> {
+    // create a block
+    // hash to a chain
+    // use to create the next block
+    // continue until the level is confirmed
+    // encode state
     return new Promise(async (resolve) => {
       for (let i = 0; i < this.chainCount; ++i) {
         const block = Block.createGenesisBlock(this.parentProofHash, new Uint8Array(32));
@@ -652,9 +700,15 @@ export class Ledger extends EventEmitter {
   public async getTx(txId: Uint8Array): Promise<Uint8Array | null | undefined> {
     let txData: Uint8Array | undefined | null;
     txData = this.txMap.get(txId);
+
     if (!txData) {
       txData = await this.storage.get(txId);
     }
+
+    if (!txData) {
+      this.logger.debug('Unable to get tx from memory or disk');
+    }
+
     return txData;
   }
 
@@ -668,9 +722,15 @@ export class Ledger extends EventEmitter {
   public async getCompactBlock(blockId: Uint8Array): Promise<Uint8Array | null | undefined> {
     let blockData: Uint8Array | undefined | null;
     blockData = this.compactBlockMap.get(blockId);
+
     if (!blockData) {
       blockData = await this.storage.get(blockId);
     }
+
+    if (!blockData) {
+      this.logger.debug('Cannot get compact block from memory or disk');
+    }
+
     return blockData;
   }
 
@@ -684,9 +744,15 @@ export class Ledger extends EventEmitter {
   public async getProof(proofId: Uint8Array): Promise<Uint8Array | null | undefined> {
     let proofData: Uint8Array | undefined | null;
     proofData = this.proofMap.get(proofId);
+
     if (!proofData) {
       proofData = await this.storage.get(proofId);
     }
+
+    if (!proofData) {
+      this.logger.debug('Unable to get proof from memory or disk');
+    }
+
     return proofData;
   }
 
@@ -700,9 +766,15 @@ export class Ledger extends EventEmitter {
   public async getContent(contentId: Uint8Array): Promise<Uint8Array | null | undefined> {
     let contentData: Uint8Array | undefined | null;
     contentData = this.contentMap.get(contentId);
+
     if (!contentData) {
       contentData = await this.storage.get(contentId);
     }
+
+    if (!contentData) {
+      this.logger.debug('Unable to get content from memory or disk');
+    }
+
     return contentData;
   }
 
@@ -721,17 +793,22 @@ export class Ledger extends EventEmitter {
     }
 
     if (!compactBlockData) {
+      this.logger.debug('Cannot get block, unable to get compact block data');
       return;
     }
 
     const compactBlock = Block.fromCompactBytes(compactBlockData);
     const proofData = await this.getProof(compactBlock.proofHash);
+
     if (!proofData) {
+      this.logger.debug('Cannot get block, unable to get proof data');
       return;
     }
 
     const contentData = await this.getContent(compactBlock.contentHash);
+
     if (!contentData) {
+      this.logger.debug('Cannot get block, unable to get content data');
       return;
     }
 
@@ -741,6 +818,7 @@ export class Ledger extends EventEmitter {
     if (content.value.payload[0]) {
       const coinbaseData = await this.getTx(content.value.payload[0]);
       if (!coinbaseData) {
+        this.logger.debug('Cannot get block, unable to get coinbase data');
         return;
       }
       coinbase = Tx.fromBytes(coinbaseData);
@@ -754,7 +832,7 @@ export class Ledger extends EventEmitter {
     });
 
     if (!areArraysEqual(block.key, blockId)) {
-      print(block.print());
+      this.logger.error('Cannot get block, retrieved block hash does not match request id');
       throw new Error('Error retrieving block, hash does not match request id');
     }
 
@@ -771,9 +849,15 @@ export class Ledger extends EventEmitter {
   public async getState(stateId: Uint8Array): Promise<Uint8Array | null | undefined> {
     let stateData: Uint8Array | undefined | null;
     stateData = this.stateMap.get(stateId);
+
     if (!stateData) {
       stateData = await this.storage.get(stateId);
     }
+
+    if (!stateData) {
+      this.logger.debug('Cannot get state from memory or disk');
+    }
+
     return stateData;
   }
 
@@ -789,6 +873,7 @@ export class Ledger extends EventEmitter {
     if (blockId) {
       return this.getBlock(blockId);
     }
+    this.logger.debug('Cannot get block by index, no block id for this index');
     return;
   }
 
@@ -804,6 +889,7 @@ export class Ledger extends EventEmitter {
     if (stateId) {
       return this.getState(stateId);
     }
+    this.logger.debug('Cannot get state by index, no state id for this index');
     return;
   }
 }
