@@ -42,7 +42,7 @@
           <div class="tabs">
             <ul>
               <li v-bind:class="{ 'is-active': activeTab == 'subspace' }" @click="activeTab = 'subspace'"><a>Subspace</a></li>
-              <li v-bind:class="{ 'is-active': activeTab == 'network' }" @click="activeTab = 'network'"><a>Network</a></li>
+              <li v-bind:class="{ 'is-active': activeTab == 'network' }" @click="renderNetworkTab"><a>Network</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'ledger' }" @click="activeTab = 'ledger'"><a>Ledger</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'farm' }" @click="activeTab = 'farm'"><a>Farm</a></li>
               <li v-bind:class="{ 'is-active': activeTab == 'wallet' }" @click="activeTab = 'wallet'"><a>Wallet</a></li>
@@ -93,30 +93,78 @@
                        
             </div>
             <div v-if='activeTab === "network"'>
-              <!-- <div class="table" v-if='node'>
-                <thead>
-                  <tr>
-                    <th>Peer</th>
-                    <th>Node ID</th>
-                    <th>Type</th>
-                    <th>Address</th>
-                    <th>UDP Port</th>
-                    <th>TCP Port</th>
-                    <th>WS Port</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for='(peer, index) in ...node.rpc.peers.values()'>
-                    <th> {{ index }} </th>
-                    <th> {{ Buffer.from(peer.nodeId).toString('hex') }} </th>
-                    <th> {{ peer.nodeType }} </th>
-                    <th> {{ peer.address }} </th>
-                    <th> {{ peer.udp4port }} </th>
-                    <th> {{ peer.tcp4port }} </th>
-                    <th> {{ peer.wsPort }} </th>
-                  </tr>
-                </tbody>
-              </div>         -->
+              <section class="stats">
+                <nav class="level">
+                    <div class="level-item has-text-centered">
+                      <div>
+                        <p class="heading">Contacts</p>
+                        <p class="title"> {{ networkStats.contacts }} </p>
+                      </div>
+                    </div>
+                    <div class="level-item has-text-centered">
+                      <div>
+                        <p class="heading">Connections</p>
+                        <p class="title"> {{ networkStats.connections }} </p>
+                      </div>
+                    </div>
+                    <div class="level-item has-text-centered">
+                      <div>
+                        <p class="heading">UDP</p>
+                        <p class="title"> {{ networkStats.udp }} </p>
+                      </div>
+                    </div>
+                    <div class="level-item has-text-centered">
+                      <div>
+                        <p class="heading">TCP</p>
+                        <p class="title"> {{ networkStats.tcp }} </p>
+                      </div>
+                    </div>
+                    <div class="level-item has-text-centered">
+                      <div>
+                        <p class="heading">WS</p>
+                        <p class="title"> {{ networkStats.ws }} </p>
+                      </div>
+                    </div>
+                  </nav>
+              </section>
+             
+              <hr>
+              <section class="routing-table">
+                <br>
+                <p class="title is-4">Peer Routing Table</p>
+                <p class="subtitle is-6">Contact info for all known peers on the network -- not active connections.</p>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Peer</th>
+                      <th>Node ID</th>
+                      <th>Type</th>
+                      <th>Address</th>
+                      <th>UDP Port</th>
+                      <th>TCP Port</th>
+                      <th>WS Port</th>
+                      <th>Last Contact</th>
+                      <th></th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(peer, index) in peers">
+                      <td> {{ index + 1 }} </td>
+                      <td> {{ byteToHexString(peer.nodeId) }} </td>
+                      <td> {{ peer.nodeType }} </td>
+                      <td> {{ peer.address }} </td>
+                      <td> {{ peer.udp4port }} </td>
+                      <td> {{ peer.tcp4port }} </td>
+                      <td> {{ peer.wsPort }} </td>
+                      <td></td>
+                      <td> <a class="button is-small is-primary is-outlined"> Ping </a> </td>
+                      <td> <a class="button is-small is-primary is-outlined"> Connect </a> </td>
+                    </tr>
+                  </tbody>
+                </table>   
+              </section>
+              
             </div>
 
             <div v-else-if='activeTab === "ledger"'>
@@ -313,6 +361,139 @@
 <script src="./build/bundle.js"></script>
 <script type='text/javascript'>
 
+  var app = new Vue({
+    el: '#app',
+    data: {
+      activeTab: 'subspace',
+      createNode: null,
+      node: null,
+      chainCount: 16,
+      numberOfPlots: 1,
+      encodingRounds: 3,
+      delay: 100,
+      peers: [],
+      networkStats: {
+        contacts: 0,
+        connections: 0,
+        udp: 0,
+        tcp: 0,
+        ws: 0,
+      }
+    },
+    methods: {
+      renderNetworkTab() {
+        this.activeTab = 'network';
+        if (this.node) {
+          this.peers = [...this.node.rpc.peers.values()];
+          this.networkStats.contacts = this.peers.length;
+          this.networkStats.connections = this.peers.length;
+          this.networkStats.udp = 0;
+          this.networkStats.tcp = 0;
+          this.networkStats.ws = this.peers.length;
+        }
+        
+      },
+      getContacts() {
+        if (this.node) {
+          return this.node.rpc.getPeers();
+        }
+      },
+      byteToHexString(uint8arr) {
+        if (!uint8arr) {
+          return '';
+        }
+        
+        var hexStr = '';
+        for (var i = 0; i < uint8arr.length; i++) {
+          var hex = (uint8arr[i] & 0xff).toString(16);
+          hex = (hex.length === 1) ? '0' + hex : hex;
+          hexStr += hex;
+        }
+        
+        return hexStr.substring(0, 12);
+      },
+      async startSingleNode() {
+        this.node = await this.createNode(
+          'dev',
+          'full',
+          'disk',
+          undefined,
+          this.chainCount,
+          this.numberOfPlots,
+          10000000,
+          this.encodingRounds,
+          this.delay,
+          true,
+          true,
+          true,
+          undefined,
+          [],
+        )
+      },
+      async joinLocalNetwork() {
+        this.node = await this.createNode(
+          'dev',
+          'validator',
+          'memory',
+          undefined,
+          this.chainCount,
+          this.numberOfPlots,
+          0,
+          this.encodingRounds,
+          this.delay,
+          false,
+          true,
+          false,
+          undefined,
+          [],
+        )
+      },
+      async joinTestNetwork() {
+        this.node = await this.createNode(
+          'test',
+          'validator',
+          'memory',
+          undefined,
+          this.chainCount,
+          this.numberOfPlots,
+          0,
+          this.encodingRounds,
+          this.delay,
+          false,
+          true,
+          false,
+          undefined,
+          [],
+        )
+      },
+      async stopNode() {
+        this.node.config.farm = false;
+      },
+    },
+    async mounted() {
+      this.createNode = await Subspace;
+    }
+  })
+
+/**
+ * Args for createNode (also look at src/main/run.ts)
+ * 
+ * network: 'dev' | 'test' | 'main'
+ * nodeType: 'full' | 'validator' | 'farmer' | 'client' | 'gateway'
+ * farmMode: 'memory' | 'disk'
+ * directory: path | undefined
+ * chainCount: number
+ * plotCount: number
+ * farmSize: number
+ * encodingRounds: number
+ * delay: number
+ * genesis: true | false
+ * reset: true | false
+ * trust: true | false
+ * contactInfo: INodeContactInfo | undefined
+ * bootstrapPeers: INodeContactInfo[] | []
+ */
+
 // Stats for Browser GUI
   // Subspace Tab
     // Number of full-nodes on the network (from DHT)
@@ -374,113 +555,7 @@
   // Setting Tab
     // edit config and restart
 
-  var app = new Vue({
-    el: '#app',
-    data: {
-      activeTab: 'subspace',
-      createNode: null,
-      node: null,
-      chainCount: 16,
-      numberOfPlots: 1,
-      encodingRounds: 3,
-      delay: 100,
-    },
-    methods: {
-      byteToHexString(uint8arr) {
-        if (!uint8arr) {
-          return '';
-        }
-        
-        var hexStr = '';
-        for (var i = 0; i < uint8arr.length; i++) {
-          var hex = (uint8arr[i] & 0xff).toString(16);
-          hex = (hex.length === 1) ? '0' + hex : hex;
-          hexStr += hex;
-        }
-        
-        return hexStr.substring(0, 12);
-      },
-      /**
-       * Args for createNode (also look at src/main/run.ts)
-       * 
-       * network: 'dev' | 'test' | 'main'
-       * nodeType: 'full' | 'validator' | 'farmer' | 'client' | 'gateway'
-       * farmMode: 'memory' | 'disk'
-       * directory: path | undefined
-       * chainCount: number
-       * plotCount: number
-       * farmSize: number
-       * encodingRounds: number
-       * delay: number
-       * genesis: true | false
-       * reset: true | false
-       * trust: true | false
-       * contactInfo: INodeContactInfo | undefined
-       * bootstrapPeers: INodeContactInfo[] | []
-       */
-      async startSingleNode() {
-        this.node = await this.createNode(
-          'dev',
-          'full',
-          'disk',
-          undefined,
-          this.chainCount,
-          this.numberOfPlots,
-          10000000,
-          this.encodingRounds,
-          this.delay,
-          true,
-          true,
-          true,
-          undefined,
-          [],
-        )
-      },
-      async joinLocalNetwork() {
-        this.node = await this.createNode(
-          'dev',
-          'validator',
-          'memory',
-          undefined,
-          this.chainCount,
-          this.numberOfPlots,
-          0,
-          this.encodingRounds,
-          this.delay,
-          false,
-          true,
-          false,
-          undefined,
-          [],
-        )
-      },
-      async joinTestNetwork() {
-        this.node = await this.createNode(
-          'test',
-          'validator',
-          'memory',
-          undefined,
-          this.chainCount,
-          this.numberOfPlots,
-          0,
-          this.encodingRounds,
-          this.delay,
-          false,
-          true,
-          false,
-          undefined,
-          [],
-        )
-      },
-      async stopNode() {
-        this.node.config.farm = false;
-      },
-    },
-   
-    async mounted() {
-      this.createNode = await Subspace;
-    }
-  })
+
 </script>
 
 

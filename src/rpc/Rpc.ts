@@ -195,7 +195,7 @@ export class Rpc extends EventEmitter {
   /**
    * Returns an array of all active peers in the routing table.
    */
-  public async getPeers(): Promise<INodeContactInfo[]> {
+  public getPeers(): INodeContactInfo[] {
     return this.network.getPeers();
   }
 
