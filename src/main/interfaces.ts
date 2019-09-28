@@ -8,12 +8,13 @@ import {INodeContactInfo} from "../network/Network";
  */
 export interface IStateValue {
   previousStateHash: Uint8Array; // hash of the previous state (32 bytes)
-  levelHash: Uint8Array; // hash of the concatenation of all proofs for the last full level (32 bytes)
+  // levelHash: Uint8Array; // hash of the concatenation of all proofs for the last full level (32 bytes)
   pieceRoot: Uint8Array; // merkle root of the piece set for the last full level (32 bytes)
+  sourceIndexPieceHash: Uint8Array;
+  parityIndexPieceHash: Uint8Array;
   timestamp: number; // UNIX time (4 bytes) of last block added to level
   difficulty: number; // piece audit scope or range (4 bytes) based on last level
   version: number; // protocol version of last level (2 bytes)
-  indexPiece: Uint8Array;
 }
 
 /**

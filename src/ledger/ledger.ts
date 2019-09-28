@@ -66,7 +66,7 @@ export class Ledger extends EventEmitter {
   public isServing = true;
   public isValidating: boolean;
 
-  private lastStateHash: Uint8Array = new Uint8Array(32);
+  private previousStateHash: Uint8Array = new Uint8Array(32);
   public previousLevelHash = new Uint8Array(32);
   public parentProofHash = new Uint8Array(32);
   public previousBlockHash = new Uint8Array(32);
@@ -163,6 +163,74 @@ export class Ledger extends EventEmitter {
         // encode state
 
     return;
+  }
+
+  public async createGenesisState(): Promise<IPiece[]> {
+    // generate the source data for 127 pieces
+    const sourceData = crypto.randomBytes(127 * 4096);
+
+    // erasure code x2 into 127 source pieces + 127 parity pieces
+    const erasureCodedData = await codes.erasureCodeLevel(sourceData);
+
+    // slice erasure coded buffer into 254 discrete pieces
+    const pieces = codes.sliceLevel(erasureCodedData);
+
+    // compute the piece hashes for merkle tree and piece metadata
+    const pieceHashes = pieces.map((piece) => crypto.hash(piece));
+
+    // create the source and parity piece index
+    const indexData = Buffer.concat([...pieceHashes]);
+    const sourceIndexPiece = Buffer.concat([indexData.subarray(0, 4064), new Uint8Array(32)]);
+    const sourceIndexPieceHash = crypto.hash(sourceIndexPiece);
+    const parityIndexPiece = Buffer.concat([indexData.subarray(4064), new Uint8Array(32)]);
+    const parityIndexPieceHash = crypto.hash(parityIndexPiece);
+    pieces.push(sourceIndexPiece);
+    pieceHashes.push(sourceIndexPieceHash);
+    pieces.push(parityIndexPiece);
+    pieceHashes.push(parityIndexPieceHash);
+
+    // build the merkle tree
+    const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
+
+    // create state
+    const state = State.create(
+      this.previousStateHash,
+      root,
+      sourceIndexPieceHash,
+      parityIndexPieceHash,
+      Date.now(),
+      DIFFICULTY,
+      VERSION,
+    );
+
+    // compile piece data
+    const pieceDataSet: IPiece[] = [];
+    for (let i = 0; i < pieces.length; ++i) {
+      pieceDataSet[i] = {
+        piece: pieces[i],
+        data: {
+          pieceHash: pieceHashes[i],
+          stateHash: state.key,
+          pieceIndex: i,
+          proof: proofs[i],
+        },
+      };
+    }
+
+    this.stateMap.set(state.key, state.toBytes());
+    this.previousStateHash = state.key;
+
+    return pieceDataSet;
+  }
+
+  /**
+   * Create the first block of a new ledger
+   */
+  public async createGenesisBlock(): Promise<void> {
+    const block = Block.createGenesisBlock(new Uint8Array(32), new Uint8Array(32));
+    const encoding = new Uint8Array(4096);
+    this.emit('block', block, encoding);
+    await this.applyBlock(block);
   }
 
   /**
@@ -383,32 +451,48 @@ export class Ledger extends EventEmitter {
    * Emits a fully formed Block for gossip by Node.
    * Passes the Block on to be applied to Ledger
    */
-  public async createBlock(proof: Proof, coinbaseTx: Tx, encoding: Uint8Array): Promise<Block> {
+  public async createBlock(proof: Proof, encoding: Uint8Array, coinbaseTx: Tx): Promise<Block> {
 
-    // create the block
-    const chainIndex = crypto.jumpHash(proof.key, this.chainCount);
-    const parentBlockId = this.chains[chainIndex].head;
-    const compactParentBlockData = this.compactBlockMap.get(parentBlockId);
-    if (!compactParentBlockData) {
-      this.logger.error('Cannot get parent block when extending the chain.');
-      throw new Error('Cannot get parent block when extending the chain.');
-    }
-    const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
-    const parentContentHash = compactParentBlock.contentHash;
-    const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
-    // how do we know the parent block?
-    const block = Block.create(this.previousBlockHash, proof, parentContentHash, txIds, coinbaseTx);
-    this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
+    // check if on genesis level or subsequent level
+    if (proof && coinbaseTx && encoding) {
+      const chainIndex = crypto.jumpHash(proof.key, this.chainCount);
+      const parentBlockId = this.chains[chainIndex].head;
+      const compactParentBlockData = this.compactBlockMap.get(parentBlockId);
+      if (!compactParentBlockData) {
+        this.logger.error('Cannot get parent block when extending the chain.');
+        throw new Error('Cannot get parent block when extending the chain.');
+      }
+      const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
+      const parentContentHash = compactParentBlock.contentHash;
+      const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
+      // how do we know the parent block?
+      const block = Block.create(this.previousBlockHash, proof, parentContentHash, txIds, coinbaseTx);
+      this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
 
-    // pass up to node for gossip across the network
-    this.emit('block', block, encoding);
-    if (this.isValidating) {
-      await this.isValidBlock(block, encoding);
-      this.logger.verbose(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
+      // pass up to node for gossip across the network
+      this.emit('block', block, encoding);
+      if (this.isValidating) {
+        await this.isValidBlock(block, encoding);
+        this.logger.verbose(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
+      }
+      await this.applyBlock(block);
+      this.logger.verbose(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
+      return block;
+    } else {
+      // ensure we do not have a coinbase
+      // ensure we have not confirmed the genesis level
+
+      // 
+
+      // we will have an empty proof
+      // determine the chain
+      // ensure we have the parent (may be null)
+      // create the block 
+
+      if (coinbaseTx) {
+        throw new Error('Cannot create block on genesis level with a coinbase tx');
+      }
     }
-    await this.applyBlock(block);
-    this.logger.verbose(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
-    return block;
   }
 
   /**

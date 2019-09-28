@@ -15,16 +15,16 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings, IPiece } from '../main/interfaces';
 import { Rpc } from '../rpc/Rpc';
-import { areArraysEqual, bin2Hex, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, ILogger, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
   // add time logging
-  // sync an existing ledger
 
 export class Node extends EventEmitter {
 
   public isGossiping = false;
+  public readonly logger: ILogger;
 
   constructor(
     public readonly type: 'full' | 'validator' | 'farmer' | 'gateway' | 'client',
@@ -34,9 +34,11 @@ export class Node extends EventEmitter {
     private ledger: Ledger,
     private wallet: Wallet | undefined,
     private farm: Farm | undefined,
+    parentLogger: ILogger,
   ) {
 
     super();
+    this.logger = parentLogger.child({subsystem: 'node'});
     this.rpc.on('ping', (payload, responseCallback: (response: Uint8Array) => void) => responseCallback(payload));
     this.rpc.on('tx-gossip', (tx: Tx) => this.onTx(tx));
     this.rpc.on('block-gossip', (block: Block, encoding: Uint8Array) => this.onBlock(block, encoding));
@@ -80,11 +82,12 @@ export class Node extends EventEmitter {
      * Encode the block as binary and gossip over the network.
      */
     this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
-      console.log('New block created by this Node.');
-      // print(block.print());
+      this.logger.verbose('New block created by this Node.');
+
       if (this.ledger.isValidating) {
         await this.ledger.isValidBlock(block, encoding);
       }
+
       if (this.isGossiping) {
         this.rpc.gossipBlock(block, encoding);
       }
@@ -121,22 +124,16 @@ export class Node extends EventEmitter {
    */
   public async createLedgerAndFarm(): Promise<void> {
     if (!this.farm || !this.wallet) {
+      this.logger.error('Cannot farm, this node is not configured as a farmer');
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
     this.isGossiping = true;
     const account = this.wallet.getAccounts()[0];
-    console.log('\nLaunching a new Subspace Full Node!');
-    console.log('-----------------------------------\n');
-    console.log(`Created a new node identity with address ${bin2Hex(account.address)}`);
-    console.log(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
-    // const [levelRecords, levelHash] =
+    this.logger.verbose('\nLaunching a new Subspace Full Node!');
+    this.logger.verbose('-----------------------------------\n');
+    this.logger.verbose(`Created a new node identity with address ${bin2Hex(account.address)}`);
+    this.logger.verbose(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
     await this.ledger.createGenesisLevel();
-    // const pieceSet = await this.ledger.encodeLevel(levelRecords, levelHash);
-    // console.log(`Created the genesis level and derived ${pieceSet.length} new pieces`);
-    // for (const piece of pieceSet) {
-    //   await this.farm.addPiece(piece.piece, piece.data);
-    // }
-    // console.log(`Completed plotting ${pieceSet.length} pieces for the genesis level.`);
 
     // start a farming evaluation loop
     while (this.config.farm) {
@@ -150,15 +147,15 @@ export class Node extends EventEmitter {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
     // find best encoding for challenge
-    console.log('\nSolving a new block challenge');
-    console.log('------------------------------');
-    console.log(`State: ${this.ledger.stateMap.size} levels`);
-    console.log(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
+    this.logger.verbose('\nSolving a new block challenge');
+    this.logger.verbose('------------------------------');
+    this.logger.verbose(`State: ${this.ledger.stateMap.size} levels`);
+    this.logger.verbose(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
     const pieceCount = this.farm.getPieceCount();
     const plotSize = this.farm.getSize() / 1000000;
-    console.log(`Farm: ${pieceCount} pieces comprising ${plotSize} MB across ${this.farm.plots.length} plots`);
-    console.log(`Balance: ${this.wallet.getPendingBalanceOfAllAccounts()} credits`);
-    console.log('------------------------------\n');
+    this.logger.verbose(`Farm: ${pieceCount} pieces comprising ${plotSize} MB across ${this.farm.plots.length} plots`);
+    this.logger.verbose(`Balance: ${this.wallet.getPendingBalanceOfAllAccounts()} credits`);
+    this.logger.verbose('------------------------------\n');
 
     const previousLevelHash = this.ledger.previousLevelHash;
     const parentProofHash = this.ledger.parentProofHash;
@@ -166,9 +163,10 @@ export class Node extends EventEmitter {
     const pieceTarget = crypto.hash(seed);
     const closestEncodings = await this.farm.getClosestEncodings(pieceTarget);
     if (!closestEncodings) {
+      this.logger.error('Cannot find a piece within plot for target');
       throw new Error('Cannot find a piece within plot for target');
     }
-    console.log(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncodings.data.pieceHash).substring(0, 16)}`);
+    this.logger.verbose(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncodings.data.pieceHash).substring(0, 16)}`);
 
     let encodingIndex = 0;
     let bestChunkQuality = 0;
@@ -189,7 +187,7 @@ export class Node extends EventEmitter {
       }
     }
 
-    console.log(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)} from plot ${encodingIndex}`);
+    this.logger.verbose(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)} from plot ${encodingIndex}`);
 
     const encoding = closestEncodings.encodings[encodingIndex];
     const account = this.wallet.getAccount(this.farm.getPlotAddress(encodingIndex));
@@ -208,7 +206,7 @@ export class Node extends EventEmitter {
 
     // create coinbase tx
     const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD, account.publicKey);
-    await this.ledger.createBlock(signedProof, coinbaseTx, encoding);
+    await this.ledger.createBlock(signedProof, encoding, coinbaseTx);
   }
 
   /**
