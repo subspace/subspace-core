@@ -179,7 +179,7 @@ export class Ledger extends EventEmitter {
       for (let i = 0; i < this.chainCount; ++i) {
         const block = Block.createGenesisBlock(this.parentProofHash, new Uint8Array(32));
         const encoding = new Uint8Array(4096);
-        console.log(`Created new genesis block for chain ${i}`);
+        this.logger.verbose(`Created new genesis block for chain ${i}`);
         this.emit('block', block, encoding);
         await this.applyBlock(block);
       }
@@ -202,12 +202,14 @@ export class Ledger extends EventEmitter {
         this.confirmedBlocks ++;
         const compactBlockData = this.compactBlockMap.get(blockId);
         if (!compactBlockData) {
+          this.logger.error('Cannot create level, cannot retrieve required compact block data');
           throw new Error('Cannot create level, cannot retrieve required compact block data');
         }
         const compactBlock = Block.fromCompactBytes(compactBlockData);
         const proofData = this.proofMap.get(compactBlock.proofHash);
         const contentData = this.contentMap.get(compactBlock.contentHash);
         if (!proofData || !contentData) {
+          this.logger.error('Cannot create new level, cannot fetch requisite proof or content data');
           throw new Error('Cannot create new level, cannot fetch requisite proof or content data');
         }
 
@@ -229,6 +231,7 @@ export class Ledger extends EventEmitter {
       this.confirmedTxs ++;
       const txData = this.txMap.get(txId);
       if (!txData) {
+        this.logger.error('Cannot create new level, cannot fetch requisite transaction data');
         throw new Error('Cannot create new level, cannot fetch requisite transaction data');
       }
       const tx = Tx.fromBytes(txData);
@@ -276,7 +279,7 @@ export class Ledger extends EventEmitter {
       this.chains.forEach((chain) => chain.reset());
     }
 
-    console.log('Completed encoding new level');
+    this.logger.verbose('Completed encoding new level');
     return pieceDataSet;
   }
 
@@ -306,7 +309,6 @@ export class Ledger extends EventEmitter {
 
     this.stateMap.set(state.key, state.toBytes());
     this.stateIndex.set(this.stateIndex.size, state.key);
-    // console.log('Added state', state.key);
     this.lastStateHash = state.key;
     return [pieceData];
   }
@@ -317,10 +319,10 @@ export class Ledger extends EventEmitter {
     // max pieces to erasure code in one go are 127
     const pieceCount = paddedLevelData.length / PIECE_SIZE;
     const erasureCodedLevelElements: Uint8Array[] = [];
-    console.log(`Piece count is: ${pieceCount}`);
+    this.logger.verbose(`Piece count is: ${pieceCount}`);
     if (pieceCount > 127) {
       const rounds = Math.ceil(pieceCount / 127);
-      console.log(`Rounds of erasure coding are: ${rounds}`);
+      this.logger.verbose(`Rounds of erasure coding are: ${rounds}`);
       for (let r = 0; r < rounds; ++r) {
         const roundData = paddedLevelData.subarray(r * 127 * PIECE_SIZE, (r + 1) * 127 * PIECE_SIZE);
         erasureCodedLevelElements.push(await codes.erasureCodeLevel(roundData));
@@ -371,7 +373,6 @@ export class Ledger extends EventEmitter {
     }
 
     this.stateMap.set(state.key, state.toBytes());
-    // console.log('Added state', state.key);
     this.lastStateHash = state.key;
 
     return pieceDataSet;
@@ -389,6 +390,7 @@ export class Ledger extends EventEmitter {
     const parentBlockId = this.chains[chainIndex].head;
     const compactParentBlockData = this.compactBlockMap.get(parentBlockId);
     if (!compactParentBlockData) {
+      this.logger.error('Cannot get parent block when extending the chain.');
       throw new Error('Cannot get parent block when extending the chain.');
     }
     const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
@@ -396,16 +398,16 @@ export class Ledger extends EventEmitter {
     const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
     // how do we know the parent block?
     const block = Block.create(this.previousBlockHash, proof, parentContentHash, txIds, coinbaseTx);
-    console.log(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
+    this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
 
     // pass up to node for gossip across the network
     this.emit('block', block, encoding);
     if (this.isValidating) {
       await this.isValidBlock(block, encoding);
-      console.log(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
+      this.logger.verbose(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
     }
     await this.applyBlock(block);
-    console.log(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
+    this.logger.verbose(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
     return block;
   }
 
@@ -415,9 +417,6 @@ export class Ledger extends EventEmitter {
    * Ensures all included Txs are valid against the Ledger and well-formed.
    */
   public async isValidBlock(block: Block, encoding: Uint8Array): Promise<boolean> {
-
-    // console.log(`Got block and encoding in Block.isValidBlock():`);
-    // console.log(encoding);
 
     // validate the block, proof, content, and coinbase tx are all well formed, will throw if not
     block.isValid(this.blsSignatures);
@@ -429,18 +428,21 @@ export class Ledger extends EventEmitter {
       if (areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
         const genesisProof = this.proofMap.get(block.value.proof.key);
         if (!genesisProof && this.proofMap.size) {
+          this.logger.error('Invalid genesis block, already have a first genesis proof');
           throw new Error('Invalid genesis block, already have a first genesis proof');
         }
       } else {
         // check in proof map
         const previousProofData = this.proofMap.get(block.value.proof.value.previousProofHash);
         if (!previousProofData) {
+          this.logger.error('Invalid genesis block, does not reference a known proof');
           throw new Error('Invalid genesis block, does not reference a known proof');
         }
       }
 
       // encoding should be null
       if (!areArraysEqual(encoding, new Uint8Array(4096))) {
+        this.logger.error('Invalid genesis block, should not have an attached encoding');
         throw new Error('Invalid genesis block, should not have an attached encoding');
       }
 
@@ -452,7 +454,8 @@ export class Ledger extends EventEmitter {
     // previous level hash is last seen level
     if (!areArraysEqual(block.value.proof.value.previousLevelHash, this.previousLevelHash)) {
       print(block.print());
-      console.log('Last seen level', this.previousLevelHash);
+      this.logger.verbose('Last seen level', this.previousLevelHash);
+      this.logger.error('Invalid block proof, points to incorrect previous level');
       throw new Error('Invalid block proof, points to incorrect previous level');
     }
 
@@ -472,11 +475,13 @@ export class Ledger extends EventEmitter {
     }
 
     if (!hasSolution) {
+      this.logger.error('Invalid block proof, solution is not present in encoding');
       throw new Error('Invalid block proof, solution is not present in encoding');
     }
 
     // piece level is seen in state
     if (!this.stateMap.has(block.value.proof.value.pieceStateHash) && areArraysEqual(block.value.proof.value.pieceStateHash, new Uint8Array(32))) {
+      this.logger.error('Invalid block proof, referenced piece level is unknown');
       throw new Error('Invalid block proof, referenced piece level is unknown');
     }
 
@@ -484,13 +489,15 @@ export class Ledger extends EventEmitter {
     if (!areArraysEqual(block.value.proof.value.previousLevelHash, block.value.proof.value.previousProofHash)) {
       const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
       if (!pieceStateData) {
-        console.log('state keys are: ', this.stateMap.keys());
-        console.log('missing state is', block.value.proof.value.pieceStateHash);
+        this.logger.verbose('state keys are: ', this.stateMap.keys());
+        this.logger.verbose('missing state is', block.value.proof.value.pieceStateHash);
+        this.logger.error('Invalid block proof, referenced state data is not in state map');
         throw new Error('Invalid block proof, referenced state data is not in state map');
       }
       const state = State.fromBytes(pieceStateData);
       const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
       if (!validPieceProof) {
+        this.logger.error('Invalid block proof, piece proof is not a valid merkle path');
         throw new Error('Invalid block proof, piece proof is not a valid merkle path');
       }
     }
@@ -500,6 +507,7 @@ export class Ledger extends EventEmitter {
     const piece = codes.decodePiece(encoding, proverAddress, this.encodingRounds);
     const pieceHash = crypto.hash(piece);
     if (!areArraysEqual(pieceHash, block.value.proof.value.pieceHash)) {
+      this.logger.error('Invalid block proof, encoding does not decode back to parent piece');
       throw new Error('Invalid block proof, encoding does not decode back to parent piece');
     }
 
@@ -508,6 +516,7 @@ export class Ledger extends EventEmitter {
     // const correctChainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
     const parentContentData = this.contentMap.get(block.value.content.value.parentContentHash);
     if (!parentContentData) {
+      this.logger.error('Invalid block content, cannot retrieve parent content block');
       throw new Error('Invalid block content, cannot retrieve parent content block');
     }
 
@@ -526,6 +535,7 @@ export class Ledger extends EventEmitter {
 
     // validate the coinbase tx (since not in mempool)
     if (!block.value.coinbase) {
+      this.logger.error('Invalid block, does not have a coinbase tx');
       throw new Error('Invalid block, does not have a coinbase tx');
     }
     this.isValidTx(block.value.coinbase);
@@ -535,6 +545,7 @@ export class Ledger extends EventEmitter {
     for (let i = 1; i < txIds.length; ++i) {
       const txData = this.txMap.get(txIds[i]);
       if (!txData) {
+        this.logger.error('Invalid block content, cannot retrieve referenced tx id');
         throw new Error('Invalid block content, cannot retrieve referenced tx id');
       }
       const tx = Tx.fromBytes(txData);
@@ -557,6 +568,7 @@ export class Ledger extends EventEmitter {
       if (areArraysEqual(block.value.proof.value.previousLevelHash, new Uint8Array(32))) {
         // we have a genesis block, apply the chain sequentially
         if (this.genesisLevelChainIndex === this.chainCount) {
+          this.logger.error('Cannot apply another genesis block, the genesis level is full');
           throw new Error('Cannot apply another genesis block, the genesis level is full');
         }
         chainIndex = this.genesisLevelChainIndex;
@@ -587,6 +599,7 @@ export class Ledger extends EventEmitter {
       }
 
       if (!this.lastConfirmedLevel && block.value.coinbase) {
+        this.logger.error('Invalid genesis block, genesis level has already been confirmed');
         throw new Error('Invalid genesis block, genesis level has already been confirmed');
       }
 
@@ -596,28 +609,27 @@ export class Ledger extends EventEmitter {
         const txId = txIds[i];
         const txData = this.txMap.get(txId);
         if (!txData) {
+          this.logger.error('Cannot apply tx that is not in the mempool');
           throw new Error('Cannot apply tx that is not in the mempool');
         }
         const tx = Tx.fromBytes(txData);
         this.applyTx(tx);
         this.unconfirmedTxs.delete(txId);
       }
-      console.log('Completed applying new block');
-      // print(block.print());
-      console.log('Checking if pending level has confirmed during applyBlock()');
+      this.logger.verbose('Completed applying new block, checking if pending level has been confirmed...');
 
       // update level confirmation cache and check if level is confirmed
       this.unconfirmedChains.delete(chainIndex);
-      console.log(this.unconfirmedChains.size);
+      this.logger.verbose(`${this.unconfirmedChains.size} unconfirmed chains remain`);
       if (!this.unconfirmedChains.size) {
         const [levelRecords, levelHash, confirmedTxs] = this.createLevel();
         this.emit('confirmed-level', levelRecords, levelHash, confirmedTxs, this.lastCoinbaseTxTime);
         this.lastConfirmedLevel ++;
-        console.log('New level has been confirmed.');
-        console.log('Chain lengths:');
-        console.log('--------------');
+        this.logger.verbose('New level has been confirmed');
+        this.logger.verbose('Chain lengths: ');
+        this.logger.verbose('---------------');
         for (const chain of this.chains) {
-          console.log(`Chain ${chain.index}: ${chain.size}`);
+          this.logger.verbose(`Chain ${chain.index}: ${chain.size}`);
         }
 
         for (let i = 0; i < this.chainCount; ++i) {
@@ -626,7 +638,7 @@ export class Ledger extends EventEmitter {
 
         if (this.isFarming) {
           this.once('completed-plotting', () => {
-            console.log('Completed plotting piece set for last confirmed level');
+            this.logger.verbose('Completed plotting piece set for last confirmed level');
             resolve();
           });
         } else {
@@ -651,9 +663,11 @@ export class Ledger extends EventEmitter {
     if (!areArraysEqual(tx.value.sender, new Uint8Array(48))) {
       const senderBalance = this.accounts.get(tx.senderAddress);
       if (!senderBalance) {
+        this.logger.error('Invalid tx, sender has no account on the ledger!');
         throw new Error('Invalid tx, sender has no account on the ledger!');
       }
       if (senderBalance - tx.value.amount < 0) {
+        this.logger.error('Invalid tx, sender does not have funds to cover this amount!');
         throw new Error('Invalid tx, sender does not have funds to cover the amount!');
       }
     }
@@ -663,8 +677,7 @@ export class Ledger extends EventEmitter {
         // create secondary index in rocks for address and compile...
         // track the nonce in each address field in accounts
 
-    console.log(`Validated new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)}`);
-
+    this.logger.verbose(`Validated new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)}`);
     return true;
   }
 
@@ -681,8 +694,7 @@ export class Ledger extends EventEmitter {
 
       // always credit the receiver
       this.accounts.update(tx.receiverAddress, tx.value.amount);
-
-      console.log(`Applied new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)} to ledger.`);
+      this.logger.error(`Applied new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)} to ledger.`);
 
       // apply the fee to the farmer?
       // note when tx is referenced (added to a block)
@@ -757,7 +769,7 @@ export class Ledger extends EventEmitter {
   }
 
   /**
-   * Searches memory and disk for a content matching query.
+   * Searches memory and disk for a content record matching query.
    *
    * @param contentId   hash of content data
    *
