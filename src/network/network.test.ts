@@ -216,7 +216,7 @@ describe('Identification', () => {
 });
 
 describe('Peers', () => {
-  test('Get peers from network instance', () => {
+  test('Get contacts from network instance', () => {
     return new Promise((resolve) => {
       setTimeout(() => {
         const peer1Peers = networkClient1.getContacts().map(serializeNodeContactInfo);
@@ -234,6 +234,59 @@ describe('Peers', () => {
         expect(networkClient4.getNumberOfActiveConnections()).toBeGreaterThan(1);
         resolve();
       }, 100);
+    });
+  });
+
+  test('Maintain contacts', async () => {
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        const contactsMaintenanceInterval = 0.001;
+        const peerServer: IPeerContactInfo = {
+          address: 'localhost',
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+          wsPort: allocatePort(),
+        };
+        const peerClient1: IPeerContactInfo = {
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+        };
+        const peerClient2: IPeerContactInfo = {
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+        };
+        const networkServer = await Network.init(peerServer, [], false, logger);
+        const networkClient1 = await Network.init(
+          peerClient1,
+          [peerServer],
+          true,
+          logger,
+          {contactsMaintenanceInterval},
+        );
+        networkServer.once('peer-connected', async () => {
+          const networkClient2 = await Network.init(
+            peerClient2,
+            [peerServer],
+            true,
+            logger,
+            {contactsMaintenanceInterval},
+          );
+
+          networkServer.once('peer-connected', async () => {
+            setTimeout(async () => {
+              expect(
+                networkClient1.getContacts().map(serializeNodeContactInfo),
+              ).toContainEqual(
+                serializeNodeContactInfo(peerClient2),
+              );
+              await networkServer.destroy();
+              await networkClient1.destroy();
+              await networkClient2.destroy();
+              resolve();
+            }, contactsMaintenanceInterval * 10 * 1000);
+          });
+        });
+      });
     });
   });
 

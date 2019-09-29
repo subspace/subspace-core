@@ -267,7 +267,10 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
         const nodeId = this.connectionToNodeIdMap.get(socket);
         if (nodeId) {
           this.connectionToNodeIdMap.delete(socket);
-          this.nodeIdToConnectionMap.delete(nodeId);
+          // In case of concurrent connection
+          if (this.nodeIdToConnectionMap.get(nodeId) === socket) {
+            this.nodeIdToConnectionMap.delete(nodeId);
+          }
           if (nodeContactInfo) {
             this.emit('peer-disconnected', nodeContactInfo);
           } else {

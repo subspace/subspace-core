@@ -263,7 +263,10 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         this.emit('peer-disconnected', nodeContactInfo);
       }
       this.connectionToNodeIdMap.delete(connection);
-      this.nodeIdToConnectionMap.delete(nodeId);
+      // In case of concurrent connection
+      if (this.nodeIdToConnectionMap.get(nodeId) === connection) {
+        this.nodeIdToConnectionMap.delete(nodeId);
+      }
     }
   }
 
@@ -318,7 +321,9 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
       const nodeId = nodeContactInfo.nodeId;
       this.nodeIdToConnectionMap.set(nodeId, connection);
       this.connectionToNodeIdMap.set(connection, nodeId);
-      this.emit('peer-connected', nodeContactInfo);
+      setTimeout(() => {
+        this.emit('peer-connected', nodeContactInfo);
+      });
     }
   }
 }

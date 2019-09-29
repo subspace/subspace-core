@@ -222,7 +222,11 @@ export class Network extends EventEmitter {
           ++this.numberOfActiveConnections;
           this.emit('peer-connected', nodeContactInfo);
           if (this.peers.size < this.options.routingTableMinSize) {
-            const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId) as Exclude<ReturnType<typeof manager.nodeIdToActiveConnection>, null>;
+            const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId);
+            // Connection can be closed in case of race condition
+            if (!connection) {
+              return;
+            }
             manager.sendMessage(
               // @ts-ignore We have type corresponding to manager, but it is hard to explain to TypeScript
               connection,
@@ -584,7 +588,7 @@ export class Network extends EventEmitter {
   }
 
   private async maintainNumberOfContactsImplementation(): Promise<void> {
-    if (this.options.routingTableMinSize >= this.peers.size) {
+    if (this.peers.size >= this.options.routingTableMinSize) {
       return;
     }
     const [protocolManager, connection] = await this.getProtocolManagerAndConnection(['any']);
