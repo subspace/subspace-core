@@ -277,7 +277,7 @@ export default async function run(
   }
 
   // instantiate a ledger for all nodes
-  ledger = new Ledger(blsSignatures, storage, numberOfChains, trustRecords, encodingRounds);
+  ledger = new Ledger(blsSignatures, storage, numberOfChains, trustRecords, encodingRounds, logger);
 
   // set the gateway node based on env
   let gatewayNodeId: string;
@@ -332,5 +332,5 @@ export default async function run(
     delay,
   };
 
-  return new Node(nodeType, config, settings, rpc, ledger, wallet, farm);
+  return new Node(nodeType, config, settings, rpc, ledger, wallet, farm, logger);
 }

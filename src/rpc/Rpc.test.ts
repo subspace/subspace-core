@@ -8,8 +8,11 @@ if (!globalThis.indexedDB) {
 
 import * as crypto from '../crypto/crypto';
 import { Block } from '../ledger/block';
+import { Content } from "../ledger/content";
+import { Proof } from "../ledger/proof";
 import { State } from '../ledger/state';
 import { Tx } from '../ledger/tx';
+import { CHUNK_LENGTH, HASH_LENGTH } from "../main/constants";
 import { IPeerContactInfo, IPiece } from '../main/interfaces';
 import { Network } from '../network/Network';
 import { Storage } from '../storage/storage';
@@ -48,34 +51,75 @@ let rpc2: Rpc;
 
 let tx: Tx;
 let wallet: Wallet;
-
-const block = Block.createGenesisBlock(
-  crypto.randomBytes(32),
-  crypto.randomBytes(32),
-);
-const proof = block.value.proof;
-const content = block.value.content;
-const state = State.create(
-  crypto.randomBytes(32),
-  crypto.randomBytes(32),
-  crypto.randomBytes(32),
-  Date.now(),
-  1,
-  1,
-  crypto.randomBytes(32),
-);
-const encoding = crypto.randomBytes(4096);
+let proof: Proof;
+let content: Content;
+let state: State;
+let encoding: Uint8Array;
+let block: Block;
 
 beforeAll(async () => {
+
   const blsSignatures = await BlsSignatures.init();
   const storage = new Storage('memory', 'tests', 'rpc');
   wallet = new Wallet(blsSignatures, storage);
   const account = await wallet.createAccount();
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
+
   network1 = await Network.init(peer1, [], false, logger); // gateway
   network2 = await Network.init(peer2, [peer1], false, logger); // client
   rpc1 = new Rpc(network1, blsSignatures, logger); // gateway
   rpc2 = new Rpc(network2, blsSignatures, logger); // client
+
+  // create the proof
+  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
+  const previousProofHash = crypto.randomBytes(HASH_LENGTH);
+  const solution = crypto.randomBytes(CHUNK_LENGTH);
+  const pieceHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceStateHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceProof = crypto.randomBytes(100);
+
+  const unsignedProof = Proof.create(
+    previousLevelHash,
+    previousProofHash,
+    solution,
+    pieceHash,
+    pieceStateHash,
+    pieceProof,
+    account.publicKey,
+  );
+
+  const signedProof = wallet.signProof(unsignedProof);
+
+  // create parent content
+  const parentContentHash = crypto.randomBytes(HASH_LENGTH);
+
+  // create tx set
+  const txIds: Uint8Array[] = [
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+  ];
+
+  // create coinbase tx and add to tx set
+  const reward = 1;
+  const coinbaseTx = await wallet.createCoinBaseTx(reward, account.publicKey);
+  txIds.unshift(coinbaseTx.key);
+
+  const previousBlockHash = crypto.randomBytes(32);
+
+  block = Block.create(previousBlockHash, signedProof, parentContentHash, txIds, coinbaseTx);
+  proof = block.value.proof;
+  content = block.value.content;
+  state = State.create(
+    crypto.randomBytes(32),
+    crypto.randomBytes(32),
+    crypto.randomBytes(32),
+    crypto.randomBytes(32),
+    Date.now(),
+    1,
+    1,
+  );
+  encoding = crypto.randomBytes(4096);
 });
 
 // test('ping-pong', async () => {

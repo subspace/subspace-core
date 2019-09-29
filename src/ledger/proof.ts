@@ -45,14 +45,14 @@ export class Proof {
    * Creates an empty proof for a new chain as part of the genesis level.
    * Does not need to be signed.
    */
-  public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array(32)): Proof {
-    const nullArray48 = new Uint8Array(48);
-    const nullArray32 = new Uint8Array(32);
-    const nullArray8 = new Uint8Array(8);
-    const proof = Proof.create(nullArray32, previousProofHash, nullArray8, nullArray32, nullArray32, nullArray32, nullArray48);
-    proof.setKey();
-    return proof;
-  }
+  // public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array(32)): Proof {
+  //   const nullArray48 = new Uint8Array(48);
+  //   const nullArray32 = new Uint8Array(32);
+  //   const nullArray8 = new Uint8Array(8);
+  //   const proof = Proof.create(nullArray32, previousProofHash, nullArray8, nullArray32, nullArray32, nullArray32, nullArray48);
+  //   proof.setKey();
+  //   return proof;
+  // }
 
   /**
    * Loads a new proof from binary data received over the network
@@ -141,18 +141,25 @@ export class Proof {
   public isValid(blsSignatures: BlsSignatures): boolean {
 
     // validate genesis proof
-    if (areArraysEqual(this._value.previousLevelHash, new Uint8Array(32))) {
-      // ensure fields are null
-      if (!areArraysEqual(this._value.solution, new Uint8Array(8)) ||
-          !areArraysEqual(this._value.pieceHash, new Uint8Array(832) ||
-          !areArraysEqual(this._value.pieceStateHash, new Uint8Array(32)) ||
-          // !areArraysEqual(this._value.pieceProof, new Uint8Array(32)) ||
-          !areArraysEqual(this._value.publicKey, new Uint8Array(48)) ||
-          !areArraysEqual(this._value.signature, new Uint8Array(96)))) {
-        throw new Error('Invalid genesis proof, includes values for null properties');
-      }
+    // if (areArraysEqual(this._value.previousLevelHash, new Uint8Array(32))) {
+    //   // ensure fields are null
+    //   if (!areArraysEqual(this._value.solution, new Uint8Array(8)) ||
+    //       !areArraysEqual(this._value.pieceHash, new Uint8Array(832) ||
+    //       !areArraysEqual(this._value.pieceStateHash, new Uint8Array(32)) ||
+    //       // !areArraysEqual(this._value.pieceProof, new Uint8Array(32)) ||
+    //       !areArraysEqual(this._value.publicKey, new Uint8Array(48)) ||
+    //       !areArraysEqual(this._value.signature, new Uint8Array(96)))) {
+    //     throw new Error('Invalid genesis proof, includes values for null properties');
+    //   }
 
-      return true;
+    //   return true;
+    // }
+
+    // genesis proof
+    if (areArraysEqual(this.value.previousProofHash, new Uint8Array(32))) {
+      if (!areArraysEqual(this.value.previousLevelHash, new Uint8Array(32))) {
+        throw new Error('Invalid genesis proof, both previous proof hash and previous level hash must be null');
+      }
     }
 
     // previous level hash is 32 bytes

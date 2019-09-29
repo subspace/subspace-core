@@ -1,6 +1,10 @@
+// tslint:disable: object-literal-sort-keys
+
 import { ReedSolomonErasure } from "@subspace/reed-solomon-erasure.wasm";
 import * as crypto from '../crypto/crypto';
-import { BLOCKS_PER_PIECE, HASH_LENGTH, PIECE_SIZE, ROUNDS } from '../main/constants';
+import { State } from "../ledger/state";
+import { BLOCKS_PER_PIECE, DIFFICULTY, HASH_LENGTH, PIECE_SIZE, ROUNDS, VERSION } from '../main/constants';
+import { IPiece } from "../main/interfaces";
 import { xorUint8Array } from '../utils/utils';
 
 // ToDo
@@ -42,14 +46,85 @@ export function padLevel(levelData: Uint8Array): Uint8Array {
   return Uint8Array.from(levelData);
 }
 
+/**
+ * Creates a new state block and piece set from pending state data.
+ *
+ * @param stateData pending state from previous confirmed levels (block proofs, contents, and txs)
+ * @param previousStateHash hash of the last state block
+ * @param timestamp time for the last coinbase tx
+ *
+ * @return a valid state instance and an array of new pieces with metadata for plotting
+ */
+export async function encodeState(stateData: Uint8Array, previousStateHash: Uint8Array, timestamp: number): Promise<{state: State, pieceDataSet: IPiece[]}> {
+
+  // ensure source data is correct length
+  if (stateData.length !== (4096 * 127)) {
+    throw new Error('Cannot encode state, state must be exactly 520,192 bytes');
+  }
+
+  // erasure code state x2 into 127 source pieces and 127 parity pieces
+  const erasureCodedData = await erasureCodeState(stateData);
+
+  // slice erasure coded data into 254 discrete pieces
+  const pieces = sliceState(erasureCodedData);
+
+  // compute the piece hashes for merkle tree and piece metadata
+  const pieceHashes = pieces.map((piece) => crypto.hash(piece));
+
+  // create source and parity index pieces
+  const indexData = Buffer.concat([...pieceHashes]);
+  const sourceIndexPiece = Buffer.concat([indexData.subarray(0, 4064), new Uint8Array(32)]);
+  const sourceIndexPieceHash = crypto.hash(sourceIndexPiece);
+  const parityIndexPiece = Buffer.concat([indexData.subarray(4064), new Uint8Array(32)]);
+  const parityIndexPieceHash = crypto.hash(parityIndexPiece);
+  pieces.push(sourceIndexPiece);
+  pieceHashes.push(sourceIndexPieceHash);
+  pieces.push(parityIndexPiece);
+  pieceHashes.push(parityIndexPieceHash);
+
+  // build the merkle tree
+  const { root, proofs } = crypto.buildMerkleTree(pieceHashes);
+
+  // create state
+  const state = State.create(
+    previousStateHash,
+    root,
+    sourceIndexPieceHash,
+    parityIndexPieceHash,
+    timestamp,
+    DIFFICULTY,
+    VERSION,
+  );
+
+  // compile piece data
+  const pieceDataSet: IPiece[] = [];
+  for (let i = 0; i < pieces.length; ++i) {
+    pieceDataSet[i] = {
+      piece: pieces[i],
+      data: {
+        pieceHash: pieceHashes[i],
+        stateHash: state.key,
+        pieceIndex: i,
+        proof: proofs[i],
+      },
+    };
+  }
+
+  return { state, pieceDataSet };
+}
+
 const readSolomonErasure = ReedSolomonErasure.fromCurrentDirectory();
 
 const SHARD_SIZE = PIECE_SIZE;
 
 /**
  * Returns the Reed-Solomon erasure coding of source data.
+ *
+ * @param data the source data to be erasure coded
+ *
+ * @return the source data combined with parity data
  */
-export async function erasureCodeLevel(data: Uint8Array): Promise<Uint8Array> {
+export async function erasureCodeState(data: Uint8Array): Promise<Uint8Array> {
   const DATA_SHARDS = data.length / SHARD_SIZE;
   const PARITY_SHARDS = DATA_SHARDS;
 
@@ -68,8 +143,13 @@ export async function erasureCodeLevel(data: Uint8Array): Promise<Uint8Array> {
 
 /**
  * Converts erasure coded data into a set of fixed length pieces.
+ *
+ * @param erasureCodedLevelData the raw buffer of the erasure coded data output
+ *
+ * @return an array of constant sized pieces constructed from the input data
+ *
  */
-export function sliceLevel(erasureCodedLevelData: Uint8Array): Uint8Array[] {
+export function sliceState(erasureCodedLevelData: Uint8Array): Uint8Array[] {
   const pieceCount = erasureCodedLevelData.length / PIECE_SIZE;
   const pieceSet: Uint8Array[] = [];
   for (let i = 0; i < pieceCount; ++i) {
@@ -82,7 +162,7 @@ export function sliceLevel(erasureCodedLevelData: Uint8Array): Uint8Array[] {
 /**
  * Reconstructs the source data of an erasure coding given a sufficient number of pieces.
  */
-export async function reconstructLevel(data: Uint8Array, DATA_SHARDS: number, PARITY_SHARDS: number, shardsAvailable: boolean[]): Promise<Uint8Array> {
+export async function reconstructState(data: Uint8Array, DATA_SHARDS: number, PARITY_SHARDS: number, shardsAvailable: boolean[]): Promise<Uint8Array> {
   const shards = data.slice();
   const result = (await readSolomonErasure).reconstruct(shards, DATA_SHARDS, PARITY_SHARDS, shardsAvailable);
   if (result !== ReedSolomonErasure.RESULT_OK) {

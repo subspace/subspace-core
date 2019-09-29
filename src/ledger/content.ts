@@ -4,7 +4,7 @@
 import * as crypto from '../crypto/crypto';
 import { HASH_LENGTH } from '../main/constants';
 import { IContentValue } from '../main/interfaces';
-import { areArraysEqual, bin2Hex } from '../utils/utils';
+import { bin2Hex } from '../utils/utils';
 
 /**
  * Record class for malleable block contents for the ledger.
@@ -32,9 +32,9 @@ export class Content {
   /**
    * Creates an empty content record for a new chain as part of the genesis level.
    */
-  public static createGenesisContent(parentContentHash: Uint8Array, proofHash: Uint8Array): Content {
-    return Content.create(parentContentHash, proofHash, []);
-  }
+  // public static createGenesisContent(parentContentHash: Uint8Array, proofHash: Uint8Array): Content {
+  //   return Content.create(parentContentHash, proofHash, []);
+  // }
 
   /**
    * Loads a content instance from binary data received over the network.
@@ -119,13 +119,13 @@ export class Content {
    */
   public isValid(): boolean {
 
-    // genesis content
-    if (areArraysEqual(this._value.parentContentHash, new Uint8Array(32))) {
-      if (areArraysEqual(this._value.proofHash, new Uint8Array(32)) || this._value.payload.length > 0) {
-        throw new Error('Invalid genesis content, should have proof hash and content should be empty');
-      }
-      return true;
-    }
+    // // genesis content
+    // if (areArraysEqual(this._value.parentContentHash, new Uint8Array(32))) {
+    //   if (areArraysEqual(this._value.proofHash, new Uint8Array(32)) || this._value.payload.length > 0) {
+    //     throw new Error('Invalid genesis content, should have proof hash and content should be empty');
+    //   }
+    //   return true;
+    // }
 
     // normal content
 

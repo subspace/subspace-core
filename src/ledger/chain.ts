@@ -3,7 +3,6 @@ import { ArraySet } from "array-map-set";
 // tslint:disable: variable-name
 
 // ToDo
-  // has() will not work, need to implement array-map-set
   // treat the chain as a tree not a set
 
 /**

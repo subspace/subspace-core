@@ -23,6 +23,7 @@ export class State {
     difficulty: number,
     version: number,
   ): State {
+
     const stateValue: IStateValue = {
       previousStateHash,
       // levelHash,
@@ -45,9 +46,9 @@ export class State {
       pieceRoot: data.subarray(32, 64),
       sourceIndexPieceHash: data.subarray(64, 96),
       parityIndexPieceHash: data.subarray(96, 128),
-      timestamp: bin2Num(data.subarray(128, 130)) * 1000,
-      difficulty: smallBin2Num(data.subarray(130, 132)),
-      version: smallBin2Num(data.subarray(132, 134)),
+      timestamp: bin2Num(data.subarray(128, 132)) * 1000,
+      difficulty: smallBin2Num(data.subarray(132, 134)),
+      version: smallBin2Num(data.subarray(134, 136)),
     };
 
     const state = new State(stateValue);

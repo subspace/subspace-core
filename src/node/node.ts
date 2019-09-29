@@ -55,16 +55,9 @@ export class Node extends EventEmitter {
      * A new level has been confirmed and encoded into a piece set.
      * Add each piece to the plot, if farming.
      */
-    this.ledger.on('confirmed-level', async (levelRecords: Uint8Array[], levelHash: Uint8Array, confirmedTxs: Tx[], lastCoinBaseTxTime: number) => {
+    this.ledger.on('confirmed-level', async (confirmedTxs: Tx[]) => {
       // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
-      const pieceDataSet = await ledger.encodeLevel(levelRecords, levelHash, lastCoinBaseTxTime);
-      console.log('Finished encoding a new level and updating state');
-      if (this.farm) {
-        for (const piece of pieceDataSet) {
-          await this.farm.addPiece(piece.piece, piece.data);
-        }
-        this.ledger.emit('completed-plotting');
-      }
+      this.logger.info('Confirmed new level');
 
       // update account for each tx that links to an account for this node
       if (this.wallet) {
@@ -77,20 +70,15 @@ export class Node extends EventEmitter {
       }
     });
 
-    /**
-     * A new block was created by this farmer from Ledger after solving the block challenge.
-     * Encode the block as binary and gossip over the network.
-     */
-    this.ledger.on('block', async (block: Block, encoding: Uint8Array) => {
-      this.logger.verbose('New block created by this Node.');
-
-      if (this.ledger.isValidating) {
-        await this.ledger.isValidBlock(block, encoding);
+    this.ledger.on('confirmed-state', async (stateHash: Uint8Array, pieceDataSet: IPiece[]) => {
+      this.logger.info('Confirmed new state');
+      if (this.farm) {
+        for (const piece of pieceDataSet) {
+          await this.farm.addPiece(piece.piece, piece.data);
+        }
       }
-
-      if (this.isGossiping) {
-        this.rpc.gossipBlock(block, encoding);
-      }
+      this.logger.info('completed plotting in node', bin2Hex(stateHash));
+      this.ledger.emit('completed-plotting', stateHash);
     });
 
     /**
@@ -133,9 +121,8 @@ export class Node extends EventEmitter {
     this.logger.verbose('-----------------------------------\n');
     this.logger.verbose(`Created a new node identity with address ${bin2Hex(account.address)}`);
     this.logger.verbose(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
-    await this.ledger.createGenesisLevel();
-
-    // start a farming evaluation loop
+    const pieceDataSet = await this.ledger.createGenesisState();
+    await this.farm.seedPlot(pieceDataSet);
     while (this.config.farm) {
       await this.farmBlock();
     }
@@ -206,7 +193,27 @@ export class Node extends EventEmitter {
 
     // create coinbase tx
     const coinbaseTx = await this.wallet.createCoinBaseTx(COINBASE_REWARD, account.publicKey);
-    await this.ledger.createBlock(signedProof, encoding, coinbaseTx);
+
+    // create the block
+    const block = await this.ledger.createBlock(signedProof, coinbaseTx);
+
+    // gossip the block across the network
+    if (this.isGossiping) {
+      this.rpc.gossipBlock(block, encoding);
+    }
+
+    // validate the block
+    if (this.ledger.isValidating) {
+      await this.ledger.isValidBlock(block, encoding);
+      this.logger.verbose(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
+    }
+
+    // apply the block to the ledger
+    await this.ledger.applyBlock(block);
+    this.logger.verbose(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
+
+    // emit the block and encoding
+    this.emit('block', block, encoding);
   }
 
   /**

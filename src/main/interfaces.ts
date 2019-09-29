@@ -25,7 +25,7 @@ export interface IFullBlockValue {
   previousBlockHash: Uint8Array;
   proof: Proof;
   content: Content;
-  coinbase?: Tx;
+  coinbase: Tx;
 }
 
 /**
