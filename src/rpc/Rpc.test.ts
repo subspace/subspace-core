@@ -66,7 +66,7 @@ const state = State.create(
 );
 const encoding = crypto.randomBytes(4096);
 
-beforeAll(async () => {
+beforeEach(async () => {
   const blsSignatures = await BlsSignatures.init();
   const storage = new Storage('memory', 'tests', 'rpc');
   wallet = new Wallet(blsSignatures, storage);
@@ -213,16 +213,19 @@ test('request-piece', async () => {
   expect(pieceResponseData.join(',')).toEqual(pieceData.join(','));
 });
 
-// test('get-peers', async () => {
-//   setTimeout(async () => {
-//     const rpc1Peers = await rpc1.getPeers();
-//     const rpc2Peers = await rpc2.getPeers();
-//     expect(rpc1Peers.length).toBe(1);
-//     expect(rpc2Peers.length).toBe(1);
-//   }, 100);
-// });
+test('get-peers', async () => {
+  return new Promise((resolve) => {
+    network1.on('peer-connected', async () => {
+      const rpc1Peers = await rpc1.getPeers();
+      const rpc2Peers = await rpc2.getPeers();
+      expect(rpc1Peers.length).toBe(1);
+      expect(rpc2Peers.length).toBe(1);
+      resolve();
+    });
+  });
+});
 
-afterAll(async () => {
+afterEach(async () => {
   await rpc1.destroy();
   await rpc2.destroy();
   await wallet.close();

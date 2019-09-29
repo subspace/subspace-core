@@ -256,6 +256,7 @@ export class Network extends EventEmitter {
     for (const bootstrapNode of bootstrapNodes) {
       // noinspection JSIgnoredPromiseFromCall
       this.establishConnectionToNode(bootstrapNode);
+      this.addPeer(bootstrapNode);
     }
 
     this.connectionMaintenanceInterval = setInterval(
@@ -270,10 +271,23 @@ export class Network extends EventEmitter {
   }
 
   /**
-   * Returns an array of peers known in network
+   * @return An array of known nodes on the network
+   */
+  public getContacts(): INodeContactInfo[] {
+    return Array.from(this.peers.values());
+  }
+
+  /**
+   * @return An array of peers to which an active connection exists
    */
   public getPeers(): INodeContactInfo[] {
-    return Array.from(this.peers.values());
+    return Array.from(this.peers.values())
+      .filter((peer) => {
+        return (
+          this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
+          this.wsManager.nodeIdToActiveConnection(peer.nodeId)
+        );
+      });
   }
 
   public getNumberOfActiveConnections(): number {
