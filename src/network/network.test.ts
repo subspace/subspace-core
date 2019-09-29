@@ -219,7 +219,7 @@ describe('Peers', () => {
   test('Get peers from network instance', () => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const peer1Peers = networkClient1.getPeers().map(serializeNodeContactInfo);
+        const peer1Peers = networkClient1.getContacts().map(serializeNodeContactInfo);
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer2));
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer3));
         // WebSocket peer will take time to show up, hence setTimeout, but it will be here even though not in bootstrap
@@ -227,7 +227,7 @@ describe('Peers', () => {
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer4));
 
         // WebSocket peer should get to know about other peers from gateway too
-        const peer4Peers = networkClient4.getPeers().map(serializeNodeContactInfo);
+        const peer4Peers = networkClient4.getContacts().map(serializeNodeContactInfo);
         expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer2));
         expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer3));
         // And establish some connections too
