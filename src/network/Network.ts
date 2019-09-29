@@ -1,6 +1,6 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {areArraysEqual, bin2Hex, ILogger, randomElement} from "../utils/utils";
+import {areArraysEqual, bin2Hex, ILogger, randomElement, shuffleArray} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {
   ICommandsKeysForSending,
@@ -267,14 +267,15 @@ export class Network extends EventEmitter {
             const requesterNodeId = contactIdentification.nodeId;
             responseCallback(
               composePeersBinary(
-                Array.from(this.peers.values())
-                  .filter((peer) => {
-                    return !(
-                      areArraysEqual(peer.nodeId, requesterNodeId) ||
-                      areArraysEqual(peer.nodeId, ownNodeId)
-                    );
-                  })
-                  // TODO: Randomize
+                shuffleArray(
+                  Array.from(this.peers.values())
+                    .filter((peer) => {
+                      return !(
+                        areArraysEqual(peer.nodeId, requesterNodeId) ||
+                        areArraysEqual(peer.nodeId, ownNodeId)
+                      );
+                    }),
+                )
                   .slice(0, numberOfPeersBinary[0]),
               ),
             );
@@ -628,14 +629,15 @@ export class Network extends EventEmitter {
     if (this.numberOfActiveConnections >= this.options.activeConnectionsMinNumber) {
       return;
     }
-    // TODO: Randomize
-    const peersToConnectTo = Array.from(this.peers.values())
-      .filter((peer) => {
-        return !(
-          this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
-          this.wsManager.nodeIdToActiveConnection(peer.nodeId)
-        );
-      })
+    const peersToConnectTo = shuffleArray(
+      Array.from(this.peers.values())
+        .filter((peer) => {
+          return !(
+            this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
+            this.wsManager.nodeIdToActiveConnection(peer.nodeId)
+          );
+        }),
+    )
       .slice(0, this.options.activeConnectionsMaxNumber);
 
     for (const peer of peersToConnectTo) {
