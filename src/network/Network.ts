@@ -129,7 +129,9 @@ export class Network extends EventEmitter {
   // In seconds
   private static readonly GOSSIP_CACHE_TIMEOUT = 60;
   // In seconds
-  private static readonly CONNECTION_MAINTENANCE_INTERVAL = 30;
+  private static readonly CONTACTS_MAINTENANCE_INTERVAL = 30;
+  // In seconds
+  private static readonly CONNECTIONS_MAINTENANCE_INTERVAL = 30;
   // In bytes
   private static readonly UDP_MESSAGE_SIZE_LIMIT = 8192;
   // In bytes, excluding 4-bytes header with message length
@@ -137,19 +139,24 @@ export class Network extends EventEmitter {
   // In bytes
   private static readonly WS_MESSAGE_SIZE_LIMIT = Network.TCP_MESSAGE_SIZE_LIMIT;
 
+  private readonly nodeId: Uint8Array;
   private readonly udpManager: UdpManager;
   private readonly tcpManager: TcpManager;
   private readonly wsManager: WsManager;
   private readonly gossipManager: GossipManager;
   private readonly browserNode: boolean;
   private readonly logger: ILogger;
+  private readonly routingTableMinSize: number;
+  private readonly routingTableMaxSize: number;
   private readonly activeConnectionsMinNumber: number;
   private readonly activeConnectionsMaxNumber: number;
 
   private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
   private numberOfActiveConnections = 0;
-  private readonly connectionMaintenanceInterval: ReturnType<typeof setInterval>;
+  private readonly contactsMaintenanceInterval: ReturnType<typeof setInterval>;
+  private readonly connectionsMaintenanceInterval: ReturnType<typeof setInterval>;
 
+  private maintainingNumberOfContactsInProgress = false;
   private maintainingNumberOfConnectionsInProgress = false;
   private destroying = false;
 
@@ -172,12 +179,15 @@ export class Network extends EventEmitter {
 
     const ownNodeId = ownNodeContactInfo.nodeId;
 
+    this.nodeId = ownNodeId;
     this.udpManager = udpManager;
     this.tcpManager = tcpManager;
     this.wsManager = wsManager;
     this.gossipManager = gossipManager;
     this.browserNode = browserNode;
     this.logger = logger;
+    this.routingTableMinSize = routingTableMinSize;
+    this.routingTableMaxSize = routingTableMaxSize;
     this.activeConnectionsMinNumber = activeConnectionsMinNumber;
     this.activeConnectionsMaxNumber = activeConnectionsMaxNumber;
 
@@ -259,14 +269,24 @@ export class Network extends EventEmitter {
       this.addPeer(bootstrapNode);
     }
 
-    this.connectionMaintenanceInterval = setInterval(
+    this.contactsMaintenanceInterval = setInterval(
+      () => {
+        if (this.destroying) {
+          return;
+        }
+        this.maintainNumberOfContacts();
+      },
+      Network.CONTACTS_MAINTENANCE_INTERVAL * 1000,
+    );
+
+    this.connectionsMaintenanceInterval = setInterval(
       () => {
         if (this.destroying) {
           return;
         }
         this.maintainNumberOfConnections();
       },
-      Network.CONNECTION_MAINTENANCE_INTERVAL * 1000,
+      Network.CONNECTIONS_MAINTENANCE_INTERVAL * 1000,
     );
   }
 
@@ -394,7 +414,8 @@ export class Network extends EventEmitter {
     }
     this.destroying = true;
 
-    clearInterval(this.connectionMaintenanceInterval);
+    clearInterval(this.connectionsMaintenanceInterval);
+    clearInterval(this.contactsMaintenanceInterval);
     await Promise.all([
       this.udpManager.destroy(),
       this.tcpManager.destroy(),
@@ -530,6 +551,43 @@ export class Network extends EventEmitter {
     }
   }
 
+  private maintainNumberOfContacts(): void {
+    if (this.maintainingNumberOfContactsInProgress) {
+      return;
+    }
+
+    this.maintainingNumberOfContactsInProgress = true;
+    this.maintainNumberOfContactsImplementation()
+      .catch((error: any) => {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Error on maintain contacts: ${errorText}`);
+      })
+      .finally(() => {
+        this.maintainingNumberOfContactsInProgress = false;
+      });
+  }
+
+  private async maintainNumberOfContactsImplementation(): Promise<void> {
+    if (this.routingTableMinSize >= this.peers.size) {
+      return;
+    }
+    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(['any']);
+    const peersBinary = await protocolManager.sendMessage(
+      connection,
+      'get-peers',
+      Uint8Array.of(this.routingTableMaxSize - this.peers.size),
+    );
+
+    const ownNodeId = this.nodeId;
+
+    for (const peer of parsePeersBinary(peersBinary)) {
+      if (!areArraysEqual(peer.nodeId, ownNodeId)) {
+        this.addPeer(peer);
+      }
+    }
+    this.maintainNumberOfConnections();
+  }
+
   private maintainNumberOfConnections(): void {
     if (this.maintainingNumberOfConnectionsInProgress) {
       return;
@@ -539,7 +597,7 @@ export class Network extends EventEmitter {
     this.maintainNumberOfConnectionsImplementation()
       .catch((error: any) => {
         const errorText = (error.stack || error) as string;
-        this.logger.debug(`Error on maintain connection: ${errorText}`);
+        this.logger.debug(`Error on maintain connections: ${errorText}`);
       })
       .finally(() => {
         this.maintainingNumberOfConnectionsInProgress = false;
