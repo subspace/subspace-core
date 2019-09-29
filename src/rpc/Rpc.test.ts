@@ -49,6 +49,8 @@ let rpc2: Rpc;
 let tx: Tx;
 let wallet: Wallet;
 
+let blsSignatures: BlsSignatures;
+
 const block = Block.createGenesisBlock(
   crypto.randomBytes(32),
   crypto.randomBytes(32),
@@ -66,8 +68,11 @@ const state = State.create(
 );
 const encoding = crypto.randomBytes(4096);
 
+beforeAll(async () => {
+  blsSignatures = await BlsSignatures.init();
+});
+
 beforeEach(async () => {
-  const blsSignatures = await BlsSignatures.init();
   const storage = new Storage('memory', 'tests', 'rpc');
   wallet = new Wallet(blsSignatures, storage);
   const account = await wallet.createAccount();
