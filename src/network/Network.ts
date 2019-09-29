@@ -45,6 +45,20 @@ export interface INodeContactInfoWs extends INodeContactInfo {
   wsPort: number;
 }
 
+export interface INetworkOptions {
+  activeConnectionsMaxNumber?: number;
+  activeConnectionsMinNumber?: number;
+  routingTableMaxSize?: number;
+  routingTableMinSize?: number;
+}
+
+export interface INetworkOptionsDefined {
+  activeConnectionsMaxNumber: number;
+  activeConnectionsMinNumber: number;
+  routingTableMaxSize: number;
+  routingTableMinSize: number;
+}
+
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter {
@@ -53,10 +67,7 @@ export class Network extends EventEmitter {
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     parentLogger: ILogger,
-    routingTableMinSize: number = 10,
-    routingTableMaxSize: number = 100,
-    activeConnectionsMinNumber: number = 5,
-    activeConnectionsMaxNumber: number = 20,
+    options?: INetworkOptions,
   ): Promise<Network> {
     const identificationPayload = composeIdentificationPayload(ownNodeContactInfo);
     const nodeInfoPayload = composeNodeInfoPayload(ownNodeContactInfo);
@@ -115,10 +126,7 @@ export class Network extends EventEmitter {
       bootstrapNodes,
       browserNode,
       logger,
-      routingTableMinSize,
-      routingTableMaxSize,
-      activeConnectionsMinNumber,
-      activeConnectionsMaxNumber,
+      options,
     );
   }
 
@@ -146,10 +154,7 @@ export class Network extends EventEmitter {
   private readonly gossipManager: GossipManager;
   private readonly browserNode: boolean;
   private readonly logger: ILogger;
-  private readonly routingTableMinSize: number;
-  private readonly routingTableMaxSize: number;
-  private readonly activeConnectionsMinNumber: number;
-  private readonly activeConnectionsMaxNumber: number;
+  private readonly options: INetworkOptionsDefined;
 
   private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
   private numberOfActiveConnections = 0;
@@ -169,13 +174,17 @@ export class Network extends EventEmitter {
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     logger: ILogger,
-    routingTableMinSize: number = 10,
-    routingTableMaxSize: number = 100,
-    activeConnectionsMinNumber: number = 5,
-    activeConnectionsMaxNumber: number = 20,
+    options?: INetworkOptions,
   ) {
     super();
     this.setMaxListeners(Infinity);
+
+    const defaultOptions: INetworkOptionsDefined = {
+      activeConnectionsMaxNumber: 20,
+      activeConnectionsMinNumber: 5,
+      routingTableMaxSize: 100,
+      routingTableMinSize: 10,
+    };
 
     const ownNodeId = ownNodeContactInfo.nodeId;
 
@@ -186,10 +195,11 @@ export class Network extends EventEmitter {
     this.gossipManager = gossipManager;
     this.browserNode = browserNode;
     this.logger = logger;
-    this.routingTableMinSize = routingTableMinSize;
-    this.routingTableMaxSize = routingTableMaxSize;
-    this.activeConnectionsMinNumber = activeConnectionsMinNumber;
-    this.activeConnectionsMaxNumber = activeConnectionsMaxNumber;
+    this.options = Object.assign(
+      {},
+      defaultOptions,
+      options || {},
+    );
 
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {
       manager.on('command', this.emit.bind(this));
@@ -205,13 +215,13 @@ export class Network extends EventEmitter {
           logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           ++this.numberOfActiveConnections;
           this.emit('peer-connected', nodeContactInfo);
-          if (this.peers.size < routingTableMinSize) {
+          if (this.peers.size < this.options.routingTableMinSize) {
             const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId) as Exclude<ReturnType<typeof manager.nodeIdToActiveConnection>, null>;
             manager.sendMessage(
               // @ts-ignore We have type corresponding to manager, but it is hard to explain to TypeScript
               connection,
               'get-peers',
-              Uint8Array.of(routingTableMaxSize - this.peers.size),
+              Uint8Array.of(this.options.routingTableMaxSize - this.peers.size),
             )
               .then((peersBinary: Uint8Array) => {
                 const requestedNodeId = nodeContactInfo.nodeId;
@@ -568,14 +578,14 @@ export class Network extends EventEmitter {
   }
 
   private async maintainNumberOfContactsImplementation(): Promise<void> {
-    if (this.routingTableMinSize >= this.peers.size) {
+    if (this.options.routingTableMinSize >= this.peers.size) {
       return;
     }
     const [protocolManager, connection] = await this.getProtocolManagerAndConnection(['any']);
     const peersBinary = await protocolManager.sendMessage(
       connection,
       'get-peers',
-      Uint8Array.of(this.routingTableMaxSize - this.peers.size),
+      Uint8Array.of(this.options.routingTableMaxSize - this.peers.size),
     );
 
     const ownNodeId = this.nodeId;
@@ -605,7 +615,7 @@ export class Network extends EventEmitter {
   }
 
   private async maintainNumberOfConnectionsImplementation(): Promise<void> {
-    if (this.numberOfActiveConnections >= this.activeConnectionsMinNumber) {
+    if (this.numberOfActiveConnections >= this.options.activeConnectionsMinNumber) {
       return;
     }
     // TODO: Randomize
@@ -616,7 +626,7 @@ export class Network extends EventEmitter {
           this.wsManager.nodeIdToActiveConnection(peer.nodeId)
         );
       })
-      .slice(0, this.activeConnectionsMaxNumber);
+      .slice(0, this.options.activeConnectionsMaxNumber);
 
     for (const peer of peersToConnectTo) {
       if (this.destroying) {
