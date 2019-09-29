@@ -151,6 +151,8 @@ export class Network extends EventEmitter {
   // In bytes
   private static readonly WS_MESSAGE_SIZE_LIMIT = Network.TCP_MESSAGE_SIZE_LIMIT;
 
+  public readonly options: INetworkOptionsDefined;
+
   private readonly nodeId: Uint8Array;
   private readonly udpManager: UdpManager;
   private readonly tcpManager: TcpManager;
@@ -158,7 +160,6 @@ export class Network extends EventEmitter {
   private readonly gossipManager: GossipManager;
   private readonly browserNode: boolean;
   private readonly logger: ILogger;
-  private readonly options: INetworkOptionsDefined;
 
   private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
   private numberOfActiveConnections = 0;
