@@ -48,13 +48,21 @@ export interface INodeContactInfoWs extends INodeContactInfo {
 export interface INetworkOptions {
   activeConnectionsMaxNumber?: number;
   activeConnectionsMinNumber?: number;
+  // In seconds
+  connectionsMaintenanceInterval?: number;
+  // In seconds
+  contactsMaintenanceInterval?: number;
   routingTableMaxSize?: number;
   routingTableMinSize?: number;
 }
 
-export interface INetworkOptionsDefined {
+export interface INetworkOptionsDefined extends INetworkOptions {
   activeConnectionsMaxNumber: number;
   activeConnectionsMinNumber: number;
+  // In seconds
+  connectionsMaintenanceInterval: number;
+  // In seconds
+  contactsMaintenanceInterval: number;
   routingTableMaxSize: number;
   routingTableMinSize: number;
 }
@@ -136,10 +144,6 @@ export class Network extends EventEmitter {
   private static readonly DEFAULT_CONNECTION_EXPIRATION = 60;
   // In seconds
   private static readonly GOSSIP_CACHE_TIMEOUT = 60;
-  // In seconds
-  private static readonly CONTACTS_MAINTENANCE_INTERVAL = 30;
-  // In seconds
-  private static readonly CONNECTIONS_MAINTENANCE_INTERVAL = 30;
   // In bytes
   private static readonly UDP_MESSAGE_SIZE_LIMIT = 8192;
   // In bytes, excluding 4-bytes header with message length
@@ -182,6 +186,8 @@ export class Network extends EventEmitter {
     const defaultOptions: INetworkOptionsDefined = {
       activeConnectionsMaxNumber: 20,
       activeConnectionsMinNumber: 5,
+      connectionsMaintenanceInterval: 30,
+      contactsMaintenanceInterval: 30,
       routingTableMaxSize: 100,
       routingTableMinSize: 10,
     };
@@ -286,7 +292,7 @@ export class Network extends EventEmitter {
         }
         this.maintainNumberOfContacts();
       },
-      Network.CONTACTS_MAINTENANCE_INTERVAL * 1000,
+      this.options.contactsMaintenanceInterval * 1000,
     );
 
     this.connectionsMaintenanceInterval = setInterval(
@@ -296,7 +302,7 @@ export class Network extends EventEmitter {
         }
         this.maintainNumberOfConnections();
       },
-      Network.CONNECTIONS_MAINTENANCE_INTERVAL * 1000,
+      this.options.connectionsMaintenanceInterval * 1000,
     );
   }
 
