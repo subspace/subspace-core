@@ -206,10 +206,10 @@ describe('Identification', () => {
         expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
-      networkClient4.once('peer-connected', () => {
-        setTimeout(() => {
+      networkClient1.on('peer-connected', (nodeContactInfo) => {
+        if (nodeContactInfo.nodeType === 'client') {
           networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
-        });
+        }
       });
     });
   });

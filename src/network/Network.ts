@@ -256,6 +256,7 @@ export class Network extends EventEmitter {
     for (const bootstrapNode of bootstrapNodes) {
       // noinspection JSIgnoredPromiseFromCall
       this.establishConnectionToNode(bootstrapNode);
+      this.addPeer(bootstrapNode);
     }
 
     this.connectionMaintenanceInterval = setInterval(
