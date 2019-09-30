@@ -115,16 +115,29 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     this.connectionExpiration = connectionExpiration;
 
     if (!browserNode && ownNodeContactInfo.tcp4Port) {
+      let ready = false;
       this.tcp4Server = net.createServer()
         .on('connection', (socket: net.Socket) => {
+          socket.on('error', (error) => {
+            const errorText = (error.stack || error) as string;
+            this.logger.info(`Error on incoming TCP connection: ${errorText}`);
+          });
           this.registerTcpConnection(socket);
         })
         .on('error', (error: Error) => {
-          if (errorCallback) {
+          if (errorCallback && !ready) {
             errorCallback(error);
+          } else {
+            const errorText = (error.stack || error) as string;
+            this.logger.info(`Error on TCP server: ${errorText}`);
           }
         })
-        .listen(ownNodeContactInfo.tcp4Port, ownNodeContactInfo.address, readyCallback);
+        .listen(ownNodeContactInfo.tcp4Port, ownNodeContactInfo.address, () => {
+          ready = true;
+          if (readyCallback) {
+            readyCallback();
+          }
+        });
     } else if (readyCallback) {
       setTimeout(readyCallback);
     }
@@ -201,7 +214,12 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
               nodeContactInfo,
             );
             this.incompleteConnections.delete(socket);
-            socket.off('error', onError);
+            socket
+              .off('error', onError)
+              .on('error', (error) => {
+                const errorText = (error.stack || error) as string;
+                this.logger.info(`Error on outgoing TCP connection to node ${bin2Hex(nodeId)}: ${errorText}`);
+              });
             resolve(socket);
           }
         },
