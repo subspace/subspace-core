@@ -206,20 +206,20 @@ describe('Identification', () => {
         expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
-      networkClient4.once('peer-connected', () => {
-        setTimeout(() => {
+      networkClient1.on('peer-connected', (nodeContactInfo) => {
+        if (nodeContactInfo.nodeType === 'client') {
           networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
-        });
+        }
       });
     });
   });
 });
 
 describe('Peers', () => {
-  test('Get peers from network instance', () => {
+  test('Get contacts from network instance', () => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const peer1Peers = networkClient1.getPeers().map(serializeNodeContactInfo);
+        const peer1Peers = networkClient1.getContacts().map(serializeNodeContactInfo);
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer2));
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer3));
         // WebSocket peer will take time to show up, hence setTimeout, but it will be here even though not in bootstrap
@@ -227,13 +227,66 @@ describe('Peers', () => {
         expect(peer1Peers).toContainEqual(serializeNodeContactInfo(peer4));
 
         // WebSocket peer should get to know about other peers from gateway too
-        const peer4Peers = networkClient4.getPeers().map(serializeNodeContactInfo);
+        const peer4Peers = networkClient4.getContacts().map(serializeNodeContactInfo);
         expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer2));
         expect(peer4Peers).toContainEqual(serializeNodeContactInfo(peer3));
         // And establish some connections too
         expect(networkClient4.getNumberOfActiveConnections()).toBeGreaterThan(1);
         resolve();
       }, 100);
+    });
+  });
+
+  test('Maintain contacts', async () => {
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        const contactsMaintenanceInterval = 0.001;
+        const peerServer: IPeerContactInfo = {
+          address: 'localhost',
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+          wsPort: allocatePort(),
+        };
+        const peerClient1: IPeerContactInfo = {
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+        };
+        const peerClient2: IPeerContactInfo = {
+          nodeId: randomBytes(NODE_ID_LENGTH),
+          nodeType: 'client',
+        };
+        const networkServer = await Network.init(peerServer, [], false, logger);
+        const networkClient1 = await Network.init(
+          peerClient1,
+          [peerServer],
+          true,
+          logger,
+          {contactsMaintenanceInterval},
+        );
+        networkServer.once('peer-connected', async () => {
+          const networkClient2 = await Network.init(
+            peerClient2,
+            [peerServer],
+            true,
+            logger,
+            {contactsMaintenanceInterval},
+          );
+
+          networkServer.once('peer-connected', async () => {
+            setTimeout(async () => {
+              expect(
+                networkClient1.getContacts().map(serializeNodeContactInfo),
+              ).toContainEqual(
+                serializeNodeContactInfo(peerClient2),
+              );
+              await networkServer.destroy();
+              await networkClient1.destroy();
+              await networkClient2.destroy();
+              resolve();
+            }, contactsMaintenanceInterval * 10 * 1000);
+          });
+        });
+      });
     });
   });
 

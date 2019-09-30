@@ -3,6 +3,7 @@
 import { ArrayMap } from "array-map-set";
 import { EventEmitter } from "events";
 import {BlsSignatures} from "../crypto/BlsSignatures";
+import * as crypto from '../crypto/crypto';
 import { Block } from "../ledger/block";
 import { Content } from "../ledger/content";
 import { Proof } from "../ledger/proof";
@@ -74,6 +75,12 @@ export class Rpc extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Received an invalid tx via gossip');
         }
+
+        // is date no more than +/- 10 minutes from now
+        if (!crypto.isDateWithinRange(tx.value.timestamp, 600000)) {
+          throw new Error('Received an invalid tx via gossip, date is out of range');
+        }
+
         this.logger.verbose('tx-gossip-received', {txId: bin2Hex(tx.key)});
         this.emit('tx-gossip', tx);
       });
@@ -89,6 +96,13 @@ export class Rpc extends EventEmitter {
             // Add to blacklisted nodes
           this.logger.debug('Received an invalid block via gossip');
         }
+
+        // is date no more than +/- 10 minutes from now
+        if (!crypto.isDateWithinRange(block.value.coinbase.value.timestamp, 600000)) {
+          throw new Error('Received an invalid block via gossip, date for coinbase tx is out of range');
+        }
+
+
         this.logger.verbose('block-gossip-received', {blockId: bin2Hex(block.key)});
         this.emit('block-gossip', block, encoding);
       });

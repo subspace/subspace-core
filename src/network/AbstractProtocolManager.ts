@@ -213,9 +213,13 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
    */
   public getActiveConnectionsOfNodeTypes(nodeTypes: INodeTypesKeys[]): Connection[] {
     const nodeTypesSet = new Set(nodeTypes);
+    const allowAny = nodeTypesSet.has('any');
     const connections: Connection[] = [];
     this.nodeIdToAddressMap.forEach((address: Address, nodeId: Uint8Array) => {
-      if (!nodeTypesSet.has(address.nodeType)) {
+      if (!(
+        allowAny ||
+        nodeTypesSet.has(address.nodeType)
+      )) {
         return;
       }
       const connection = this.nodeIdToConnectionMap.get(nodeId);

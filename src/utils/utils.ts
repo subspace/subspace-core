@@ -1,13 +1,13 @@
 // ToDo
-  // port to Rust/WASM?
-  // write tests
+// port to Rust/WASM?
+// write tests
 
 // tslint:disable: object-literal-sort-keys
 
 import * as fs from 'fs';
 import * as path from 'path';
 import {random_int} from "random-bytes-numbers";
-import { inspect } from 'util';
+import {inspect} from 'util';
 import * as winston from 'winston';
 
 export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 1 {
@@ -28,8 +28,8 @@ export function compareUint8Array(aKey: Uint8Array, bKey: Uint8Array): -1 | 0 | 
  */
 export function xorUint8Array(a: Uint8Array, b: Uint8Array): Uint8Array {
   return a.map((byte, index) => {
-      // tslint:disable-next-line:no-bitwise
-      return byte ^ b[index];
+    // tslint:disable-next-line:no-bitwise
+    return byte ^ b[index];
   });
 }
 
@@ -236,4 +236,31 @@ export function randomElement<E>(elements: E[]): E {
   }
 
   return elements[random_int(0, elements.length - 1)];
+}
+
+/**
+ * In-place array shuffle (random sort) using Fisher-Yates (aka Knuth) Shuffle algorithm
+ * https://stackoverflow.com/a/2450976
+ *
+ * @param array
+ *
+ * @return The same array
+ */
+export function shuffleArray<A>(array: A[]): A[] {
+  let currentIndex = array.length;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    const randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    const temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
 }

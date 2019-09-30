@@ -180,9 +180,9 @@ export class Tx {
       throw new Error('Invalid tx, incorrect amount length');
     }
 
-    // is date within +/- 10 minutes of now
-    if (!crypto.isDateWithinRange(this._value.timestamp, 600000)) {
-      throw new Error('Invalid tx, date is out of range');
+    // is date no more than 10 minutes in the future
+    if (this.value.timestamp > Date.now() + 600000) {
+      throw new Error('Invalid tx, data is more than 10 minutes in the future');
     }
 
     let sender: Uint8Array;

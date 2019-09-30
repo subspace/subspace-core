@@ -1,6 +1,6 @@
 import {ArrayMap} from "array-map-set";
 import {EventEmitter} from "events";
-import {areArraysEqual, bin2Hex, ILogger, randomElement} from "../utils/utils";
+import {areArraysEqual, bin2Hex, ILogger, randomElement, shuffleArray} from "../utils/utils";
 import {AbstractProtocolManager} from "./AbstractProtocolManager";
 import {
   ICommandsKeysForSending,
@@ -45,6 +45,28 @@ export interface INodeContactInfoWs extends INodeContactInfo {
   wsPort: number;
 }
 
+export interface INetworkOptions {
+  activeConnectionsMaxNumber?: number;
+  activeConnectionsMinNumber?: number;
+  // In seconds
+  connectionsMaintenanceInterval?: number;
+  // In seconds
+  contactsMaintenanceInterval?: number;
+  routingTableMaxSize?: number;
+  routingTableMinSize?: number;
+}
+
+export interface INetworkOptionsDefined extends INetworkOptions {
+  activeConnectionsMaxNumber: number;
+  activeConnectionsMinNumber: number;
+  // In seconds
+  connectionsMaintenanceInterval: number;
+  // In seconds
+  contactsMaintenanceInterval: number;
+  routingTableMaxSize: number;
+  routingTableMinSize: number;
+}
+
 const emptyPayload = new Uint8Array(0);
 
 export class Network extends EventEmitter {
@@ -53,10 +75,7 @@ export class Network extends EventEmitter {
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     parentLogger: ILogger,
-    routingTableMinSize: number = 10,
-    routingTableMaxSize: number = 100,
-    activeConnectionsMinNumber: number = 5,
-    activeConnectionsMaxNumber: number = 20,
+    options?: INetworkOptions,
   ): Promise<Network> {
     const identificationPayload = composeIdentificationPayload(ownNodeContactInfo);
     const nodeInfoPayload = composeNodeInfoPayload(ownNodeContactInfo);
@@ -115,10 +134,7 @@ export class Network extends EventEmitter {
       bootstrapNodes,
       browserNode,
       logger,
-      routingTableMinSize,
-      routingTableMaxSize,
-      activeConnectionsMinNumber,
-      activeConnectionsMaxNumber,
+      options,
     );
   }
 
@@ -128,8 +144,6 @@ export class Network extends EventEmitter {
   private static readonly DEFAULT_CONNECTION_EXPIRATION = 60;
   // In seconds
   private static readonly GOSSIP_CACHE_TIMEOUT = 60;
-  // In seconds
-  private static readonly CONNECTION_MAINTENANCE_INTERVAL = 30;
   // In bytes
   private static readonly UDP_MESSAGE_SIZE_LIMIT = 8192;
   // In bytes, excluding 4-bytes header with message length
@@ -137,19 +151,22 @@ export class Network extends EventEmitter {
   // In bytes
   private static readonly WS_MESSAGE_SIZE_LIMIT = Network.TCP_MESSAGE_SIZE_LIMIT;
 
+  public readonly options: INetworkOptionsDefined;
+
+  private readonly nodeId: Uint8Array;
   private readonly udpManager: UdpManager;
   private readonly tcpManager: TcpManager;
   private readonly wsManager: WsManager;
   private readonly gossipManager: GossipManager;
   private readonly browserNode: boolean;
   private readonly logger: ILogger;
-  private readonly activeConnectionsMinNumber: number;
-  private readonly activeConnectionsMaxNumber: number;
 
   private readonly peers = ArrayMap<Uint8Array, INodeContactInfo>();
   private numberOfActiveConnections = 0;
-  private readonly connectionMaintenanceInterval: ReturnType<typeof setInterval>;
+  private readonly contactsMaintenanceInterval: ReturnType<typeof setInterval>;
+  private readonly connectionsMaintenanceInterval: ReturnType<typeof setInterval>;
 
+  private maintainingNumberOfContactsInProgress = false;
   private maintainingNumberOfConnectionsInProgress = false;
   private destroying = false;
 
@@ -162,24 +179,34 @@ export class Network extends EventEmitter {
     bootstrapNodes: INodeContactInfo[],
     browserNode: boolean,
     logger: ILogger,
-    routingTableMinSize: number = 10,
-    routingTableMaxSize: number = 100,
-    activeConnectionsMinNumber: number = 5,
-    activeConnectionsMaxNumber: number = 20,
+    options?: INetworkOptions,
   ) {
     super();
     this.setMaxListeners(Infinity);
 
+    const defaultOptions: INetworkOptionsDefined = {
+      activeConnectionsMaxNumber: 20,
+      activeConnectionsMinNumber: 5,
+      connectionsMaintenanceInterval: 30,
+      contactsMaintenanceInterval: 30,
+      routingTableMaxSize: 100,
+      routingTableMinSize: 10,
+    };
+
     const ownNodeId = ownNodeContactInfo.nodeId;
 
+    this.nodeId = ownNodeId;
     this.udpManager = udpManager;
     this.tcpManager = tcpManager;
     this.wsManager = wsManager;
     this.gossipManager = gossipManager;
     this.browserNode = browserNode;
     this.logger = logger;
-    this.activeConnectionsMinNumber = activeConnectionsMinNumber;
-    this.activeConnectionsMaxNumber = activeConnectionsMaxNumber;
+    this.options = Object.assign(
+      {},
+      defaultOptions,
+      options || {},
+    );
 
     for (const manager of [udpManager, tcpManager, wsManager, gossipManager]) {
       manager.on('command', this.emit.bind(this));
@@ -195,13 +222,17 @@ export class Network extends EventEmitter {
           logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           ++this.numberOfActiveConnections;
           this.emit('peer-connected', nodeContactInfo);
-          if (this.peers.size < routingTableMinSize) {
-            const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId) as Exclude<ReturnType<typeof manager.nodeIdToActiveConnection>, null>;
+          if (this.peers.size < this.options.routingTableMinSize) {
+            const connection = manager.nodeIdToActiveConnection(nodeContactInfo.nodeId);
+            // Connection can be closed in case of race condition
+            if (!connection) {
+              return;
+            }
             manager.sendMessage(
               // @ts-ignore We have type corresponding to manager, but it is hard to explain to TypeScript
               connection,
               'get-peers',
-              Uint8Array.of(routingTableMaxSize - this.peers.size),
+              Uint8Array.of(this.options.routingTableMaxSize - this.peers.size),
             )
               .then((peersBinary: Uint8Array) => {
                 const requestedNodeId = nodeContactInfo.nodeId;
@@ -237,14 +268,15 @@ export class Network extends EventEmitter {
             const requesterNodeId = contactIdentification.nodeId;
             responseCallback(
               composePeersBinary(
-                Array.from(this.peers.values())
-                  .filter((peer) => {
-                    return !(
-                      areArraysEqual(peer.nodeId, requesterNodeId) ||
-                      areArraysEqual(peer.nodeId, ownNodeId)
-                    );
-                  })
-                  // TODO: Randomize
+                shuffleArray(
+                  Array.from(this.peers.values())
+                    .filter((peer) => {
+                      return !(
+                        areArraysEqual(peer.nodeId, requesterNodeId) ||
+                        areArraysEqual(peer.nodeId, ownNodeId)
+                      );
+                    }),
+                )
                   .slice(0, numberOfPeersBinary[0]),
               ),
             );
@@ -256,24 +288,48 @@ export class Network extends EventEmitter {
     for (const bootstrapNode of bootstrapNodes) {
       // noinspection JSIgnoredPromiseFromCall
       this.establishConnectionToNode(bootstrapNode);
+      this.addPeer(bootstrapNode);
     }
 
-    this.connectionMaintenanceInterval = setInterval(
+    this.contactsMaintenanceInterval = setInterval(
+      () => {
+        if (this.destroying) {
+          return;
+        }
+        this.maintainNumberOfContacts();
+      },
+      this.options.contactsMaintenanceInterval * 1000,
+    );
+
+    this.connectionsMaintenanceInterval = setInterval(
       () => {
         if (this.destroying) {
           return;
         }
         this.maintainNumberOfConnections();
       },
-      Network.CONNECTION_MAINTENANCE_INTERVAL * 1000,
+      this.options.connectionsMaintenanceInterval * 1000,
     );
   }
 
   /**
-   * Returns an array of peers known in network
+   * @return An array of known nodes on the network
+   */
+  public getContacts(): INodeContactInfo[] {
+    return Array.from(this.peers.values());
+  }
+
+  /**
+   * @return An array of peers to which an active connection exists
    */
   public getPeers(): INodeContactInfo[] {
-    return Array.from(this.peers.values());
+    return Array.from(this.peers.values())
+      .filter((peer) => {
+        return (
+          this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
+          this.wsManager.nodeIdToActiveConnection(peer.nodeId)
+        );
+      });
   }
 
   public getNumberOfActiveConnections(): number {
@@ -380,7 +436,8 @@ export class Network extends EventEmitter {
     }
     this.destroying = true;
 
-    clearInterval(this.connectionMaintenanceInterval);
+    clearInterval(this.connectionsMaintenanceInterval);
+    clearInterval(this.contactsMaintenanceInterval);
     await Promise.all([
       this.udpManager.destroy(),
       this.tcpManager.destroy(),
@@ -516,6 +573,43 @@ export class Network extends EventEmitter {
     }
   }
 
+  private maintainNumberOfContacts(): void {
+    if (this.maintainingNumberOfContactsInProgress) {
+      return;
+    }
+
+    this.maintainingNumberOfContactsInProgress = true;
+    this.maintainNumberOfContactsImplementation()
+      .catch((error: any) => {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Error on maintain contacts: ${errorText}`);
+      })
+      .finally(() => {
+        this.maintainingNumberOfContactsInProgress = false;
+      });
+  }
+
+  private async maintainNumberOfContactsImplementation(): Promise<void> {
+    if (this.peers.size >= this.options.routingTableMinSize) {
+      return;
+    }
+    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(['any']);
+    const peersBinary = await protocolManager.sendMessage(
+      connection,
+      'get-peers',
+      Uint8Array.of(this.options.routingTableMaxSize - this.peers.size),
+    );
+
+    const ownNodeId = this.nodeId;
+
+    for (const peer of parsePeersBinary(peersBinary)) {
+      if (!areArraysEqual(peer.nodeId, ownNodeId)) {
+        this.addPeer(peer);
+      }
+    }
+    this.maintainNumberOfConnections();
+  }
+
   private maintainNumberOfConnections(): void {
     if (this.maintainingNumberOfConnectionsInProgress) {
       return;
@@ -525,7 +619,7 @@ export class Network extends EventEmitter {
     this.maintainNumberOfConnectionsImplementation()
       .catch((error: any) => {
         const errorText = (error.stack || error) as string;
-        this.logger.debug(`Error on maintain connection: ${errorText}`);
+        this.logger.debug(`Error on maintain connections: ${errorText}`);
       })
       .finally(() => {
         this.maintainingNumberOfConnectionsInProgress = false;
@@ -533,18 +627,19 @@ export class Network extends EventEmitter {
   }
 
   private async maintainNumberOfConnectionsImplementation(): Promise<void> {
-    if (this.numberOfActiveConnections >= this.activeConnectionsMinNumber) {
+    if (this.numberOfActiveConnections >= this.options.activeConnectionsMinNumber) {
       return;
     }
-    // TODO: Randomize
-    const peersToConnectTo = Array.from(this.peers.values())
-      .filter((peer) => {
-        return !(
-          this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
-          this.wsManager.nodeIdToActiveConnection(peer.nodeId)
-        );
-      })
-      .slice(0, this.activeConnectionsMaxNumber);
+    const peersToConnectTo = shuffleArray(
+      Array.from(this.peers.values())
+        .filter((peer) => {
+          return !(
+            this.tcpManager.nodeIdToActiveConnection(peer.nodeId) ||
+            this.wsManager.nodeIdToActiveConnection(peer.nodeId)
+          );
+        }),
+    )
+      .slice(0, this.options.activeConnectionsMaxNumber);
 
     for (const peer of peersToConnectTo) {
       if (this.destroying) {
