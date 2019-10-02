@@ -102,7 +102,6 @@ export class Rpc extends EventEmitter {
           throw new Error('Received an invalid block via gossip, date for coinbase tx is out of range');
         }
 
-
         this.logger.verbose('block-gossip-received', {blockId: bin2Hex(block.key)});
         this.emit('block-gossip', block, encoding);
       });

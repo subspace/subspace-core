@@ -25,7 +25,6 @@ const test = async () => {
   const encoding = new Uint8Array(4096);
 
   // create the proof
-  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(CHUNK_LENGTH);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -33,7 +32,6 @@ const test = async () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,

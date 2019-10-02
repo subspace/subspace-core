@@ -15,7 +15,6 @@ export class State {
    */
   public static create(
     previousStateHash: Uint8Array,
-    // levelHash: Uint8Array,
     pieceRoot: Uint8Array,
     sourceIndexPieceHash: Uint8Array,
     parityIndexPieceHash: Uint8Array,
@@ -26,7 +25,6 @@ export class State {
 
     const stateValue: IStateValue = {
       previousStateHash,
-      // levelHash,
       pieceRoot,
       sourceIndexPieceHash,
       parityIndexPieceHash,
@@ -42,7 +40,6 @@ export class State {
   public static fromBytes(data: Uint8Array): State {
     const stateValue: IStateValue = {
       previousStateHash: data.subarray(0, 32),
-      // levelHash: data.subarray(32, 64),
       pieceRoot: data.subarray(32, 64),
       sourceIndexPieceHash: data.subarray(64, 96),
       parityIndexPieceHash: data.subarray(96, 128),
@@ -78,7 +75,6 @@ export class State {
   public toBytes(): Uint8Array {
     return Buffer.concat([
       this._value.previousStateHash,
-      // this._value.levelHash,
       this._value.pieceRoot,
       this._value.sourceIndexPieceHash,
       this._value.parityIndexPieceHash,
@@ -97,7 +93,6 @@ export class State {
       key: bin2Hex(this._key),
       value: {
         previousStateHash: bin2Hex(this._value.previousStateHash),
-        // levelHash: bin2Hex(this._value.levelHash),
         pieceRoot: bin2Hex(this._value.pieceRoot),
         sourceIndexPieceHash: bin2Hex(this._value.sourceIndexPieceHash),
         parityIndexPieceHash: bin2Hex(this._value.parityIndexPieceHash),

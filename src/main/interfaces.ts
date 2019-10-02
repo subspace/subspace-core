@@ -42,7 +42,7 @@ export interface ICompactBlockValue {
  * 252 bytes + merkle proof
  */
 export interface IProofValue {
-  previousLevelHash: Uint8Array; // 32 byte hash of all proofs in the previous level
+  // previousLevelHash: Uint8Array; // 32 byte hash of all proofs in the previous level
   previousProofHash: Uint8Array;  // 32 byte hash of the last unconfirmed proof seen
   solution: Uint8Array; // 8 byte encoded chunk closest to encoding target
   pieceHash: Uint8Array; // 32 byte original piece id of encoding that includes the solution

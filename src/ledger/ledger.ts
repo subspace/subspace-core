@@ -11,14 +11,23 @@ import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, PIECE_SIZE } from '../main/constants';
 import { IFullBlockValue, IPiece} from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { areArraysEqual, bin2Hex, ILogger, print, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, ILogger, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
 import { Content } from './content';
 import { Proof } from './proof';
-import { State } from './state';
+// import { State } from './state';
 import { Tx } from './tx';
+
+// Simple Solve Refactor
+  // remove the notion of level entirely
+  // encode state once the pending state buffer is reached (no more while loop)
+  // solve will only use the previous proof hash as input
+  // block validation will include checking that the parent is not an ancestor of the proof
+  // still must handle forks on the same chain (as they will eventually occur)
+  // then we can add in notion of piece proximity, chunk quality and audit scope
+  // then we can make the chunk quality and audit scope dynamic
 
 // ToDo
   // handle validation where one farmer computes the next level and adds pieces before another
@@ -60,7 +69,7 @@ export class Ledger extends EventEmitter {
   public isValidating: boolean;
 
   private previousStateHash = new Uint8Array(32);
-  public previousLevelHash = new Uint8Array(32);
+  // public previousLevelHash = new Uint8Array(32);
   public parentProofHash = new Uint8Array(32);
   public previousBlockHash = new Uint8Array(32);
 
@@ -68,29 +77,31 @@ export class Ledger extends EventEmitter {
   public chainCount = 0;
   public confirmedTxs = 0;
   public confirmedBlocks = 0;
-  public confirmedLevels = 0;
+  // public confirmedLevels = 0;
   public confirmedState = 0;
   public lastCoinbaseTxTime = 0;
-  public genesisLevelChainIndex = 0;
+  // public genesisLevelChainIndex = 0;
 
   public accounts: Account;
   public stateMap = ArrayMap<Uint8Array, Uint8Array>();
 
   // memory pool, may be cleared after each level is confirmed (if not serving)
-  public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
+  private compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
   private chains: Chain[] = [];
   private readonly blsSignatures: BlsSignatures;
   private storage: Storage;
-  public proofMap = ArrayMap<Uint8Array, Uint8Array>();
+  // private pendingProofSet: Set<Uint8Array> = ArraySet();
+  private proofMap = ArrayMap<Uint8Array, Uint8Array>();
   private contentMap = ArrayMap<Uint8Array, Uint8Array>();
+  // private pendingTxSet: Set<Uint8Array> = ArraySet();
   private txMap = ArrayMap<Uint8Array, Uint8Array>();
   private unconfirmedTxs: Set<Uint8Array> = ArraySet(); // has not been included in a block
-  private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
-  private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
+  // private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
+  // private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
   public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
   public blockIndex: Map<number, Uint8Array> = new Map();
   public stateIndex: Map<number, Uint8Array> = new Map();
-  private pendingState: Uint8Array = new Uint8Array();
+  private pendingState: Uint8Array = new Uint8Array(256 * 4096);
   public readonly logger: ILogger;
 
   constructor(
@@ -117,8 +128,8 @@ export class Ledger extends EventEmitter {
       this.chains.push(chain);
 
       // init each chain as unconfirmed
-      this.unconfirmedBlocksByChain.push(ArraySet());
-      this.unconfirmedChains.add(i);
+      // this.unconfirmedBlocksByChain.push(ArraySet());
+      // this.unconfirmedChains.add(i);
     }
   }
 
@@ -160,21 +171,21 @@ export class Ledger extends EventEmitter {
       }
       const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
       parentContentHash = compactParentBlock.contentHash;
-    } else if (areArraysEqual(proof.value.previousLevelHash, new Uint8Array(32)) && !areArraysEqual(proof.value.previousProofHash, new Uint8Array(32))) {
-      // corner case 1
-        // a new block on the genesis level, that is the first block of a chain, but not the first block in the ledger,
-        // previosProofHash should not be null
-        // previousLevelhash should be null
-      parentContentHash = new Uint8Array(32);
+    // } else if (areArraysEqual(proof.value.previousLevelHash, new Uint8Array(32)) && !areArraysEqual(proof.value.previousProofHash, new Uint8Array(32))) {
+    //   // corner case 1
+    //     // a new block on the genesis level, that is the first block of a chain, but not the first block in the ledger,
+    //     // previosProofHash should not be null
+    //     // previousLevelhash should be null
+    //   parentContentHash = new Uint8Array(32);
     } else {
       // corner case 2:
         // the first block in the ledger
         // previousProofHash should be null
         // previousLevelhash shsould be null
-      if (!areArraysEqual(proof.value.previousProofHash, new Uint8Array(32)) || !areArraysEqual(proof.value.previousProofHash, new Uint8Array(32))) {
-        this.logger.error('Only the genesis block may have a null parent proof hash and previousLevelHash');
-        throw new Error('Only the genesis block may have a null parent proof hash');
-      }
+      // if (!areArraysEqual(proof.value.previousProofHash, new Uint8Array(32))) {
+      //   this.logger.error('Only the genesis block may have a null parent proof hash');
+      //   throw new Error('Only the genesis block may have a null parent proof hash');
+      // }
       parentContentHash = new Uint8Array(32);
     }
 
@@ -199,13 +210,9 @@ export class Ledger extends EventEmitter {
 
     // verify the proof
 
-    // previous level hash is last seen level
-    if (!areArraysEqual(block.value.proof.value.previousLevelHash, this.previousLevelHash)) {
-      print(block.print());
-      this.logger.verbose('Last seen level', this.previousLevelHash);
-      this.logger.error('Invalid block proof, points to incorrect previous level');
-      throw new Error('Invalid block proof, points to incorrect previous level');
-    }
+    // proof has not been seen by another block that is my parent
+      // for each chain keep a set of seen proofs or a bloom filter
+      // ensure the proof has not been seen by this chain
 
     // previous proof hash is in proof map
     if (!this.proofMap.has(block.value.proof.value.previousProofHash)) {
@@ -214,6 +221,27 @@ export class Ledger extends EventEmitter {
         throw new Error('Invalid block proof, points to an unknown previous proof');
       }
     }
+
+    // piece is within the scope of the audit (closest piece for now)
+      // to fully verify I need every piece ID for the entire ledger
+        // 512 hashes per MB 1.5k -> 1/1000th of the ledger size
+        // 1 TB Ledger means 1 GB of hashes
+        // 1 PB Ledger means 1 TB of hashes
+      // What can a light client do?
+        // expect the piece to meet some minimum proximity
+        // simply revise the piece if they hear of a better one
+        // this has more to do with gosssiping piece than with consensus proper
+
+    // chunk proximity meets the threshold (maybe more as a rough guide) than absolute requirement
+      // first variable is the number of unique pieces for a given challenge (scope), assume 1 to start
+      // second variable is the average quality over the last period from the last state block
+      // then apply the same rules as piece quality
+        // if you hear a better one revise your piece
+
+    // solution is the best piece yet seen for this challenge (not for chain)
+      // different solutions can very well hash to different chains
+      // but they really represent entirely different ledger states
+      // we should differentiate based on the challenge
 
     // solution is part of encoded piece
     let hasSolution = false;
@@ -236,22 +264,22 @@ export class Ledger extends EventEmitter {
       throw new Error('Invalid block proof, referenced piece level is unknown');
     }
 
-    // piece proof is valid for a given state level, assuming their is more than one piece in the level
-    if (!areArraysEqual(block.value.proof.value.previousLevelHash, block.value.proof.value.previousProofHash)) {
-      const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
-      if (!pieceStateData) {
-        this.logger.verbose('state keys are: ', this.stateMap.keys());
-        this.logger.verbose('missing state is', block.value.proof.value.pieceStateHash);
-        this.logger.error('Invalid block proof, referenced state data is not in state map');
-        throw new Error('Invalid block proof, referenced state data is not in state map');
-      }
-      const state = State.fromBytes(pieceStateData);
-      const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
-      if (!validPieceProof) {
-        this.logger.error('Invalid block proof, piece proof is not a valid merkle path');
-        throw new Error('Invalid block proof, piece proof is not a valid merkle path');
-      }
-    }
+    // piece merkle proof is valid for a given state level, assuming their is more than one piece in the level
+    // if (!areArraysEqual(block.value.proof.value.previousLevelHash, block.value.proof.value.previousProofHash)) {
+    //   const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
+    //   if (!pieceStateData) {
+    //     this.logger.verbose('state keys are: ', this.stateMap.keys());
+    //     this.logger.verbose('missing state is', block.value.proof.value.pieceStateHash);
+    //     this.logger.error('Invalid block proof, referenced state data is not in state map');
+    //     throw new Error('Invalid block proof, referenced state data is not in state map');
+    //   }
+    //   const state = State.fromBytes(pieceStateData);
+    //   const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
+    //   if (!validPieceProof) {
+    //     this.logger.error('Invalid block proof, piece proof is not a valid merkle path');
+    //     throw new Error('Invalid block proof, piece proof is not a valid merkle path');
+    //   }
+    // }
 
     // encoding decodes pack to piece
     const proverAddress = crypto.hash(block.value.proof.value.publicKey);
@@ -263,16 +291,13 @@ export class Ledger extends EventEmitter {
     }
 
     // check that the parent content hash is on the correct chain
-    // if the block is a genesis block for a chain, the parent content hash will be null
-    // if the block is normal, then its parent block should be within the compact block map
-
     const correctChainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
 
     if (areArraysEqual(block.value.content.value.parentContentHash, new Uint8Array(32))) {
       // this should be the first block for a chain
-      if (!areArraysEqual(block.value.proof.value.previousLevelHash, new Uint8Array(32))) {
-        throw new Error('Invalid block, can only have a null parent content on the genesis level');
-      }
+      // if (!areArraysEqual(block.value.proof.value.previousLevelHash, new Uint8Array(32))) {
+      //   throw new Error('Invalid block, can only have a null parent content on the genesis level');
+      // }
 
       const chain = this.chains[correctChainIndex];
       if (chain.height !== 0) {
@@ -359,8 +384,30 @@ export class Ledger extends EventEmitter {
     this.blockIndex.set(this.blockIndex.size, block.key);
     this.chains[chainIndex].addBlock(block.key);
     this.compactBlockMap.set(block.key, block.toCompactBytes());
-    this.unconfirmedBlocksByChain[chainIndex].add(block.key);
+    // this.unconfirmedBlocksByChain[chainIndex].add(block.key);
     this.previousBlockHash = block.key;
+
+    const proofData = block.value.proof.toBytes();
+    const encodedProof = Buffer.concat([smallNum2Bin(proofData.length), proofData]);
+    const contentData = block.value.content.toBytes();
+    const encodedContentData = Buffer.concat([smallNum2Bin(contentData.length), contentData]);
+
+
+    // compile the level data and record the length of each record
+    levelRecords.push(smallNum2Bin(proofData.length));
+    levelRecords.push(proofData);
+    levelProofHashes.push(compactBlock.proofHash);
+    const content = Content.fromBytes(contentData);
+    levelRecords.push(smallNum2Bin(contentData.length));
+    levelRecords.push(contentData);
+
+    // add proofHash to proofSet
+
+    // add all txHashes to txSet
+
+    // add proof and content to pending State
+
+    // when to deduplicate txs and add to pending state?
 
     // add proof to proof map and update last proof seen
     this.proofMap.set(block.value.proof.key, block.value.proof.toBytes());
@@ -370,6 +417,7 @@ export class Ledger extends EventEmitter {
     this.contentMap.set(block.value.content.key, block.value.content.toBytes());
 
     const coinbase = block.value.coinbase;
+    // this.txSet.add(coinbase.key);
     this.txMap.set(coinbase.key, coinbase.toBytes());
     this.applyTx(coinbase);
     this.lastCoinbaseTxTime = block.value.coinbase.value.timestamp;
@@ -387,30 +435,36 @@ export class Ledger extends EventEmitter {
       this.applyTx(tx);
       this.unconfirmedTxs.delete(txId);
     }
-    this.logger.verbose('Completed applying new block, checking if pending level has been confirmed...');
+    this.logger.verbose('Completed applying new block');
 
-    // update level confirmation cache and check if level is confirmed
-    this.unconfirmedChains.delete(chainIndex);
-    this.logger.verbose(`${this.unconfirmedChains.size} unconfirmed chains remain`);
-    if (!this.unconfirmedChains.size) {
-      this.createLevel();
-      this.logger.verbose('New level has been confirmed');
-      this.logger.verbose('Chain lengths: ');
-      this.logger.verbose('---------------');
-      for (const chain of this.chains) {
-        this.logger.verbose(`Chain ${chain.index}: ${chain.size}`);
-      }
-
-      // reset each chain back to unconfirmed
-      for (let i = 0; i < this.chainCount; ++i) {
-        this.unconfirmedChains.add(i);
-      }
-
-      // encode new state as needed
-      while (this.pendingState.length >= (4096 * 127)) {
-        await this.createState();
-      }
+    if (this.pendingState.length >= (4096 * 127)) {
+      await this.createState();
     }
+
+    // this.logger.verbose('Completed applying new block, checking if pending level has been confirmed...');
+
+    // // update level confirmation cache and check if level is confirmed
+    // this.unconfirmedChains.delete(chainIndex);
+    // this.logger.verbose(`${this.unconfirmedChains.size} unconfirmed chains remain`);
+    // if (!this.unconfirmedChains.size) {
+    //   this.createLevel();
+    //   this.logger.verbose('New level has been confirmed');
+    //   this.logger.verbose('Chain lengths: ');
+    //   this.logger.verbose('---------------');
+    //   for (const chain of this.chains) {
+    //     this.logger.verbose(`Chain ${chain.index}: ${chain.size}`);
+    //   }
+
+    //   // reset each chain back to unconfirmed
+    //   for (let i = 0; i < this.chainCount; ++i) {
+    //     this.unconfirmedChains.add(i);
+    //   }
+
+    //   // encode new state as needed
+    //   while (this.pendingState.length >= (4096 * 127)) {
+    //     await this.createState();
+    //   }
+    // }
   }
 
   /**
@@ -530,13 +584,13 @@ export class Ledger extends EventEmitter {
   private async createState(): Promise<void> {
     return new Promise(async (resolve) => {
       // we need to only take the first 127 pieces
-      const levelData = this.pendingState.subarray(0, 4096 * 127);
+      const stateData = this.pendingState.subarray(0, 4096 * 127);
 
       // assign the remainder back to the pending state
       this.pendingState = this.pendingState.subarray(4096 * 127);
 
       // erasure code the source state
-      const { state, pieceDataSet } = await codes.encodeState(levelData, this.previousStateHash, Date.now());
+      const { state, pieceDataSet } = await codes.encodeState(stateData, this.previousStateHash, Date.now());
 
       // update the state chain
       this.stateMap.set(state.key, state.toBytes());

@@ -56,22 +56,16 @@ let content: Content;
 let state: State;
 let encoding: Uint8Array;
 let block: Block;
+let blsSignatures: BlsSignatures;
 
-beforeEach(async () => {
-
-  const blsSignatures = await BlsSignatures.init();
+beforeAll(async () => {
+  blsSignatures = await BlsSignatures.init();
   const storage = new Storage('memory', 'tests', 'rpc');
   wallet = new Wallet(blsSignatures, storage);
   const account = await wallet.createAccount();
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
 
-  network1 = await Network.init(peer1, [], false, logger); // gateway
-  network2 = await Network.init(peer2, [peer1], false, logger); // client
-  rpc1 = new Rpc(network1, blsSignatures, logger); // gateway
-  rpc2 = new Rpc(network2, blsSignatures, logger); // client
-
   // create the proof
-  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(CHUNK_LENGTH);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -79,7 +73,6 @@ beforeEach(async () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,
@@ -120,6 +113,13 @@ beforeEach(async () => {
     1,
   );
   encoding = crypto.randomBytes(4096);
+});
+
+beforeEach(async () => {
+  network1 = await Network.init(peer1, [], false, logger); // gateway
+  network2 = await Network.init(peer2, [peer1], false, logger); // client
+  rpc1 = new Rpc(network1, blsSignatures, logger); // gateway
+  rpc2 = new Rpc(network2, blsSignatures, logger); // client
 });
 
 // test('ping-pong', async () => {

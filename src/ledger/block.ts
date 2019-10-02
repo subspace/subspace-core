@@ -15,20 +15,6 @@ import { Tx } from './tx';
 export class Block {
 
   /**
-   * Creates an empty block record for a new chain as part of the genesis level.
-   */
-  // public static createGenesisBlock(previousProofHash: Uint8Array, parentContentHash: Uint8Array): Block {
-  //   const genesisProof = Proof.createGenesisProof(previousProofHash);
-  //   const genesisContent = Content.createGenesisContent(parentContentHash, genesisProof.key);
-  //   const genesisBlockValue: IFullBlockValue = {
-  //     previousBlockHash: new Uint8Array(32),
-  //     proof: genesisProof,
-  //     content: genesisContent,
-  //   };
-  //   return new Block(genesisBlockValue);
-  // }
-
-  /**
    * Returns a new block record given correct inputs.
    */
   public static create(
@@ -186,29 +172,7 @@ export class Block {
       if (!areArraysEqual(this._value.previousBlockHash, new Uint8Array(32))) {
         throw new Error('Invalid block, first genesis block must have a null previous block hash');
       }
-
-      // coinbase should be missing
-      // if (this._value.coinbase) {
-      //   throw new Error('Invalid genesis block, cannot have a coinbase transaction');
-      // }
-
-      // return true;
     }
-
-    // if subsequent genesis block (on the genesis level)
-    // if (areArraysEqual(this._value.proof.value.previousLevelHash, new Uint8Array(32))) {
-    //   // coinbase should be missing
-    //   if (this._value.coinbase) {
-    //     throw new Error('Invalid genesis block, cannot have a coinbase transaction');
-    //   }
-
-    //   return true;
-    // }
-
-    // else if normal block
-    // if (areArraysEqual(this._value.previousBlockHash, new Uint8Array(32))) {
-    //   throw new Error('Invalid block, only the genesis block may have a null previous block hash');
-    // }
 
     if (!this.value.coinbase) {
       throw new Error('Invalid block, must have a coinbase tx');

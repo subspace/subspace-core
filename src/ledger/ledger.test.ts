@@ -75,7 +75,6 @@ test('create-credit-tx', async () => {
 });
 
 test('create-genesis-proof', () => {
-  const previousLevelHash = new Uint8Array(HASH_LENGTH);
   const previousProofHash = new Uint8Array(HASH_LENGTH);
   const solution = crypto.randomBytes(8);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -83,7 +82,6 @@ test('create-genesis-proof', () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,
@@ -102,7 +100,6 @@ test('create-genesis-proof', () => {
 });
 
 test('create-proof', () => {
-  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(8);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -110,7 +107,6 @@ test('create-proof', () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,
@@ -165,7 +161,6 @@ test('create-content', () => {
 test('create-genesis-block', async () => {
 
   // create the proof
-  const previousLevelHash = new Uint8Array(HASH_LENGTH);
   const previousProofHash = new Uint8Array(HASH_LENGTH);
   const solution = crypto.randomBytes(CHUNK_LENGTH);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -173,7 +168,6 @@ test('create-genesis-block', async () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,
@@ -218,7 +212,6 @@ test('create-genesis-block', async () => {
 test('create-block', async () => {
 
   // create the proof
-  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(CHUNK_LENGTH);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -226,7 +219,6 @@ test('create-block', async () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,

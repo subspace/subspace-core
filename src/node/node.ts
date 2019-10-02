@@ -144,10 +144,11 @@ export class Node extends EventEmitter {
     this.logger.verbose(`Balance: ${this.wallet.getPendingBalanceOfAllAccounts()} credits`);
     this.logger.verbose('------------------------------\n');
 
-    const previousLevelHash = this.ledger.previousLevelHash;
+    // ToDo concatenate previousProofhash with Node ID so every node has a different challenge
+    // const previousLevelHash = this.ledger.previousLevelHash;
     const parentProofHash = this.ledger.parentProofHash;
-    const seed = Buffer.concat([previousLevelHash, parentProofHash]);
-    const pieceTarget = crypto.hash(seed);
+    // const seed = Buffer.concat([previousLevelHash, parentProofHash]);
+    const pieceTarget = crypto.hash(parentProofHash);
     const closestEncodings = await this.farm.getClosestEncodings(pieceTarget);
     if (!closestEncodings) {
       this.logger.error('Cannot find a piece within plot for target');
@@ -181,7 +182,6 @@ export class Node extends EventEmitter {
 
     // create proof of storage
     const unsignedProof = await Proof.create(
-      previousLevelHash,
       parentProofHash,
       bestChunk,
       closestEncodings.data.pieceHash,

@@ -19,7 +19,7 @@ export class Proof {
    * Proof must be passed to wallet for signing before being valid.
    */
   public static create(
-    previousLevelHash: Uint8Array,
+    // previousLevelHash: Uint8Array,
     previousProofHash: Uint8Array,
     solution: Uint8Array,
     pieceHash: Uint8Array,
@@ -28,7 +28,7 @@ export class Proof {
     publicKey: Uint8Array,
   ): Proof {
     const proofValue: IProofValue = {
-      previousLevelHash,
+      // previousLevelHash,
       previousProofHash,
       solution,
       pieceHash,
@@ -40,19 +40,6 @@ export class Proof {
     const proof = new Proof(proofValue);
     return proof;
   }
-
-  /**
-   * Creates an empty proof for a new chain as part of the genesis level.
-   * Does not need to be signed.
-   */
-  // public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array(32)): Proof {
-  //   const nullArray48 = new Uint8Array(48);
-  //   const nullArray32 = new Uint8Array(32);
-  //   const nullArray8 = new Uint8Array(8);
-  //   const proof = Proof.create(nullArray32, previousProofHash, nullArray8, nullArray32, nullArray32, nullArray32, nullArray48);
-  //   proof.setKey();
-  //   return proof;
-  // }
 
   /**
    * Loads a new proof from binary data received over the network
@@ -68,14 +55,14 @@ export class Proof {
     }
 
     const proofValue: IProofValue = {
-      previousLevelHash: data.subarray(0, 32),
-      previousProofHash: data.subarray(32, 64),
-      solution: data.subarray(64, 72),
-      pieceHash: data.subarray(72, 104),
-      pieceStateHash: data.subarray(104, 136),
-      publicKey: data.subarray(136, 184),
-      signature: data.subarray(184, 280),
-      pieceProof: data.subarray(280),
+      // previousLevelHash: data.subarray(0, 32),
+      previousProofHash: data.subarray(0, 32),
+      solution: data.subarray(32, 40),
+      pieceHash: data.subarray(40, 72),
+      pieceStateHash: data.subarray(72, 104),
+      publicKey: data.subarray(104, 152),
+      signature: data.subarray(152, 248),
+      pieceProof: data.subarray(248),
     };
 
     const proof = new Proof(proofValue);
@@ -104,7 +91,7 @@ export class Proof {
    */
   public toBytes(signed = true): Uint8Array {
     return Buffer.concat([
-      this._value.previousLevelHash,
+      // this._value.previousLevelHash,
       this._value.previousProofHash,
       this._value.solution,
       this._value.pieceHash,
@@ -123,7 +110,7 @@ export class Proof {
       type: 'Proof',
       key: bin2Hex(this._key),
       value: {
-        previousLevelHash: bin2Hex(this._value.previousLevelHash),
+        // previousLevelHash: bin2Hex(this._value.previousLevelHash),
         previousProofHash: bin2Hex(this._value.previousProofHash),
         solution: bin2Hex(this._value.solution),
         pieceHash: bin2Hex(this._value.pieceHash),
@@ -156,16 +143,16 @@ export class Proof {
     // }
 
     // genesis proof
-    if (areArraysEqual(this.value.previousProofHash, new Uint8Array(32))) {
-      if (!areArraysEqual(this.value.previousLevelHash, new Uint8Array(32))) {
-        throw new Error('Invalid genesis proof, both previous proof hash and previous level hash must be null');
-      }
-    }
+    // if (areArraysEqual(this.value.previousProofHash, new Uint8Array(32))) {
+    //   if (!areArraysEqual(this.value.previousLevelHash, new Uint8Array(32))) {
+    //     throw new Error('Invalid genesis proof, both previous proof hash and previous level hash must be null');
+    //   }
+    // }
 
-    // previous level hash is 32 bytes
-    if (this._value.previousLevelHash.length !== 32) {
-      throw new Error('Invalid proof, invalid length for previous level hash');
-    }
+    // // previous level hash is 32 bytes
+    // if (this._value.previousLevelHash.length !== 32) {
+    //   throw new Error('Invalid proof, invalid length for previous level hash');
+    // }
 
     // previous proof hash is 32 bytes
     if (this._value.previousProofHash.length !== 32) {
