@@ -343,13 +343,17 @@ export class Network extends EventEmitter {
    * @param command
    * @param payload
    */
-  public async sendRequestOneWay(
+  public sendRequestOneWay(
     nodeTypes: INodeTypesKeys[],
     command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<void> {
-    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(nodeTypes);
-    return protocolManager.sendMessageOneWay(connection, command, payload);
+    return this.makeRequestToNodeType(
+      nodeTypes,
+      (protocolManager, connection) => {
+        return protocolManager.sendMessageOneWay(connection, command, payload);
+      },
+    );
   }
 
   /**
@@ -386,13 +390,16 @@ export class Network extends EventEmitter {
    *
    * @return Resolves with response contents
    */
-  public async sendRequest(
+  public sendRequest(
     nodeTypes: INodeTypesKeys[],
     command: ICommandsKeysForSending,
     payload: Uint8Array = emptyPayload,
   ): Promise<Uint8Array> {
-    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(nodeTypes);
-    return protocolManager.sendMessage(connection, command, payload);
+    return this.makeRequestToNodeType(
+      nodeTypes,
+      (protocolManager, connection) => {
+        return protocolManager.sendMessage(connection, command, payload);
+      });
   }
 
   /**
@@ -413,8 +420,18 @@ export class Network extends EventEmitter {
 
     const addresses = await this.udpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
     if (addresses.length) {
-      const randomAddress = randomElement(addresses);
-      return this.udpManager.sendMessage(randomAddress, command, payload);
+      try {
+        const randomAddress = randomElement(addresses);
+        return await this.udpManager.sendMessage(randomAddress, command, payload);
+      } catch (error) {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Initial request failed, trying again: ${errorText}`);
+
+        if (addresses.length) {
+          const randomAddress = randomElement(addresses);
+          return this.udpManager.sendMessage(randomAddress, command, payload);
+        }
+      }
     }
 
     return this.sendRequest(nodeTypes, command, payload);
@@ -519,14 +536,31 @@ export class Network extends EventEmitter {
     return EventEmitter.prototype.emit.call(this, arg1, arg2, arg3, arg4);
   }
 
-  // TODO: There should be a smart way to infer type instead of `any`
-  private async getProtocolManagerAndConnection(
+  /**
+   * @param nodeTypes
+   * @param makeRequestCallback
+   *
+   * This will make request and will do 1 retry in case request fails (if possible)
+   */
+  private async makeRequestToNodeType<Result>(
     nodeTypes: INodeTypesKeys[],
-  ): Promise<[AbstractProtocolManager<any, INodeContactInfo>, any]> {
+    // TODO: There should be a smart way to infer type instead of `any` that will work
+    makeRequestCallback: (protocolManager: AbstractProtocolManager<any, INodeContactInfo>, connection: any) => Promise<Result>,
+  ): Promise<Result> {
     const tcpConnections = this.tcpManager.getActiveConnectionsOfNodeTypes(nodeTypes);
     if (tcpConnections.length) {
-      const randomConnection = randomElement(tcpConnections);
-      return [this.tcpManager, randomConnection];
+      try {
+        const randomConnection = randomElement(tcpConnections);
+        return await makeRequestCallback(this.tcpManager, randomConnection);
+      } catch (error) {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Initial request failed, trying again: ${errorText}`);
+
+        if (tcpConnections.length) {
+          const randomConnection = randomElement(tcpConnections);
+          return makeRequestCallback(this.tcpManager, randomConnection);
+        }
+      }
     }
 
     const nodeIds = this.tcpManager.getNodeIdsOfNodeTypes(nodeTypes);
@@ -534,15 +568,36 @@ export class Network extends EventEmitter {
       const randomNodeId = randomElement(nodeIds);
       const connection = await this.tcpManager.nodeIdToConnection(randomNodeId);
       if (connection) {
-        return [this.tcpManager, connection];
+        try {
+          return await makeRequestCallback(this.tcpManager, connection);
+        } catch (error) {
+          const errorText = (error.stack || error) as string;
+          this.logger.debug(`Initial request failed, trying again: ${errorText}`);
+
+          const randomNodeId = randomElement(nodeIds);
+          const connection = await this.tcpManager.nodeIdToConnection(randomNodeId);
+          if (connection) {
+            return makeRequestCallback(this.tcpManager, connection);
+          }
+        }
       }
     }
 
     // Node likely doesn't have any other way to communicate besides WebSocket
     const wsConnections = this.wsManager.getActiveConnectionsOfNodeTypes(nodeTypes);
     if (wsConnections.length) {
-      const randomConnection = randomElement(wsConnections);
-      return [this.wsManager, randomConnection];
+      try {
+        const randomConnection = randomElement(wsConnections);
+        return await makeRequestCallback(this.wsManager, randomConnection);
+      } catch (error) {
+        const errorText = (error.stack || error) as string;
+        this.logger.debug(`Initial request failed, trying again: ${errorText}`);
+
+        if (wsConnections.length) {
+          const randomConnection = randomElement(wsConnections);
+          return makeRequestCallback(this.wsManager, randomConnection);
+        }
+      }
     }
 
     {
@@ -551,12 +606,25 @@ export class Network extends EventEmitter {
         const randomNodeId = randomElement(nodeIds);
         const connection = await this.wsManager.nodeIdToConnection(randomNodeId);
         if (connection) {
-          return [this.wsManager, connection];
+          try {
+            return await makeRequestCallback(this.wsManager, connection);
+          } catch (error) {
+            const errorText = (error.stack || error) as string;
+            this.logger.debug(`Initial request failed, trying again: ${errorText}`);
+
+            if (nodeIds.length) {
+              const randomNodeId = randomElement(nodeIds);
+              const connection = await this.wsManager.nodeIdToConnection(randomNodeId);
+              if (connection) {
+                return makeRequestCallback(this.wsManager, connection);
+              }
+            }
+          }
         }
       }
     }
 
-    throw new Error(`Can't find any node that is in node types list: ${nodeTypes.join(', ')}`);
+    throw new Error(`Can't find any node that is in node types list and works: ${nodeTypes.join(', ')}`);
   }
 
   private addPeer(nodeContactInfo: INodeContactInfo): void {
@@ -593,11 +661,15 @@ export class Network extends EventEmitter {
     if (this.peers.size >= this.options.routingTableMinSize) {
       return;
     }
-    const [protocolManager, connection] = await this.getProtocolManagerAndConnection(['any']);
-    const peersBinary = await protocolManager.sendMessage(
-      connection,
-      'get-peers',
-      Uint8Array.of(this.options.routingTableMaxSize - this.peers.size),
+    const peersBinary = await this.makeRequestToNodeType(
+      ['any'],
+      (protocolManager, connection) => {
+        return protocolManager.sendMessage(
+          connection,
+          'get-peers',
+          Uint8Array.of(this.options.routingTableMaxSize - this.peers.size),
+        );
+      },
     );
 
     const ownNodeId = this.nodeId;
