@@ -32,13 +32,8 @@ import { Plot } from './plot';
  * Supports farming in parallel across multiple plots with different addresses
  */
 export class Farm {
-  public static readonly MODE_MEM_DB = 'mem-db';
-  public static readonly MODE_DISK_DB = 'disk-db';
-  public static readonly MODE_INDEXED_DB = 'indexed-db';
-
   public readonly plots: Plot[];
   public pieceOffset: number;
-  private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB;
   private readonly encodingRounds: number;
   private readonly metadataStore: Storage;
   private readonly pieceIndex: Tree<Uint8Array, number>;
@@ -46,14 +41,16 @@ export class Farm {
   /**
    * Returns a new farm instance for use by parent node.
    *
-   * @param mode the type of plotting and storage backend to be used (e.g. memory or disk)
+   * @param adapterName the type of plotting and storage backend to be used (e.g. memory or disk)
+   * @param metadataStore
+   * @param storageDir
    * @param numberOfPlots how many plots to encode each new piece under (when the ledger is smaller than average disk)
    * @param farmSize the maximum allowable size of all disk plots combined
    * @param encodingRounds the number of rounds of encoding/decoding to apply to each piece
    * @param addresses the addresses that will be used for plotting (same as number of plots)
    */
   constructor(
-    mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB,
+    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
     metadataStore: Storage,
     storageDir: string,
     numberOfPlots: number,
@@ -61,39 +58,15 @@ export class Farm {
     encodingRounds: number,
     addresses: Uint8Array[],
   ) {
-    this.mode = mode;
     this.metadataStore = metadataStore;
     this.encodingRounds = encodingRounds;
     this.pieceOffset = 0;
     this.plots = [];
 
-    let plotAdapter: string;
-    // let indexAdapter: string;
-
-    switch (this.mode) {
-      case Farm.MODE_MEM_DB:
-        plotAdapter = 'mem-db';
-        // indexAdapter = 'memory';
-        break;
-      case Farm.MODE_DISK_DB:
-        plotAdapter = 'disk-db';
-        // indexAdapter = 'disk';
-        break;
-      case Farm.MODE_INDEXED_DB:
-        plotAdapter = 'indexed-db';
-        // indexAdapter = 'disk';
-        break;
-      default:
-        plotAdapter = 'mem-db';
-        // indexAdapter = 'memory';
-        break;
-    }
-
-    // this.metadataStore = new Storage(storageAdapter, storageDir, `farm-${mode}`);
     const plotSize = Math.floor(farmSize / numberOfPlots);
 
     for (let i = 0; i < numberOfPlots; ++i) {
-      const plot = Plot.open(plotAdapter, storageDir, i, plotSize, addresses[i]);
+      const plot = Plot.open(adapterName, storageDir, i, plotSize, addresses[i]);
       this.plots.push(plot);
     }
 

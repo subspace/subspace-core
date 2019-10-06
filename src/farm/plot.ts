@@ -1,19 +1,28 @@
 import * as path from 'path';
-import { PIECE_SIZE } from "../main/constants";
-import { num2Bin } from "../utils/utils";
+import {PIECE_SIZE} from "../main/constants";
+import {num2Bin} from "../utils/utils";
 import IndexedDBStore from './IndexedDBStore';
 import IStore from "./IStore";
 import MemoryStore from './MemoryStore';
 import RocksStore from './RocksStore';
 
 export class Plot {
+  public static readonly ADAPTER_MEM_DB = 'mem-db';
+  public static readonly ADAPTER_DISK_DB = 'disk-db';
+  public static readonly ADAPTER_INDEXED_DB = 'indexed-db';
+  public static readonly ADAPTER_ROCKS_DB = 'rocks-db';
 
   /**
    * Opens a new plot. Will open an existing plot if rocks or disk storage with same path as previous plot.
    */
-  public static open(type: string, storageDir: string, index: number, size: number, address: Uint8Array): Plot {
-    const plot = new Plot(type, storageDir, index, size, address);
-    return plot;
+  public static open(
+    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
+    storageDir: string,
+    index: number,
+    size: number,
+    address: Uint8Array,
+  ): Plot {
+    return new Plot(adapterName, storageDir, index, size, address);
   }
 
   public readonly type: string;
@@ -23,27 +32,43 @@ export class Plot {
   public readonly address: Uint8Array;
   private store: IStore;
 
-  constructor(type: string, storageDir: string, index: number, size: number, address: Uint8Array) {
-    this.type = type;
+  /**
+   * @param adapterName
+   * @param storageDir
+   * @param index
+   * @param size
+   * @param address
+   */
+  constructor(
+    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
+    storageDir: string,
+    index: number,
+    size: number,
+    address: Uint8Array,
+  ) {
+    this.type = adapterName;
     this.index = index;
     this.size = size;
     this.maxOffset = Math.floor(this.size / PIECE_SIZE);
     this.address = address;
     const plotPath = `plot-${this.index}`;
-    switch (type) {
-      case 'mem-db':
+    switch (adapterName) {
+      case Plot.ADAPTER_MEM_DB:
         this.store = new MemoryStore();
         break;
-      case 'disk-db':
+      case Plot.ADAPTER_DISK_DB:
+        // TODO
+        throw new Error('Not implemented yet');
+        break;
+      case Plot.ADAPTER_ROCKS_DB:
         const storagePath = path.join(storageDir, plotPath);
         this.store = new RocksStore(path.normalize(storagePath));
         break;
-      case 'indexed-db':
+      case Plot.ADAPTER_INDEXED_DB:
         this.store = new IndexedDBStore(plotPath);
         break;
       default:
-        this.store = new MemoryStore();
-        break;
+        throw new Error(`Incorrect adapter name ${adapterName}`);
     }
   }
 
@@ -63,7 +88,7 @@ export class Plot {
    * @param offset the index of the encoded piece within the plot
    */
   public async getEncoding(offset: number): Promise<Uint8Array> {
-    const encoding =  await this.store.get(num2Bin(offset));
+    const encoding = await this.store.get(num2Bin(offset));
     if (!encoding) {
       throw new Error('Cannot get encoding, is not in plot');
     }

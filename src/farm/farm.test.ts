@@ -1,3 +1,5 @@
+import {Plot} from "./plot";
+
 if (!globalThis.indexedDB) {
   // Only import when not preset (in Node.js)
   // tslint:disable-next-line:no-var-requires no-submodule-imports
@@ -24,7 +26,7 @@ if (fs.existsSync(storageDir)) {
 fs.mkdirSync(storageDir, { recursive: true });
 
 test('mem-plot', async () => {
-  const plotMode = 'mem-db';
+  const plotMode = Plot.ADAPTER_MEM_DB;
   const farmSize = 409600;
   const paddedDataSize = 120191;
   const numberOfPlots = 32;
@@ -94,8 +96,8 @@ test('mem-plot', async () => {
   expect(deletedExactEncodings).toBeFalsy();
 });
 
-test('disk-plot', async () => {
-  const plotMode = 'disk-db';
+test('rocks-plot', async () => {
+  const plotMode = Plot.ADAPTER_ROCKS_DB;
   const farmSize = 409600;
   const paddedDataSize = 120191;
   const numberOfPlots = 32;
