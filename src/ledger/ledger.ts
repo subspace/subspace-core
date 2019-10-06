@@ -10,7 +10,7 @@ import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, PIECE_SIZE } from '../main/constants';
 import { IFullBlockValue, IPiece} from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { areArraysEqual, bin2Hex, ILogger, measureProximity, smallNum2Bin, sortSet } from '../utils/utils';
+import { areArraysEqual, bin2Hex, compareUint8Array, ILogger, measureProximity, smallNum2Bin } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
@@ -655,11 +655,10 @@ export class Ledger extends EventEmitter {
     let latestTxTime: number = 0;
 
     // canonicaly order the blocks
-    const confirmedBlockSet = ArraySet([...confirmedBlocks.keys()]);
-    const sortedBlocks = sortSet(confirmedBlockSet);
+    const sortedBlockHashes = [...confirmedBlocks.keys()].sort(compareUint8Array);
 
     // retrieve and comiple the data for each block
-    for (const blockHash of sortedBlocks) {
+    for (const blockHash of sortedBlockHashes) {
       this.blockIndex.set(this.blockIndex.size, blockHash);
       const blockData = await this.getBlock(blockHash);
 
@@ -681,12 +680,12 @@ export class Ledger extends EventEmitter {
       }
     }
 
+    // canonicaly order the txs
     const confirmedUnencodedTxs = [...uniqueTxSet.values()].filter((txId) => this.unencodedTxs.has(txId));
-    const unsortedTxSet = ArraySet(confirmedUnencodedTxs);
-    const sortedTxSet = sortSet(unsortedTxSet);
+    const sortedTxHashes = confirmedUnencodedTxs.sort(compareUint8Array);
 
     // filter for duplicate txs and encode
-    for (const txHash of sortedTxSet.values()) {
+    for (const txHash of sortedTxHashes) {
       this.unencodedTxs.delete(txHash);
       const txData = await this.getTx(txHash);
 

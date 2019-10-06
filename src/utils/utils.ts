@@ -4,7 +4,6 @@
 
 // tslint:disable: object-literal-sort-keys
 
-import { ArraySet } from 'array-map-set';
 import * as fs from 'fs';
 import * as path from 'path';
 import {random_int} from "random-bytes-numbers";
@@ -70,10 +69,6 @@ export function measureProximity(a: Uint8Array, b: Uint8Array, reverse = false):
   }
 
   return proximity;
-}
-
-export function sortSet(set: Set<Uint8Array>): Set<Uint8Array> {
-  return ArraySet([...set.values()].sort());
 }
 
 /**
