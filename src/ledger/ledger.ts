@@ -70,7 +70,7 @@ export class Ledger extends EventEmitter {
   public stateIndex: Map<number, Uint8Array> = new Map();
   private pendingState: Uint8Array = new Uint8Array();
   public pendingRecordsLength = 0;
-  public readonly logger: ILogger;
+  private logger: ILogger;
 
   // An array of chains, each chain contains a set of unconfirmed block ids for this chain
   private pendingBlocksByChain: Array<Set<Uint8Array>> = [];
