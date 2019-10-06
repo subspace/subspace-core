@@ -19,7 +19,7 @@ import { areArraysEqual, bin2Hex, ILogger, measureProximity, randomWait, smallNu
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
-  // add time logging
+//   add time logging
 
 export class Node extends EventEmitter {
 
@@ -119,9 +119,7 @@ export class Node extends EventEmitter {
     this.logger.verbose('------------------------------\n');
 
     // ToDo concatenate previousProofhash with Node ID so every node has a different challenge
-    // const previousLevelHash = this.ledger.previousLevelHash;
     const parentProofHash = this.ledger.parentProofHash;
-    // const seed = Buffer.concat([previousLevelHash, parentProofHash]);
     const pieceTarget = crypto.hash(parentProofHash);
     const closestEncodings = await this.farm.getClosestEncodings(pieceTarget);
     if (!closestEncodings) {

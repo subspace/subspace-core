@@ -1,4 +1,3 @@
-// tslint:disable: max-classes-per-file
 // tslint:disable: object-literal-sort-keys
 // tslint:disable: no-console
 // tslint:disable: member-ordering
@@ -724,7 +723,7 @@ export class Ledger extends EventEmitter {
    * 127 parity pieces (erasure coded level data)
    * 1 parity index piece
    * Any node can reconstruct the state using just the state block by querying the DHT for the two index pieces and retrieving any combination of 127 source and parity pieces.
-   * 
+   *
    * @param timestamp the timestamp of the newest tx in the block, used to timestamp the state block
    */
   private async createState(timestamp: number): Promise<void> {
