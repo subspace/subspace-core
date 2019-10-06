@@ -19,7 +19,7 @@ const logger = createLogger('warn');
 
 const peer1: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('1'.repeat(NODE_ID_LENGTH * 2), 'hex'),
+  nodeId: Buffer.from('01'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'full',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
@@ -28,7 +28,7 @@ const peer1: IPeerContactInfo = {
 
 const peer2: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('2'.repeat(NODE_ID_LENGTH * 2), 'hex'),
+  nodeId: Buffer.from('02'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'validator',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
@@ -37,7 +37,7 @@ const peer2: IPeerContactInfo = {
 
 const peer3: IPeerContactInfo = {
   address: 'localhost',
-  nodeId: Buffer.from('3'.repeat(NODE_ID_LENGTH * 2), 'hex'),
+  nodeId: Buffer.from('03'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'full',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
@@ -45,7 +45,7 @@ const peer3: IPeerContactInfo = {
 };
 
 const peer4: IPeerContactInfo = {
-  nodeId: Buffer.from('4'.repeat(NODE_ID_LENGTH * 2), 'hex'),
+  nodeId: Buffer.from('04'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'client',
 };
 
@@ -55,10 +55,38 @@ let networkClient3: Network;
 let networkClient4: Network;
 
 beforeEach(async () => {
-  networkClient1 = await Network.init(peer1, [peer2, peer3], false, logger);
-  networkClient2 = await Network.init(peer2, [peer1], false, logger);
-  networkClient3 = await Network.init(peer3, [peer1], false, logger);
-  networkClient4 = await Network.init(peer4, [peer1], true, logger);
+  networkClient1 = await Network.init(
+    peer1,
+    [peer2, peer3],
+    false,
+    logger.child({
+      ownNodeId: bin2Hex(peer1.nodeId),
+    }),
+  );
+  networkClient2 = await Network.init(
+    peer2,
+    [peer1],
+    false,
+    logger.child({
+      ownNodeId: bin2Hex(peer2.nodeId),
+    }),
+  );
+  networkClient3 = await Network.init(
+    peer3,
+    [peer1],
+    false,
+    logger.child({
+      ownNodeId: bin2Hex(peer3.nodeId),
+    }),
+  );
+  networkClient4 = await Network.init(
+    peer4,
+    [peer1],
+    true,
+    logger.child({
+      ownNodeId: bin2Hex(peer4.nodeId),
+    }),
+  );
 });
 
 describe('UDP', () => {
@@ -97,14 +125,14 @@ describe('TCP', () => {
   test('Send one-way reliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
+      networkClient2.once('ping', (payload, _, clientIdentification) => {
+        expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
+        resolve();
+      });
       networkClient1.on('peer-connected', (nodeContactInfo) => {
         if (nodeContactInfo.nodeType === 'validator') {
-          networkClient2.once('ping', (payload, _, clientIdentification) => {
-            expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-            expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
-            expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
-            resolve();
-          });
           networkClient1.sendRequestOneWay(['validator'], 'ping', randomPayload);
         }
       });
