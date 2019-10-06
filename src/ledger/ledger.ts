@@ -21,18 +21,18 @@ import { State } from './state';
 import { Tx } from './tx';
 
 // Next Steps
-  // handle a fork on one chain
-  // create a new data structure that is the chain graph for audit puposes -- probably some kind of tree
-  // fix logging in node s.t. it is intelligeble
-  // then we can add in notion of piece proximity, chunk quality and audit scope
-  // then we can make the chunk quality and make audit scope dynamic and self-adjusting
-  // handle validation failures where one farmer computes the next level and adds pieces before another
-  // fix memory leak
-  // run in farmer mode, pruning chain state after each new level
-  // decode levels and refactor level into a separate class
-  // handle tx fees
-  // enforce a maximum block size of 4096 bytes
-  // check that nonce has been incremented to prevent replay attacks
+//  handle a fork on one chain
+//  create a new data structure that is the chain graph for audit puposes -- probably some kind of tree
+//  fix logging in node s.t. it is intelligeble
+//  then we can add in notion of piece proximity, chunk quality and audit scope
+//  then we can make the chunk quality and make audit scope dynamic and self-adjusting
+//  handle validation failures where one farmer computes the next level and adds pieces before another
+//  fix memory leak
+//  run in farmer mode, pruning chain state after each new level
+//  decode levels and refactor level into a separate class
+//  handle tx fees
+//  enforce a maximum block size of 4096 bytes
+//  check that nonce has been incremented to prevent replay attacks
 
 export class Ledger extends EventEmitter {
 
@@ -207,12 +207,12 @@ export class Ledger extends EventEmitter {
    */
   public async isValidBlock(block: Block, encoding: Uint8Array): Promise<boolean> {
     // ToDo
-      // return false if
-        // parent proof has not yet been seen
-        // piece/piece-proof refrences unknown state
-        // references a tx that has not been seen yet
-      // on isValid -> wait at some interval before checking if isValid again
-      // validate nodes are not adding txs that have already been announced by their ancestors
+    //  return false if
+    //    parent proof has not yet been seen
+    //    piece/piece-proof refrences unknown state
+    //    references a tx that has not been seen yet
+    //  on isValid -> wait at some interval before checking if isValid again
+    //  validate nodes are not adding txs that have already been announced by their ancestors
 
     // validate the block, proof, content, and coinbase tx are all well formed, will throw if not
     block.isValid(this.blsSignatures);
@@ -240,26 +240,26 @@ export class Ledger extends EventEmitter {
       throw new Error('Invalid block proof, parent proof (challenge) has already been confirmed for this chain');
     }
 
-    // piece is within the scope of the audit (closest piece for now)
-      // to fully verify I need every piece ID for the entire ledger
-        // 512 hashes per MB 1.5k -> 1/1000th of the ledger size
-        // 1 TB Ledger means 1 GB of hashes
-        // 1 PB Ledger means 1 TB of hashes
-      // What can a light client do?
-        // expect the piece to meet some minimum proximity
-        // simply revise the piece if they hear of a better one
-        // this has more to do with gosssiping piece than with consensus proper
+    //  piece is within the scope of the audit (closest piece for now)
+    //    to fully verify I need every piece ID for the entire ledger
+    //      512 hashes per MB 1.5k -> 1/1000th of the ledger size
+    //      1 TB Ledger means 1 GB of hashes
+    //      1 PB Ledger means 1 TB of hashes
+    //  What can a light client do?
+    //    expect the piece to meet some minimum proximity
+    //    simply revise the piece if they hear of a better one
+    //    this has more to do with gosssiping piece than with consensus proper
 
     // chunk proximity meets the threshold (maybe more as a rough guide) than absolute requirement
-      // first variable is the number of unique pieces for a given challenge (scope), assume 1 to start
-      // second variable is the average quality over the last period from the last state block
-      // then apply the same rules as piece quality
-        // if you hear a better one revise your piece
+    //    first variable is the number of unique pieces for a given challenge (scope), assume 1 to start
+    //    second variable is the average quality over the last period from the last state block
+    //    then apply the same rules as piece quality
+    //    if you hear a better one revise your piece
 
     // solution is the best piece yet seen for this challenge on this chain (if last block uses same challenge)
-      // revert the old block
-      // apply this block instead
-      // eventually will need to check total chain/ledger quality (assuming that block has been referenced by other blocks)
+    //  revert the old block
+    //  apply this block instead
+    //  eventually will need to check total chain/ledger quality (assuming that block has been referenced by other blocks)
 
     // solution is part of encoded piece
     let hasSolution = false;
@@ -396,9 +396,9 @@ export class Ledger extends EventEmitter {
     }
 
     // has nonce been incremented? (prevent replay attack)
-      // how to get the last tx for this account?
-        // create secondary index in rocks for address and compile...
-        // track the nonce in each address field in accounts
+    //    how to get the last tx for this account?
+    //    create secondary index in rocks for address and compile...
+    //    track the nonce in each address field in accounts
 
     this.logger.verbose(`Validated new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)}`);
     return true;
