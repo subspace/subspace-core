@@ -1,7 +1,7 @@
 import {ArraySet} from "array-map-set";
 import {EventEmitter} from "events";
 import {hash} from "../crypto/crypto";
-import {bin2Hex, compareUint8Array, ILogger} from "../utils/utils";
+import {bin2Hex, compareUint8Array, ILogger, xorUint8Array} from "../utils/utils";
 import {COMMANDS, COMMANDS_INVERSE, GOSSIP_COMMANDS_SET, ICommandsKeysForSending} from "./constants";
 import {INodeContactIdentification} from "./Network";
 import {TcpManager} from "./TcpManager";
@@ -129,7 +129,12 @@ export class GossipManager extends EventEmitter {
     if (sourceNodeId) {
       allNodesSet.delete(sourceNodeId);
     }
+    const ownNodeId = this.ownNodeId;
     const nodesToGossipTo = Array.from(allNodesSet)
+      .map((nodeId) => {
+        // Convert into XOR distance
+        return xorUint8Array(nodeId, ownNodeId);
+      })
       .sort(compareUint8Array)
       .slice(
         0,
@@ -137,7 +142,11 @@ export class GossipManager extends EventEmitter {
           Math.log2(allNodesSet.size),
           10,
         ),
-      );
+      )
+      .map((xorDistance) => {
+        // Convert back to nodeId
+        return xorUint8Array(xorDistance, ownNodeId);
+      });
 
     const fitsInUdp = message.length <= this.udpManager.getMessageSizeLimit();
 
