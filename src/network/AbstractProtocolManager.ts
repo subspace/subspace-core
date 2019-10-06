@@ -12,7 +12,6 @@ import {
   noopResponseCallback,
   parseIdentificationPayload,
   parseMessage,
-  parseNodeInfoPayload,
 } from "./utils";
 
 export abstract class AbstractProtocolManager<Connection extends object, Address extends INodeContactInfo> extends EventEmitter {
@@ -378,35 +377,7 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
         );
       }
       const nodeContactIdentification = parseIdentificationPayload(payload);
-      const nodeContactInfo = parseNodeInfoPayload(payload);
-      const existingConnection = this.nodeIdToConnectionMap.get(nodeContactInfo.nodeId);
-      if (existingConnection) {
-        this.logger.debug(
-          `Mapping between connection and nodeId already exists`,
-          {
-            nodeId: bin2Hex(nodeContactInfo.nodeId),
-          },
-        );
-        switch (compareUint8Array(this.ownNodeId, nodeContactInfo.nodeId)) {
-          case -1:
-            // Our nodeId is smaller, close already existing connection and proceed with replacing it with incoming
-            this.destroyConnection(existingConnection);
-            break;
-          case 1:
-            // Our nodeId is bigger, close incoming connection
-            this.destroyConnection(connection);
-            return;
-          default:
-            this.logger.error(`Connection to itself, this should never happen!`);
-            throw new Error('Connecting to itself, this should never happen');
-        }
-      }
-
-      this.nodeIdToConnectionMap.set(nodeContactInfo.nodeId, connection);
-      this.connectionToNodeIdMap.set(connection, nodeContactInfo.nodeId);
-      this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
-      this.emit('peer-contact-info', nodeContactInfo);
-      this.emit('peer-connected', nodeContactInfo);
+      this.registerConnectionMappingToIdentificationInfo(connection, nodeContactIdentification);
       return;
     }
     const nodeId = this.connectionToNodeIdMap.get(connection);
@@ -498,6 +469,49 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
         }
         break;
     }
+  }
+
+  protected registerConnectionMappingToIdentificationInfo(connection: Connection, nodeContactIdentification: INodeContactIdentification): void {
+    const nodeId = nodeContactIdentification.nodeId;
+    const existingConnection = this.nodeIdToConnectionMap.get(nodeId);
+    if (existingConnection) {
+      if (existingConnection === connection) {
+        this.logger.debug(
+          `Redundant identification message, connection is already established and mapping exists`,
+          {
+            nodeId: bin2Hex(nodeId),
+          },
+        );
+        return;
+      }
+      const comparisonResult = compareUint8Array(this.ownNodeId, nodeId);
+      this.logger.debug(
+        `Mapping between connection and nodeId already exists`,
+        {
+          comparisonResult: comparisonResult,
+          nodeId: bin2Hex(nodeId),
+        },
+      );
+      switch (comparisonResult) {
+        case -1:
+          // Our nodeId is smaller, close already existing connection and proceed with replacing it with incoming
+          this.destroyConnection(existingConnection);
+          break;
+        case 1:
+          // Our nodeId is bigger, close incoming connection
+          this.destroyConnection(connection);
+          return;
+        default:
+          this.logger.error(`Connection to itself, this should never happen!`);
+          throw new Error('Connecting to itself, this should never happen');
+      }
+    }
+
+    this.nodeIdToConnectionMap.set(nodeId, connection);
+    this.connectionToNodeIdMap.set(connection, nodeId);
+    this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
+    this.emit('peer-contact-info', nodeContactIdentification);
+    this.emit('peer-connected', nodeContactIdentification);
   }
 
   /**

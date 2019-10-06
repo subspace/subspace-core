@@ -305,9 +305,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       });
 
     if (nodeContactInfo) {
-      const nodeId = nodeContactInfo.nodeId;
-      this.nodeIdToConnectionMap.set(nodeId, socket);
-      this.connectionToNodeIdMap.set(socket, nodeId);
+      this.registerConnectionMappingToIdentificationInfo(socket, nodeContactInfo);
       setTimeout(() => {
         this.emit('peer-connected', nodeContactInfo);
       });

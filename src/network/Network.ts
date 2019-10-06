@@ -253,7 +253,7 @@ export class Network extends EventEmitter {
           }
         })
         .on('peer-disconnected', (nodeContactInfo: INodeContactInfo) => {
-          logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
+          logger.info('peer-disconnected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           --this.numberOfActiveConnections;
           this.emit('peer-disconnected', nodeContactInfo);
           this.maintainNumberOfConnections();
