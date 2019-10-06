@@ -1,9 +1,9 @@
 export default interface IStore {
-  add(encoding: Uint8Array, offset: Uint8Array): Promise<void>;
+  add(encoding: Uint8Array, offset: number): Promise<void>;
 
-  get(offset: Uint8Array): Promise<Uint8Array | undefined | null>;
+  get(offset: number): Promise<Uint8Array | undefined | null>;
 
-  del(offset: Uint8Array): Promise<void>;
+  del(offset: number): Promise<void>;
 
   close(): Promise<void>;
 }

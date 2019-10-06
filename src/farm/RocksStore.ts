@@ -10,11 +10,11 @@ export default class RocksStore implements IStore {
     this.store = level(path, { valueEncoding: 'binary' });
   }
 
-  public async add(encoding: Uint8Array, offset: Uint8Array): Promise<void> {
+  public async add(encoding: Uint8Array, offset: number): Promise<void> {
     await this.store.put(offset, encoding);
   }
 
-  public async get(offset: Uint8Array): Promise<Uint8Array | null> {
+  public async get(offset: number): Promise<Uint8Array | null> {
     try {
       return await this.store.get(offset);
     } catch (error) {
@@ -25,7 +25,7 @@ export default class RocksStore implements IStore {
     }
   }
 
-  public async del(offset: Uint8Array): Promise<void> {
+  public async del(offset: number): Promise<void> {
     try {
       await this.store.del(offset);
     } catch (error) {

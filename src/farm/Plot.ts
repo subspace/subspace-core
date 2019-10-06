@@ -1,6 +1,5 @@
 import * as path from 'path';
 import {PIECE_SIZE} from "../main/constants";
-import {num2Bin} from "../utils/utils";
 import DiskStore from "./DiskStore";
 import IndexedDBStore from './IndexedDBStore';
 import IStore from "./IStore";
@@ -76,7 +75,7 @@ export class Plot {
    * @param offset    index at which to add encoding to the plot
    */
   public async addEncoding(encoding: Uint8Array, offset: number): Promise<void> {
-    return this.store.add(encoding, num2Bin(offset));
+    return this.store.add(encoding, offset);
   }
 
   /**
@@ -85,7 +84,7 @@ export class Plot {
    * @param offset the index of the encoded piece within the plot
    */
   public async getEncoding(offset: number): Promise<Uint8Array> {
-    const encoding = await this.store.get(num2Bin(offset));
+    const encoding = await this.store.get(offset);
     if (!encoding) {
       throw new Error('Cannot get encoding, is not in plot');
     }
@@ -99,7 +98,7 @@ export class Plot {
    *
    */
   public async deleteEncoding(offset: number): Promise<void> {
-    return this.store.del(num2Bin(offset));
+    return this.store.del(offset);
   }
 
   /**

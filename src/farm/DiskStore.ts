@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import {PIECE_SIZE} from "../main/constants";
-import {bin2Num, num2Bin} from "../utils/utils";
 import IStore from "./IStore";
 
 async function allocateEmptyFile(path: string, size: number, chunkSize: number): Promise<void> {
@@ -35,22 +34,19 @@ export default class DiskStore implements IStore {
     }
     await allocateEmptyFile(plotDataLocation, size, PIECE_SIZE);
     const plotData = await fs.promises.open(plotDataLocation, 'r+');
-    return new DiskStore(plotData, size / PIECE_SIZE);
+    return new DiskStore(plotData);
   }
 
-  public constructor(
-    private readonly plotData: fs.promises.FileHandle,
-    private readonly numberOfPieces: number,
-  ) {
+  public constructor(private readonly plotData: fs.promises.FileHandle) {
   }
 
-  public async add(value: Uint8Array, key: Uint8Array): Promise<void> {
-    await this.plotData.write(value, 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
+  public async add(value: Uint8Array, offset: number): Promise<void> {
+    await this.plotData.write(value, 0, PIECE_SIZE, offset * PIECE_SIZE);
   }
 
-  public async get(key: Uint8Array): Promise<Uint8Array | null> {
+  public async get(offset: number): Promise<Uint8Array | null> {
     const data = Buffer.allocUnsafe(PIECE_SIZE);
-    await this.plotData.read(data, 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
+    await this.plotData.read(data, 0, PIECE_SIZE, offset * PIECE_SIZE);
     if (isAllZeroes(data)) {
       // Not found, all zeroes
       return null;
@@ -58,33 +54,8 @@ export default class DiskStore implements IStore {
     return data;
   }
 
-  public async del(key: Uint8Array): Promise<void> {
-    await this.plotData.write(new Uint8Array(PIECE_SIZE), 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
-  }
-
-  public async getKeys(): Promise<Uint8Array[]> {
-    const keys: Uint8Array[] = [];
-    for (let i = 0, max = this.numberOfPieces; i < max; ++i) {
-      const key = num2Bin(i);
-      const data = await this.get(key);
-      if (!data) {
-        break;
-      }
-      keys.push(key);
-    }
-    return keys;
-  }
-
-  public async getLength(): Promise<number> {
-    const keys = await this.getKeys();
-    return keys.length;
-  }
-
-  public async clear(): Promise<void> {
-    const keys = await this.getKeys();
-    for (const key of keys) {
-      await this.del(key);
-    }
+  public async del(offset: number): Promise<void> {
+    await this.plotData.write(new Uint8Array(PIECE_SIZE), 0, PIECE_SIZE, offset * PIECE_SIZE);
   }
 
   public async close(): Promise<void> {
