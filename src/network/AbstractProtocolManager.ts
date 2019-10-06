@@ -10,8 +10,8 @@ import {
 import {INodeContactIdentification, INodeContactInfo} from "./Network";
 import {
   noopResponseCallback,
-  parseIdentificationPayload,
   parseMessage,
+  parseNodeInfoPayload,
 } from "./utils";
 
 export abstract class AbstractProtocolManager<Connection extends object, Address extends INodeContactInfo> extends EventEmitter {
@@ -376,8 +376,8 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
           `Identification payload length is incorrect, expected ${NODE_CONTACT_INFO_PAYLOAD_LENGTH} bytes but got ${payload.length} bytes`,
         );
       }
-      const nodeContactIdentification = parseIdentificationPayload(payload);
-      this.registerConnectionMappingToIdentificationInfo(connection, nodeContactIdentification);
+      const nodeContactInfo = parseNodeInfoPayload(payload);
+      this.registerConnectionMappingToIdentificationInfo(connection, nodeContactInfo);
       return;
     }
     const nodeId = this.connectionToNodeIdMap.get(connection);
@@ -471,8 +471,8 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     }
   }
 
-  protected registerConnectionMappingToIdentificationInfo(connection: Connection, nodeContactIdentification: INodeContactIdentification): void {
-    const nodeId = nodeContactIdentification.nodeId;
+  protected registerConnectionMappingToIdentificationInfo(connection: Connection, nodeContactInfo: INodeContactInfo): void {
+    const nodeId = nodeContactInfo.nodeId;
     const existingConnection = this.nodeIdToConnectionMap.get(nodeId);
     if (existingConnection) {
       if (existingConnection === connection) {
@@ -509,9 +509,9 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
 
     this.nodeIdToConnectionMap.set(nodeId, connection);
     this.connectionToNodeIdMap.set(connection, nodeId);
-    this.connectionToIdentificationMap.set(connection, nodeContactIdentification);
-    this.emit('peer-contact-info', nodeContactIdentification);
-    this.emit('peer-connected', nodeContactIdentification);
+    this.connectionToIdentificationMap.set(connection, nodeContactInfo);
+    this.emit('peer-contact-info', nodeContactInfo);
+    this.emit('peer-connected', nodeContactInfo);
   }
 
   /**
