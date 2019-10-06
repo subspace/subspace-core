@@ -11,6 +11,7 @@ export class Plot {
   public static readonly ADAPTER_DISK_DB = 'disk-db';
   public static readonly ADAPTER_INDEXED_DB = 'indexed-db';
   public static readonly ADAPTER_ROCKS_DB = 'rocks-db';
+  public static readonly ADAPTER_MEGAPLOT_DB = 'megaplot-db';
 
   /**
    * Opens a new plot. Will open an existing plot if rocks or disk storage with same path as previous plot.

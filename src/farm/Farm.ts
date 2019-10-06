@@ -1,12 +1,15 @@
 // tslint:disable: object-literal-sort-keys
 
 import { NodeManagerJsUint8Array, Tree } from "@subspace/red-black-tree";
+import * as path from "path";
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { PIECE_SIZE } from "../main/constants";
 import { IEncodingSet, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { areArraysEqual, smallBin2Num, smallNum2Bin } from "../utils/utils";
+import {MegaPlot} from "./MegaPlot";
+import MegaPlotStore from "./MegaPlotStore";
 import { Plot } from './Plot';
 
 // ToDo
@@ -42,7 +45,7 @@ export class Farm {
    * @param addresses the addresses that will be used for plotting (same as number of plots)
    */
   public static async open(
-    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
+    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB | typeof Plot.ADAPTER_MEGAPLOT_DB,
     metadataStore: Storage,
     storageDir: string,
     numberOfPlots: number,
@@ -54,9 +57,18 @@ export class Farm {
 
     const plotSize = Math.floor(farmSize / numberOfPlots);
 
-    for (let i = 0; i < numberOfPlots; ++i) {
-      const plot = await Plot.open(adapterName, storageDir, i, plotSize, addresses[i]);
-      plots.push(plot);
+    if (adapterName === Plot.ADAPTER_MEGAPLOT_DB) {
+      const storagePath = path.join(storageDir, `megaPlot.bin`);
+      const megaPlot = await MegaPlot.create(storagePath, plotSize, numberOfPlots);
+      for (let plotIndex = 0; plotIndex < numberOfPlots; ++plotIndex) {
+        const plot = new Plot(new MegaPlotStore(megaPlot, plotIndex), plotSize, addresses[plotIndex]);
+        plots.push(plot);
+      }
+    } else {
+      for (let plotIndex = 0; plotIndex < numberOfPlots; ++plotIndex) {
+        const plot = await Plot.open(adapterName, storageDir, plotIndex, plotSize, addresses[plotIndex]);
+        plots.push(plot);
+      }
     }
 
     return new Farm(plots, metadataStore, encodingRounds);
