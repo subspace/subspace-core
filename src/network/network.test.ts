@@ -29,7 +29,7 @@ const peer1: IPeerContactInfo = {
 const peer2: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('2'.repeat(NODE_ID_LENGTH * 2), 'hex'),
-  nodeType: 'full',
+  nodeType: 'validator',
   tcp4Port: allocatePort(),
   udp4Port: allocatePort(),
   wsPort: allocatePort(),
@@ -71,7 +71,7 @@ describe('UDP', () => {
         expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
-      networkClient1.sendRequestOneWayUnreliable(['full'], 'ping', randomPayload);
+      networkClient1.sendRequestOneWayUnreliable(['validator'], 'ping', randomPayload);
     });
   });
 
@@ -87,7 +87,7 @@ describe('UDP', () => {
           resolve();
         });
       }),
-      networkClient1.sendRequestUnreliable(['full'], 'ping', randomPayload),
+      networkClient1.sendRequestUnreliable(['validator'], 'ping', randomPayload),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
@@ -97,14 +97,16 @@ describe('TCP', () => {
   test('Send one-way reliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient2.once('peer-connected', () => {
-        networkClient2.once('ping', (payload, _, clientIdentification) => {
-          expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-          expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
-          expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
-          resolve();
-        });
-        networkClient1.sendRequestOneWay(['full'], 'ping', randomPayload);
+      networkClient1.on('peer-connected', (nodeContactInfo) => {
+        if (nodeContactInfo.nodeType === 'validator') {
+          networkClient2.once('ping', (payload, _, clientIdentification) => {
+            expect(payload.join(', ')).toEqual(randomPayload.join(', '));
+            expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+            expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
+            resolve();
+          });
+          networkClient1.sendRequestOneWay(['validator'], 'ping', randomPayload);
+        }
       });
     });
   });
@@ -122,8 +124,10 @@ describe('TCP', () => {
         });
       }),
       new Promise<Uint8Array>((resolve) => {
-        networkClient2.once('peer-connected', () => {
-          resolve(networkClient1.sendRequest(['full'], 'ping', randomPayload));
+        networkClient1.on('peer-connected', (nodeContactInfo) => {
+          if (nodeContactInfo.nodeType === 'validator') {
+            resolve(networkClient1.sendRequest(['validator'], 'ping', randomPayload));
+          }
         });
       }),
     ]);
@@ -135,13 +139,17 @@ describe('WebSocket', () => {
   test('Send one-way reliable', async () => {
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
-      networkClient1.once('ping', (payload, _, clientIdentification) => {
+      networkClient4.once('ping', (payload, _, clientIdentification) => {
         expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-        expect(clientIdentification.nodeId.join(', ')).toEqual(peer4.nodeId.join(', '));
-        expect(clientIdentification.nodeType).toEqual(peer4.nodeType);
+        expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+        expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
         resolve();
       });
-      networkClient4.sendRequestOneWay(['full'], 'ping', randomPayload);
+      networkClient1.on('peer-connected', (nodeContactInfo) => {
+        if (nodeContactInfo.nodeType === 'client') {
+          networkClient1.sendRequestOneWay(['client'], 'ping', randomPayload);
+        }
+      });
     });
   });
 
@@ -149,15 +157,21 @@ describe('WebSocket', () => {
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
-        networkClient1.once('ping', async (payload, responseCallback, clientIdentification) => {
+        networkClient4.once('ping', async (payload, responseCallback, clientIdentification) => {
           expect(payload.join(', ')).toEqual(randomPayload.join(', '));
-          expect(clientIdentification.nodeId.join(', ')).toEqual(peer4.nodeId.join(', '));
-          expect(clientIdentification.nodeType).toEqual(peer4.nodeType);
+          expect(clientIdentification.nodeId.join(', ')).toEqual(peer1.nodeId.join(', '));
+          expect(clientIdentification.nodeType).toEqual(peer1.nodeType);
           responseCallback(randomPayload);
           resolve();
         });
       }),
-      networkClient4.sendRequest(['full'], 'ping', randomPayload),
+      new Promise<Uint8Array>((resolve) => {
+        networkClient1.on('peer-connected', (nodeContactInfo) => {
+          if (nodeContactInfo.nodeType === 'client') {
+            resolve(networkClient1.sendRequest(['client'], 'ping', randomPayload));
+          }
+        });
+      }),
     ]);
     expect(payload.join(', ')).toEqual(randomPayload.join(', '));
   });
