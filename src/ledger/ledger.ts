@@ -11,55 +11,28 @@ import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, PIECE_SIZE } from '../main/constants';
 import { IFullBlockValue, IPiece} from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { areArraysEqual, bin2Hex, ILogger, smallNum2Bin } from '../utils/utils';
+import { areArraysEqual, bin2Hex, ILogger, measureProximity, smallNum2Bin, sortSet } from '../utils/utils';
 import { Account } from './accounts';
 import { Block } from './block';
 import { Chain } from './chain';
 import { Content } from './content';
 import { Proof } from './proof';
-// import { State } from './state';
+import { State } from './state';
 import { Tx } from './tx';
 
-// Simple Solve Refactor
-  // remove the notion of level entirely
-  // encode state once the pending state buffer is reached (no more while loop)
-  // solve will only use the previous proof hash as input
-  // block validation will include checking that the parent is not an ancestor of the proof
-  // still must handle forks on the same chain (as they will eventually occur)
+// Next Steps
+  // handle a fork on one chain
+  // create a new data structure that is the chain graph for audit puposes -- probably some kind of tree
+  // fix logging in node s.t. it is intelligeble
   // then we can add in notion of piece proximity, chunk quality and audit scope
-  // then we can make the chunk quality and audit scope dynamic
-
-// ToDo
-  // handle validation where one farmer computes the next level and adds pieces before another
-  // handle chain forks
-  // handle level forks
-  // set minimum work difficulty
-  // work difficulty resets
+  // then we can make the chunk quality and make audit scope dynamic and self-adjusting
+  // handle validation failures where one farmer computes the next level and adds pieces before another
   // fix memory leak
   // run in farmer mode, pruning chain state after each new level
-  // decode levels
-  // Refactor Level into a separate class
+  // decode levels and refactor level into a separate class
   // handle tx fees
   // enforce a maximum block size of 4096 bytes
-
-// Basic Modes
-  // do I store the chain data (full node)
-  // do I store the piece set (plotting)
-  // do I store the state chain (light client, full node, farmer)
-
-// Implementation
-  // 1) Store the entire ledger in memory, create state blocks for each new level, encode and plot
-  // 2) Only store the ledger in memory and create new state blocks
-  // 3) Just store the state blocks, discard new blocks once they are created
-  // 4) Store each chain state to disk after N levels are confirmed
-  // 5) Discard each new block after N levels are confirmed
-
-// modes of operation
-  // light client -- only stores the state chain, discards all level data after it is compressed
-  // full node -- stores the full tx and block history (in memory or on disk)
-  // farmer -- only stores the state chain but  encodes each new level into their plot
-  // gateway node -- answers rpc requests for records over the DHT
-  // farmer -- answers rpc requests for pieces
+  // check that nonce has been incremented to prevent replay attacks
 
 export class Ledger extends EventEmitter {
 
@@ -69,7 +42,6 @@ export class Ledger extends EventEmitter {
   public isValidating: boolean;
 
   private previousStateHash = new Uint8Array(32);
-  // public previousLevelHash = new Uint8Array(32);
   public parentProofHash = new Uint8Array(32);
   public previousBlockHash = new Uint8Array(32);
 
@@ -77,32 +49,40 @@ export class Ledger extends EventEmitter {
   public chainCount = 0;
   public confirmedTxs = 0;
   public confirmedBlocks = 0;
-  // public confirmedLevels = 0;
   public confirmedState = 0;
-  public lastCoinbaseTxTime = 0;
-  // public genesisLevelChainIndex = 0;
 
   public accounts: Account;
   public stateMap = ArrayMap<Uint8Array, Uint8Array>();
 
   // memory pool, may be cleared after each level is confirmed (if not serving)
-  private compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
+  public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
   private chains: Chain[] = [];
   private readonly blsSignatures: BlsSignatures;
   private storage: Storage;
-  // private pendingProofSet: Set<Uint8Array> = ArraySet();
   private proofMap = ArrayMap<Uint8Array, Uint8Array>();
   private contentMap = ArrayMap<Uint8Array, Uint8Array>();
   // private pendingTxSet: Set<Uint8Array> = ArraySet();
   private txMap = ArrayMap<Uint8Array, Uint8Array>();
   private unconfirmedTxs: Set<Uint8Array> = ArraySet(); // has not been included in a block
-  // private unconfirmedBlocksByChain: Array<Set<Uint8Array>> = []; // has not been included in a level
-  // private unconfirmedChains: Set<number> = new Set(); // does not have any new blocks since last level was confirmed
+  private unencodedTxs: Set<Uint8Array> = ArraySet(); // have been applied to the ledger but not encoded as state
   public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
   public blockIndex: Map<number, Uint8Array> = new Map();
   public stateIndex: Map<number, Uint8Array> = new Map();
-  private pendingState: Uint8Array = new Uint8Array(256 * 4096);
+  private pendingState: Uint8Array = new Uint8Array();
+  public pendingRecordsLength = 0;
   public readonly logger: ILogger;
+
+  // An array of chains, each chain contains a set of unconfirmed block ids for this chain
+  private pendingBlocksByChain: Array<Set<Uint8Array>> = [];
+  // An Array of levels (block heights), each level contains a map of key (blockId) -> value (number of chains pending confirmation)
+  private pendingBlocksByLevel: Map<number, Map<Uint8Array, number>> = new Map();
+  // A lookup table that maps the blockId for a pending block to which level index it sits at
+  private levelForPendingBlock: Map<Uint8Array, number> = ArrayMap<Uint8Array, number>();
+  // A lookup table that maps txId to a set of all valid blockIds that have claimed that tx
+  // private blocksClaimingTx: Map<Uint8Array, Set<Uint8Array>> = ArrayMap<Uint8Array, Set<Uint8Array>>();
+
+  private proof2BlockMap: Map<Uint8Array, Uint8Array> = ArrayMap<Uint8Array, Uint8Array>();
+  private content2BlockMap: Map<Uint8Array, Uint8Array> = ArrayMap<Uint8Array, Uint8Array>();
 
   constructor(
     blsSignatures: BlsSignatures,
@@ -127,9 +107,9 @@ export class Ledger extends EventEmitter {
       const chain = new Chain(i);
       this.chains.push(chain);
 
-      // init each chain as unconfirmed
-      // this.unconfirmedBlocksByChain.push(ArraySet());
-      // this.unconfirmedChains.add(i);
+      // create empty pending blocks tracker
+      const pendingBlocksForChain: Set<Uint8Array> = ArraySet();
+      this.pendingBlocksByChain.push(pendingBlocksForChain);
     }
   }
 
@@ -152,41 +132,63 @@ export class Ledger extends EventEmitter {
    * @param proof the canonical proof of unique storage
    * @param coinbaseTx the associatec coinbase tx
    *
-   * @return the fully formed Block for Node to validate, gossip, and apply to the ledger
+   * @return the fully formed Block for Node to validate, gossip, and apply to the ledger -- or a null response if proof is too late for chain
    */
-  public async createBlock(proof: Proof, coinbaseTx: Tx): Promise<Block> {
+  public async createBlock(proof: Proof, coinbaseTx: Tx): Promise<Block | void> {
     const chainIndex = crypto.jumpHash(proof.key, this.chainCount);
     const parentBlockId = this.chains[chainIndex].head;
     let parentContentHash: Uint8Array;
 
-    // genesis block will not have a parent block id for that chain
+    // for a single chain, we have to confirm the new block as soon as it's received
+
     if (parentBlockId.length === 32) {
-      // default case
-        // a new block, not on the genesis level, or a new block on the genesis level that is not the first block on a chain
-        // there should be a valid previous block that resides in the compact block map
-      const compactParentBlockData = this.compactBlockMap.get(parentBlockId);
-      if (!compactParentBlockData) {
+      // default case (not a genesis block)
+
+      // get the last block on the chain we are extending (parent block)
+      const parentBlockData = await this.getBlock(parentBlockId);
+
+      if (!parentBlockData) {
         this.logger.error('Cannot get parent block when extending the chain.');
         throw new Error('Cannot get parent block when extending the chain.');
       }
-      const compactParentBlock = Block.fromCompactBytes(compactParentBlockData);
-      parentContentHash = compactParentBlock.contentHash;
-    // } else if (areArraysEqual(proof.value.previousLevelHash, new Uint8Array(32)) && !areArraysEqual(proof.value.previousProofHash, new Uint8Array(32))) {
-    //   // corner case 1
-    //     // a new block on the genesis level, that is the first block of a chain, but not the first block in the ledger,
-    //     // previosProofHash should not be null
-    //     // previousLevelhash should be null
-    //   parentContentHash = new Uint8Array(32);
+
+      // compile the parent block and get parent content data (for new content pointer)
+      const parentBlock = Block.fromFullBytes(parentBlockData);
+      parentContentHash = parentBlock.value.content.key;
+
+      // retrieve all blocks pending for this chain
+      const blocksPendingForThisChain = this.pendingBlocksByChain[chainIndex];
+
+      // retrieve the block id for the challenge referenced
+      const parentProofBlockHash = this.proof2BlockMap.get(proof.value.previousProofHash);
+      if (!parentProofBlockHash) {
+        throw new Error('Cannot get parent proof block hash when extending the chain');
+      }
+
+      // ensure the parent proof is still unconfirmed, else this proof (and block) are no longer valid for this chain
+      if (!blocksPendingForThisChain.has(parentProofBlockHash)) {
+        if (areArraysEqual(parentBlock.value.proof.value.previousProofHash, proof.value.previousProofHash)) {
+          // we have a fork, see which one is higher quality
+          const chunkTarget = crypto.hash(crypto.hash(proof.value.previousProofHash)).subarray(0, 8);
+          const incumbentBlockQuality = measureProximity(chunkTarget, parentBlock.value.proof.value.solution);
+          const challengerBlockQuality = measureProximity(chunkTarget, proof.value.solution);
+
+          if (challengerBlockQuality > incumbentBlockQuality) {
+            // revert the chain
+            // need to still return the block here -- then handle the fork in apply block
+            this.logger.warn('******* Valid Fork, Chain should revert here ******');
+          }
+        }
+        // either the chain has been extended more that one block (proofs do not match)
+        // or they have the same proof and the challenger quality is lower
+        this.logger.debug('Potential block does not have a valid proof for ledger');
+        this.logger.debug([...blocksPendingForThisChain.values()]);
+        return;
+      }
     } else {
-      // corner case 2:
-        // the first block in the ledger
-        // previousProofHash should be null
-        // previousLevelhash shsould be null
-      // if (!areArraysEqual(proof.value.previousProofHash, new Uint8Array(32))) {
-      //   this.logger.error('Only the genesis block may have a null parent proof hash');
-      //   throw new Error('Only the genesis block may have a null parent proof hash');
-      // }
+      // genesis block for this chain
       parentContentHash = new Uint8Array(32);
+
     }
 
     const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
@@ -204,22 +206,38 @@ export class Ledger extends EventEmitter {
    * @return whether or not the block is valid (boolean)
    */
   public async isValidBlock(block: Block, encoding: Uint8Array): Promise<boolean> {
+    // ToDo
+      // return false if
+        // parent proof has not yet been seen
+        // piece/piece-proof refrences unknown state
+        // references a tx that has not been seen yet
+      // on isValid -> wait at some interval before checking if isValid again
+      // validate nodes are not adding txs that have already been announced by their ancestors
 
     // validate the block, proof, content, and coinbase tx are all well formed, will throw if not
     block.isValid(this.blsSignatures);
 
     // verify the proof
 
-    // proof has not been seen by another block that is my parent
-      // for each chain keep a set of seen proofs or a bloom filter
-      // ensure the proof has not been seen by this chain
-
     // previous proof hash is in proof map
-    if (!this.proofMap.has(block.value.proof.value.previousProofHash)) {
-      if (!areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32)) || !areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
+    if (!(await this.getProof(block.value.proof.value.previousProofHash))) {
+      if (!areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
         this.logger.error('Invalid block proof, points to an unknown previous proof');
         throw new Error('Invalid block proof, points to an unknown previous proof');
       }
+    }
+
+    // proof has not been seen on this chain yet
+    const chainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
+    const pendingBlocksForChain = this.pendingBlocksByChain[chainIndex];
+    const parentProofBlockHash = this.proof2BlockMap.get(block.value.proof.value.previousProofHash);
+
+    if (!parentProofBlockHash && !(areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32)))) {
+      throw new Error('Cannot get block id for proof when validating block');
+    }
+
+    if (parentProofBlockHash && !pendingBlocksForChain.has(parentProofBlockHash)) {
+      throw new Error('Invalid block proof, parent proof (challenge) has already been confirmed for this chain');
     }
 
     // piece is within the scope of the audit (closest piece for now)
@@ -238,10 +256,10 @@ export class Ledger extends EventEmitter {
       // then apply the same rules as piece quality
         // if you hear a better one revise your piece
 
-    // solution is the best piece yet seen for this challenge (not for chain)
-      // different solutions can very well hash to different chains
-      // but they really represent entirely different ledger states
-      // we should differentiate based on the challenge
+    // solution is the best piece yet seen for this challenge on this chain (if last block uses same challenge)
+      // revert the old block
+      // apply this block instead
+      // eventually will need to check total chain/ledger quality (assuming that block has been referenced by other blocks)
 
     // solution is part of encoded piece
     let hasSolution = false;
@@ -258,53 +276,49 @@ export class Ledger extends EventEmitter {
       throw new Error('Invalid block proof, solution is not present in encoding');
     }
 
-    // piece level is seen in state
+    // piece references a known state
     if (!this.stateMap.has(block.value.proof.value.pieceStateHash) && areArraysEqual(block.value.proof.value.pieceStateHash, new Uint8Array(32))) {
       this.logger.error('Invalid block proof, referenced piece level is unknown');
       throw new Error('Invalid block proof, referenced piece level is unknown');
     }
 
-    // piece merkle proof is valid for a given state level, assuming their is more than one piece in the level
-    // if (!areArraysEqual(block.value.proof.value.previousLevelHash, block.value.proof.value.previousProofHash)) {
-    //   const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
-    //   if (!pieceStateData) {
-    //     this.logger.verbose('state keys are: ', this.stateMap.keys());
-    //     this.logger.verbose('missing state is', block.value.proof.value.pieceStateHash);
-    //     this.logger.error('Invalid block proof, referenced state data is not in state map');
-    //     throw new Error('Invalid block proof, referenced state data is not in state map');
-    //   }
-    //   const state = State.fromBytes(pieceStateData);
-    //   const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
-    //   if (!validPieceProof) {
-    //     this.logger.error('Invalid block proof, piece proof is not a valid merkle path');
-    //     throw new Error('Invalid block proof, piece proof is not a valid merkle path');
-    //   }
-    // }
+    // piece merkle proof is valid for a given state level
+    const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
+
+    if (!pieceStateData) {
+      this.logger.verbose('state keys are: ', this.stateMap.keys());
+      this.logger.verbose('missing state is', block.value.proof.value.pieceStateHash);
+      this.logger.error('Invalid block proof, referenced state data is not in state map');
+      throw new Error('Invalid block proof, referenced state data is not in state map');
+    }
+    const state = State.fromBytes(pieceStateData);
+    const validPieceProof = crypto.isValidMerkleProof(state.value.pieceRoot, block.value.proof.value.pieceProof, block.value.proof.value.pieceHash);
+
+    if (!validPieceProof) {
+      this.logger.error('Invalid block proof, piece proof is not a valid merkle path');
+      throw new Error('Invalid block proof, piece proof is not a valid merkle path');
+    }
 
     // encoding decodes pack to piece
     const proverAddress = crypto.hash(block.value.proof.value.publicKey);
     const piece = codes.decodePiece(encoding, proverAddress, this.encodingRounds);
     const pieceHash = crypto.hash(piece);
+
     if (!areArraysEqual(pieceHash, block.value.proof.value.pieceHash)) {
       this.logger.error('Invalid block proof, encoding does not decode back to parent piece');
       throw new Error('Invalid block proof, encoding does not decode back to parent piece');
     }
 
     // check that the parent content hash is on the correct chain
-    const correctChainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
-
     if (areArraysEqual(block.value.content.value.parentContentHash, new Uint8Array(32))) {
-      // this should be the first block for a chain
-      // if (!areArraysEqual(block.value.proof.value.previousLevelHash, new Uint8Array(32))) {
-      //   throw new Error('Invalid block, can only have a null parent content on the genesis level');
-      // }
+      const chain = this.chains[chainIndex];
 
-      const chain = this.chains[correctChainIndex];
       if (chain.height !== 0) {
         throw new Error('Invalid block, content claims to start a chain that already has a genesis block');
       }
     } else {
       const parentContentData = await this.getContent(block.value.content.value.parentContentHash);
+
       if (!parentContentData) {
         this.logger.error('Invalid block content, cannot retrieve parent content block');
         throw new Error('Invalid block content, cannot retrieve parent content block');
@@ -312,7 +326,8 @@ export class Ledger extends EventEmitter {
 
       const parentContent = Content.fromBytes(parentContentData);
       const parentChainIndex = crypto.jumpHash(parentContent.value.proofHash, this.chainCount);
-      if (parentChainIndex !== correctChainIndex) {
+
+      if (parentChainIndex !== chainIndex) {
         throw new Error('Invalid block content, does not hash to the same chain as parent');
       }
     }
@@ -322,18 +337,35 @@ export class Ledger extends EventEmitter {
       this.logger.error('Invalid block, does not have a coinbase tx');
       throw new Error('Invalid block, does not have a coinbase tx');
     }
+
     this.isValidTx(block.value.coinbase);
 
     // verify each tx in the content (including coinbase)
     const txIds = block.value.content.value.payload;
     for (let i = 1; i < txIds.length; ++i) {
       const txData = this.txMap.get(txIds[i]);
+
       if (!txData) {
         this.logger.error('Invalid block content, cannot retrieve referenced tx id');
         throw new Error('Invalid block content, cannot retrieve referenced tx id');
       }
+
       const tx = Tx.fromBytes(txData);
       this.isValidTx(tx);
+
+      // ensure the tx has not been included in an ancestor block
+      // const blocksClaimingThisTx = this.blocksClaimingTx.get(tx.key);
+
+      // if (!blocksClaimingThisTx) {
+      //   throw new Error('Canot find blocks claiming tx value for this tx, that exist in tx map');
+      // }
+
+      // for (const blockId of blocksClaimingThisTx.values()) {
+      //   // is this block an ancestor of the current block?
+      //   // how far back should you look?
+      //   // corner case now for malicous node, solve later
+      //   this.logger.verbose(`Block has included tx already referenced by another block with id: ${bin2Hex(blockId).substr(0, 12)}`);
+      // }
     }
 
     return true;
@@ -373,54 +405,138 @@ export class Ledger extends EventEmitter {
   }
 
   /**
-   * Called when a new valid block has been created locally or received over th network.
-   * Applies the block to the ledger, checks if the leve is confirmed, and if state can be encoded.
+   * Called when a new valid block has been created locally or received over the network.
+   * Applies the block to the ledger, checks if the level is confirmed, and if state can be encoded.
    *
    * @param block the fully formed block instance to be applied
    */
   public async applyBlock(block: Block): Promise<void> {
     // extend the correct chain with block id and add to compact block map
     const chainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
-    this.blockIndex.set(this.blockIndex.size, block.key);
+    const parentBlockId = this.chains[chainIndex].head;
     this.chains[chainIndex].addBlock(block.key);
     this.compactBlockMap.set(block.key, block.toCompactBytes());
-    // this.unconfirmedBlocksByChain[chainIndex].add(block.key);
     this.previousBlockHash = block.key;
 
+    // store the proof
+    this.proof2BlockMap.set(block.value.proof.key, block.key);
     const proofData = block.value.proof.toBytes();
-    const encodedProof = Buffer.concat([smallNum2Bin(proofData.length), proofData]);
-    const contentData = block.value.content.toBytes();
-    const encodedContentData = Buffer.concat([smallNum2Bin(contentData.length), contentData]);
-
-
-    // compile the level data and record the length of each record
-    levelRecords.push(smallNum2Bin(proofData.length));
-    levelRecords.push(proofData);
-    levelProofHashes.push(compactBlock.proofHash);
-    const content = Content.fromBytes(contentData);
-    levelRecords.push(smallNum2Bin(contentData.length));
-    levelRecords.push(contentData);
-
-    // add proofHash to proofSet
-
-    // add all txHashes to txSet
-
-    // add proof and content to pending State
-
-    // when to deduplicate txs and add to pending state?
-
-    // add proof to proof map and update last proof seen
-    this.proofMap.set(block.value.proof.key, block.value.proof.toBytes());
+    this.proofMap.set(block.value.proof.key, proofData);
     this.parentProofHash = block.value.proof.key;
 
-    // add content to content map
-    this.contentMap.set(block.value.content.key, block.value.content.toBytes());
+    // store the content
+    this.content2BlockMap.set(block.value.content.key, block.key);
+    const contentData = block.value.content.toBytes();
+    this.contentMap.set(block.value.content.key, contentData);
 
+    if (parentBlockId.length === 32) {
+
+      // insert block into the appropriate level
+      const parentBlockLevelIndex = this.levelForPendingBlock.get(parentBlockId);
+      if (parentBlockLevelIndex === undefined) {
+        this.logger.verbose(`Parent block ID: ${bin2Hex(parentBlockId)}`);
+        this.logger.verbose(`Parent block level index is: ${parentBlockLevelIndex}`);
+        console.log(this.levelForPendingBlock);
+        throw new Error('Cannot get level for parent block');
+      }
+
+      // get or create the level for the new pending block
+      let pendingBlocksForLevel = this.pendingBlocksByLevel.get(parentBlockLevelIndex + 1);
+      if (!pendingBlocksForLevel) {
+        // if null level, then create the new level
+        pendingBlocksForLevel = ArrayMap<Uint8Array, number>();
+      }
+
+      // add the counter for this blocks level and set
+      pendingBlocksForLevel.set(block.key, this.chainCount);
+      this.pendingBlocksByLevel.set(parentBlockLevelIndex + 1, pendingBlocksForLevel);
+
+      // record the level for this block
+      this.levelForPendingBlock.set(block.key, parentBlockLevelIndex + 1);
+      this.logger.verbose(`Added pending block ${bin2Hex(block.key).substring(0, 12)} to level ${parentBlockLevelIndex + 1}`);
+
+    } else {
+      // genesis block
+
+      let pendingBlocksForLevel = this.pendingBlocksByLevel.get(0);
+      if (!pendingBlocksForLevel) {
+        // if null level, then create the new level
+        pendingBlocksForLevel = ArrayMap<Uint8Array, number>();
+      }
+      pendingBlocksForLevel.set(block.key, this.chainCount);
+      this.pendingBlocksByLevel.set(0, pendingBlocksForLevel);
+      this.levelForPendingBlock.set(block.key, 0);
+      this.logger.verbose(`Added pending block ${bin2Hex(block.key).substring(0, 12)} to level ${0}`);
+    }
+
+    // add this block as pending confirmation for each chain
+    for (const chain of this.pendingBlocksByChain) {
+      chain.add(block.key);
+    }
+
+    // check which pending blocks for this chain that this block confirms
+    // start by get the pending blocks for this chain
+    const blocksPendingForThisChain = this.pendingBlocksByChain[chainIndex];
+
+    // skip the genesis block
+    if (!areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
+      // confirm the challenge for this chain
+      // get the block id of parent proof and remove from pending blocks for this chain
+      const parentProofBlockHash = this.proof2BlockMap.get(block.value.proof.value.previousProofHash);
+
+      if (!parentProofBlockHash) {
+        throw new Error('Cannot retrieve block id for challenge referenced in block');
+      }
+
+      if (!blocksPendingForThisChain.has(parentProofBlockHash)) {
+        throw new Error('Block with parent proof should not be confirmed for this chain yet');
+      }
+
+      blocksPendingForThisChain.delete(parentProofBlockHash);
+      this.confirmChainForPendingBlock(parentProofBlockHash);
+
+      // confirm the last block for this chain
+      // skip the first block on each chain
+      if (parentBlockId.length === 32) {
+        // get the block id of parent content and remove from pending blocks for this chain
+        const parentContentBlockHash = this.content2BlockMap.get(block.value.content.value.parentContentHash);
+
+        if (!parentContentBlockHash) {
+          throw new Error('Cannot retrieve block id for parent content referenced in block');
+        }
+
+        if (!blocksPendingForThisChain.has(parentContentBlockHash) && !areArraysEqual(parentContentBlockHash, parentProofBlockHash)) {
+          // unless the proof came from parent content block
+          throw new Error('Parent content block for this block should not be confirmed for this chain yet');
+        }
+
+        // dont try and confirm the same block twice for one chain
+        if (!areArraysEqual(parentProofBlockHash, parentContentBlockHash)) {
+          blocksPendingForThisChain.delete(parentContentBlockHash);
+          this.confirmChainForPendingBlock(parentContentBlockHash);
+        }
+      }
+
+      this.logger.verbose('Confirming all blocks from parent proof chain');
+
+      // remove all blocks confirmed on parent proof chain from blocks pending for this chain
+      const chainIndexForParentProof = crypto.jumpHash(block.value.proof.value.previousProofHash, this.chainCount);
+      const blocksPendingConfirmationForParentProof = this.pendingBlocksByChain[chainIndexForParentProof];
+      for (const blockPendingForThisChain of blocksPendingForThisChain.values()) {
+        if (!blocksPendingConfirmationForParentProof.has(blockPendingForThisChain)) {
+          blocksPendingForThisChain.delete(blockPendingForThisChain);
+          this.confirmChainForPendingBlock(blockPendingForThisChain);
+        }
+      }
+    }
+
+    // when a chain is confimred for a block, we check if the block is confirmed, then the level, and encode state as needed
+
+    // add the coinbase tx txset
     const coinbase = block.value.coinbase;
-    // this.txSet.add(coinbase.key);
     this.txMap.set(coinbase.key, coinbase.toBytes());
     this.applyTx(coinbase);
-    this.lastCoinbaseTxTime = block.value.coinbase.value.timestamp;
+    this.unencodedTxs.add(coinbase.key);
 
     // for each credit tx, apply and remove from unconfirmed set, skipping the coinbase tx
     const txIds = block.value.content.value.payload;
@@ -434,37 +550,9 @@ export class Ledger extends EventEmitter {
       const tx = Tx.fromBytes(txData);
       this.applyTx(tx);
       this.unconfirmedTxs.delete(txId);
+      this.unencodedTxs.add(txId);
     }
     this.logger.verbose('Completed applying new block');
-
-    if (this.pendingState.length >= (4096 * 127)) {
-      await this.createState();
-    }
-
-    // this.logger.verbose('Completed applying new block, checking if pending level has been confirmed...');
-
-    // // update level confirmation cache and check if level is confirmed
-    // this.unconfirmedChains.delete(chainIndex);
-    // this.logger.verbose(`${this.unconfirmedChains.size} unconfirmed chains remain`);
-    // if (!this.unconfirmedChains.size) {
-    //   this.createLevel();
-    //   this.logger.verbose('New level has been confirmed');
-    //   this.logger.verbose('Chain lengths: ');
-    //   this.logger.verbose('---------------');
-    //   for (const chain of this.chains) {
-    //     this.logger.verbose(`Chain ${chain.index}: ${chain.size}`);
-    //   }
-
-    //   // reset each chain back to unconfirmed
-    //   for (let i = 0; i < this.chainCount; ++i) {
-    //     this.unconfirmedChains.add(i);
-    //   }
-
-    //   // encode new state as needed
-    //   while (this.pendingState.length >= (4096 * 127)) {
-    //     await this.createState();
-    //   }
-    // }
   }
 
   /**
@@ -483,6 +571,10 @@ export class Ledger extends EventEmitter {
     this.accounts.update(tx.receiverAddress, tx.value.amount);
     this.logger.verbose(`Applied new ${areArraysEqual(tx.value.sender, new Uint8Array(48)) ? "credit" : "coinbase"} tx ${bin2Hex(tx.key).substring(0, 16)} to ledger.`);
 
+    // add the tx to
+    // const
+    // this.blocksClaimingTx.add()
+
     // apply the fee to the farmer?
     // note when tx is referenced (added to a block)
     // note when tx is confirmed (a block referencing is captured in a level)
@@ -490,86 +582,138 @@ export class Ledger extends EventEmitter {
 }
 
   /**
-   * Organizes all blocks for a newly confirmed level by ordering the proofs and contents, then deduplicating the txs.
-   * All data is written to a length encoded buffer. Once the buffer reaches a minimum size, a new state block will be encoded.
+   * Confirms a single chain for a block and checks if the block is now confirmed
+   *
+   * @param blockId
    */
-  private createLevel(): void {
-    const levelRecords: Uint8Array[] = [];
-    const levelProofHashes: Uint8Array[] = [];
-    const uniqueTxSet: Set<Uint8Array> = new Set();
+  private confirmChainForPendingBlock(blockId: Uint8Array): void {
 
-    // pull each valid pending block from eachc hain
-    for (const chain of this.unconfirmedBlocksByChain) {
-      for (const blockId of chain.values()) {
-        this.confirmedBlocks ++;
+    const pendingBlockLevelIndex = this.levelForPendingBlock.get(blockId);
 
-        // retrieve the block data
-        const compactBlockData = this.compactBlockMap.get(blockId);
-        if (!compactBlockData) {
-          this.logger.error('Cannot create level, cannot retrieve required compact block data');
-          throw new Error('Cannot create level, cannot retrieve required compact block data');
-        }
-        const compactBlock = Block.fromCompactBytes(compactBlockData);
-        const proofData = this.proofMap.get(compactBlock.proofHash);
-        const contentData = this.contentMap.get(compactBlock.contentHash);
-        if (!proofData || !contentData) {
-          this.logger.error('Cannot create new level, cannot fetch requisite proof or content data');
-          throw new Error('Cannot create new level, cannot fetch requisite proof or content data');
-        }
-
-        // compile the level data and record the length of each record
-        levelRecords.push(smallNum2Bin(proofData.length));
-        levelRecords.push(proofData);
-        levelProofHashes.push(compactBlock.proofHash);
-        const content = Content.fromBytes(contentData);
-        levelRecords.push(smallNum2Bin(contentData.length));
-        levelRecords.push(contentData);
-
-        for (const txId of content.value.payload) {
-          uniqueTxSet.add(txId);
-        }
-      }
-      chain.clear();
+    if (pendingBlockLevelIndex === undefined) {
+      throw new Error('Cannot retrieve level index for pending block that needs to have chain count decremented');
     }
 
-    const confirmedTxs: Tx[] = [];
+    const pendingBlocks = this.pendingBlocksByLevel.get(pendingBlockLevelIndex);
+    // const pendingBlocks = this.pendingBlocksByLevel[pendingBlockLevelIndex];
 
-    for (const txId of uniqueTxSet) {
-      this.confirmedTxs ++;
-      const txData = this.txMap.get(txId);
+    if (!pendingBlocks) {
+      throw new Error ('Cannot retrieve level for pending block that needs to have chain count decremented');
+    }
+
+    let pendingChainCount = pendingBlocks.get(blockId);
+
+    if (pendingChainCount === undefined) {
+      console.log(`Searching for block ${bin2Hex(blockId).substring(0, 12)} at index ${pendingBlockLevelIndex}`);
+      console.log(this.pendingBlocksByLevel.size);
+      for (const [level, entries] of this.pendingBlocksByLevel.entries()) {
+        console.log('Level: ', level);
+        for (const [blockId, chainCount] of entries.entries()) {
+          console.log(`${bin2Hex(blockId).substring(0, 12)}: ${chainCount}`);
+        }
+      }
+      throw new Error('Cannot get pending block from pending block map for block that needs to have chain count decremented');
+    }
+
+    pendingChainCount --;
+    pendingBlocks.set(blockId, pendingChainCount);
+
+    if (pendingChainCount === 0) {
+      // this block is confirmed on all chains
+
+      // remove the block from pending block map
+      this.levelForPendingBlock.delete(blockId);
+
+      // check if all blocks at this index are confirmed
+      for (const unconfirmedChainCount of pendingBlocks.values()) {
+        if (unconfirmedChainCount !== 0) {
+          return;
+        }
+      }
+
+      // confirm and encode all blocks at this index
+      this.confirmLevel(pendingBlockLevelIndex);
+    }
+  }
+
+  /**
+   * Compiles new records for pending state when for all blocks within a new confirmed level
+   *
+   * @param levelIndex the height of the block tree that is being confirmed
+   */
+  private async confirmLevel(levelIndex: number): Promise<void> {
+
+    // get all blocks for pending level
+    const confirmedBlocks = this.pendingBlocksByLevel.get(levelIndex);
+    // const confirmedBlocks = this.pendingBlocksByLevel[levelIndex];
+
+    if (!confirmedBlocks) {
+      throw new Error('Cannot get confirmed blocks for new confirmed level');
+    }
+
+    const newRecords: Uint8Array[] = [];
+    const uniqueTxSet: Set<Uint8Array> = ArraySet();
+    let latestTxTime: number = 0;
+
+    // canonicaly order the blocks
+    const confirmedBlockSet = ArraySet([...confirmedBlocks.keys()]);
+    const sortedBlocks = sortSet(confirmedBlockSet);
+
+    // retrieve and comiple the data for each block
+    for (const blockHash of sortedBlocks) {
+      this.blockIndex.set(this.blockIndex.size, blockHash);
+      const blockData = await this.getBlock(blockHash);
+
+      if (!blockData) {
+        throw new Error('Cannot retrieve block for state encoding');
+      }
+
+      // add proof and content to pending records
+      const block = Block.fromFullBytes(blockData);
+      const proofData = block.value.proof.toBytes();
+      const proofLength = smallNum2Bin(proofData.length);
+      const contentData = block.value.content.toBytes();
+      const contentLength = smallNum2Bin(contentData.length);
+      newRecords.push(proofLength, proofData, contentLength, contentData);
+
+      // collect all the txs in the set
+      for (const txHash of block.value.content.value.payload) {
+        uniqueTxSet.add(txHash);
+      }
+    }
+
+    const confirmedUnencodedTxs = [...uniqueTxSet.values()].filter((txId) => this.unencodedTxs.has(txId));
+    const unsortedTxSet = ArraySet(confirmedUnencodedTxs);
+    const sortedTxSet = sortSet(unsortedTxSet);
+
+    // filter for duplicate txs and encode
+    for (const txHash of sortedTxSet.values()) {
+      this.unencodedTxs.delete(txHash);
+      const txData = await this.getTx(txHash);
+
       if (!txData) {
-        this.logger.error('Cannot create new level, cannot fetch requisite transaction data');
-        throw new Error('Cannot create new level, cannot fetch requisite transaction data');
+        throw new Error('Cannot retrieve tx for state encoding');
       }
+
       const tx = Tx.fromBytes(txData);
-      confirmedTxs.push(tx);
-      levelRecords.push(smallNum2Bin(txData.length));
-      levelRecords.push(txData);
+      if (tx.value.timestamp > latestTxTime) {
+        latestTxTime = tx.value.timestamp;
+      }
+
+      const txLength = smallNum2Bin(txData.length);
+      newRecords.push(txLength, txData);
     }
 
-    // compile the level hash and update for new solving
-    const levelProofHashesData = Buffer.concat(levelProofHashes);
-    const levelHash = crypto.hash(levelProofHashesData);
-    this.previousLevelHash = levelHash;
+    // compile new records and add to pending state
+    const newState = Buffer.concat(newRecords);
+    this.pendingState = Buffer.concat([this.pendingState, newState]);
 
-    // add new level data to pending state buffer
-    const levelData = Buffer.concat(levelRecords);
-    this.pendingState = Buffer.concat([this.pendingState, levelData]);
-
-    // clear the pending state from memory
-    // optionally save the pending state to disk
-    // ideally only after state has been confirmed, or multiple levels
-    if (!this.isServing) {
-      this.compactBlockMap.clear();
-      this.proofMap.clear();
-      this.contentMap.clear();
-      this.txMap.clear();
-      this.chains.forEach((chain) => chain.reset());
+    // check if state needs to be encoded
+    while (this.pendingState.length >= 127 * 4096) {
+      await this.createState(latestTxTime);
     }
 
-    // return the confirmed tx for wallet to parse
-    this.confirmedLevels ++;
-    this.emit('confirmed-level', confirmedTxs);
+    // output log info for new confimred level
   }
 
   /**
@@ -581,7 +725,7 @@ export class Ledger extends EventEmitter {
    * 1 parity index piece
    * Any node can reconstruct the state using just the state block by querying the DHT for the two index pieces and retrieving any combination of 127 source and parity pieces.
    */
-  private async createState(): Promise<void> {
+  private async createState(timestamp: number): Promise<void> {
     return new Promise(async (resolve) => {
       // we need to only take the first 127 pieces
       const stateData = this.pendingState.subarray(0, 4096 * 127);
@@ -590,7 +734,7 @@ export class Ledger extends EventEmitter {
       this.pendingState = this.pendingState.subarray(4096 * 127);
 
       // erasure code the source state
-      const { state, pieceDataSet } = await codes.encodeState(stateData, this.previousStateHash, Date.now());
+      const { state, pieceDataSet } = await codes.encodeState(stateData, this.previousStateHash, timestamp);
 
       // update the state chain
       this.stateMap.set(state.key, state.toBytes());

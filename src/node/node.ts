@@ -52,24 +52,8 @@ export class Node extends EventEmitter {
     this.rpc.on('state-request-by-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onStateRequestByIndex(index, responseCallback));
 
     /**
-     * A new level has been confirmed and encoded into a piece set.
-     * Add each piece to the plot, if farming.
+     * A new state block has been confimred, if farming, plot the new piece set within farm.
      */
-    this.ledger.on('confirmed-level', async (confirmedTxs: Tx[]) => {
-      // how do you prevent race conditions here, a piece maybe partially plotted before it can be evaluated...
-      this.logger.info('Confirmed new level');
-
-      // update account for each tx that links to an account for this node
-      if (this.wallet) {
-        const addresses = this.wallet.addresses;
-        for (const tx of confirmedTxs) {
-          if (addresses.has(bin2Hex(tx.senderAddress)) || addresses.has(bin2Hex(tx.receiverAddress))) {
-            await this.wallet.onTxConfirmed(tx);
-          }
-        }
-      }
-    });
-
     this.ledger.on('confirmed-state', async (stateHash: Uint8Array, pieceDataSet: IPiece[]) => {
       this.logger.info('Confirmed new state');
       if (this.farm) {
@@ -79,16 +63,6 @@ export class Node extends EventEmitter {
       }
       this.logger.info('completed plotting in node', bin2Hex(stateHash));
       this.ledger.emit('completed-plotting', stateHash);
-    });
-
-    /**
-     * A new credit tx was created by this node and applied to the local ledger.
-     * Encode the tx as binary and gossip over the network.
-     */
-    this.ledger.on('tx', (tx: Tx) => {
-      if (this.isGossiping) {
-        this.rpc.gossipTx(tx);
-      }
     });
 
     switch (this.type) {
@@ -196,6 +170,11 @@ export class Node extends EventEmitter {
 
     // create the block
     const block = await this.ledger.createBlock(signedProof, coinbaseTx);
+
+    // check if proof for this block was too late for chain
+    if (!block) {
+      return;
+    }
 
     // gossip the block across the network
     if (this.isGossiping) {
@@ -334,7 +313,7 @@ export class Node extends EventEmitter {
     if (this.isGossiping) {
       console.log('New block received by node via gossip', bin2Hex(block.key));
       // check to ensure you have parent
-      if (!this.ledger.proofMap.has(block.value.previousBlockHash)) {
+      if (! (await this.ledger.getBlock(block.value.previousBlockHash))) {
         // we have received an early block who arrived before its parent
         this.ledger.earlyBlocks.set(block.key, block.value);
         // this.rpc.requestBlock()
