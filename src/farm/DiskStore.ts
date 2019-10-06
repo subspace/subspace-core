@@ -44,13 +44,13 @@ export default class DiskStore implements IStore {
   ) {
   }
 
-  public async add(key: Uint8Array, value: Uint8Array): Promise<void> {
+  public async add(value: Uint8Array, key: Uint8Array): Promise<void> {
     await this.plotData.write(value, 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
   }
 
   public async get(key: Uint8Array): Promise<Uint8Array | null> {
-    const data = Buffer.allocUnsafe(length);
-    await this.plotData.read(data, 0, length, bin2Num(key) * PIECE_SIZE);
+    const data = Buffer.allocUnsafe(PIECE_SIZE);
+    await this.plotData.read(data, 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
     if (isAllZeroes(data)) {
       // Not found, all zeroes
       return null;

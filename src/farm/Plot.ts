@@ -30,7 +30,7 @@ export class Plot {
         store = new MemoryStore();
         break;
       case Plot.ADAPTER_DISK_DB: {
-        const storagePath = path.join(storageDir, plotPath);
+        const storagePath = path.join(storageDir, `${plotPath}.bin`);
         store = await DiskStore.create(storagePath, size);
         break;
       }
