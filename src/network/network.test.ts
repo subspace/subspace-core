@@ -17,6 +17,8 @@ function serializeNodeContactInfo(nodeContactInfo: INodeContactInfo): string {
 
 const logger = createLogger('warn');
 
+const contactsMaintenanceInterval = 0.001;
+
 const peer1: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('01'.repeat(NODE_ID_LENGTH), 'hex'),
@@ -62,6 +64,7 @@ beforeEach(async () => {
     logger.child({
       ownNodeId: bin2Hex(peer1.nodeId),
     }),
+    {contactsMaintenanceInterval},
   );
   networkClient2 = await Network.init(
     peer2,
@@ -70,6 +73,7 @@ beforeEach(async () => {
     logger.child({
       ownNodeId: bin2Hex(peer2.nodeId),
     }),
+    {contactsMaintenanceInterval},
   );
   networkClient3 = await Network.init(
     peer3,
@@ -78,6 +82,7 @@ beforeEach(async () => {
     logger.child({
       ownNodeId: bin2Hex(peer3.nodeId),
     }),
+    {contactsMaintenanceInterval},
   );
   networkClient4 = await Network.init(
     peer4,
@@ -86,6 +91,7 @@ beforeEach(async () => {
     logger.child({
       ownNodeId: bin2Hex(peer4.nodeId),
     }),
+    {contactsMaintenanceInterval},
   );
 });
 
@@ -282,7 +288,6 @@ describe('Peers', () => {
   test('Maintain contacts', async () => {
     return new Promise((resolve) => {
       setTimeout(async () => {
-        const contactsMaintenanceInterval = 0.001;
         const peerServer: IPeerContactInfo = {
           address: 'localhost',
           nodeId: randomBytes(NODE_ID_LENGTH),
@@ -346,7 +351,7 @@ describe('Peers', () => {
           nodeType: 'client',
         };
         let networkClient: Network;
-        const networkServer = await Network.init(peerServer, [], false, logger);
+        const networkServer = await Network.init(peerServer, [], false, logger, {contactsMaintenanceInterval});
         networkServer
           .once('peer-connected', (nodeContactInfo: INodeContactInfo) => {
             expect(serializeNodeContactInfo(nodeContactInfo)).toEqual(serializeNodeContactInfo(peerClient));
@@ -357,7 +362,7 @@ describe('Peers', () => {
             await networkServer.destroy();
             resolve();
           });
-        networkClient = await Network.init(peerClient, [peerServer], true, logger);
+        networkClient = await Network.init(peerClient, [peerServer], true, logger, {contactsMaintenanceInterval});
       });
     });
   });

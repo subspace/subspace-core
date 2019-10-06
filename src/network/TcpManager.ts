@@ -125,10 +125,11 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           this.registerTcpConnection(socket);
         })
         .on('error', (error: Error) => {
+          const errorText = (error.stack || error) as string;
           if (errorCallback && !ready) {
+            this.logger.error(`Error on TCP server: ${errorText}`);
             errorCallback(error);
           } else {
-            const errorText = (error.stack || error) as string;
             this.logger.info(`Error on TCP server: ${errorText}`);
           }
         })
