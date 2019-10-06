@@ -125,10 +125,11 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
           this.registerTcpConnection(socket);
         })
         .on('error', (error: Error) => {
+          const errorText = (error.stack || error) as string;
           if (errorCallback && !ready) {
+            this.logger.error(`Error on TCP server: ${errorText}`);
             errorCallback(error);
           } else {
-            const errorText = (error.stack || error) as string;
             this.logger.info(`Error on TCP server: ${errorText}`);
           }
         })
@@ -305,9 +306,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       });
 
     if (nodeContactInfo) {
-      const nodeId = nodeContactInfo.nodeId;
-      this.nodeIdToConnectionMap.set(nodeId, socket);
-      this.connectionToNodeIdMap.set(socket, nodeId);
+      this.registerConnectionMappingToIdentificationInfo(socket, nodeContactInfo);
       setTimeout(() => {
         this.emit('peer-connected', nodeContactInfo);
       });

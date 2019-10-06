@@ -22,6 +22,8 @@ import { Rpc } from './Rpc';
 
 const logger = createLogger('warn');
 
+const contactsMaintenanceInterval = 0.001;
+
 const peer1: IPeerContactInfo = {
   nodeId: crypto.randomBytes(32),
   nodeType: 'full',
@@ -77,8 +79,8 @@ beforeEach(async () => {
   wallet = new Wallet(blsSignatures, storage);
   const account = await wallet.createAccount();
   tx = await wallet.createCoinBaseTx(1, account.publicKey);
-  network1 = await Network.init(peer1, [], false, logger); // gateway
-  network2 = await Network.init(peer2, [peer1], false, logger); // client
+  network1 = await Network.init(peer1, [], false, logger, {contactsMaintenanceInterval}); // gateway
+  network2 = await Network.init(peer2, [peer1], false, logger, {contactsMaintenanceInterval}); // client
   rpc1 = new Rpc(network1, blsSignatures, logger); // gateway
   rpc2 = new Rpc(network2, blsSignatures, logger); // client
 });

@@ -318,9 +318,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     };
     // TODO: Connection expiration for cleanup
     if (nodeContactInfo) {
-      const nodeId = nodeContactInfo.nodeId;
-      this.nodeIdToConnectionMap.set(nodeId, connection);
-      this.connectionToNodeIdMap.set(connection, nodeId);
+      this.registerConnectionMappingToIdentificationInfo(connection, nodeContactInfo);
       setTimeout(() => {
         this.emit('peer-connected', nodeContactInfo);
       });
