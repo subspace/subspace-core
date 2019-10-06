@@ -1,0 +1,93 @@
+import * as fs from "fs";
+import {PIECE_SIZE} from "../main/constants";
+import {bin2Num, num2Bin} from "../utils/utils";
+import IStore from "./IStore";
+
+async function allocateEmptyFile(path: string, size: number, chunkSize: number): Promise<void> {
+  const fileHandle = await fs.promises.open(path, 'w');
+  let written = 0;
+  const emptyPiece = Buffer.alloc(chunkSize);
+  while (written < size) {
+    await fileHandle.write(emptyPiece);
+    written += chunkSize;
+  }
+  await fileHandle.close();
+}
+
+function isAllZeroes(array: Uint8Array): boolean {
+  for (let byte = 0, length = array.length; byte < length; ++byte) {
+    if (array[byte] !== 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// This implementation is a rough inefficient sketch that follows existing API defined by IStore
+export default class DiskStore implements IStore {
+  /**
+   * @param plotDataLocation
+   * @param size
+   */
+  public static async create(plotDataLocation: string, size: number): Promise<DiskStore> {
+    if (size % PIECE_SIZE === 0) {
+      throw new Error('Incorrect plot size, should be multiple of piece size');
+    }
+    await allocateEmptyFile(plotDataLocation, size, PIECE_SIZE);
+    const plotData = await fs.promises.open(plotDataLocation, 'r+');
+    return new DiskStore(plotData, size / PIECE_SIZE);
+  }
+
+  public constructor(
+    private readonly plotData: fs.promises.FileHandle,
+    private readonly numberOfPieces: number,
+  ) {
+  }
+
+  public async add(key: Uint8Array, value: Uint8Array): Promise<void> {
+    await this.plotData.write(value, 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
+  }
+
+  public async get(key: Uint8Array): Promise<Uint8Array | null> {
+    const data = Buffer.allocUnsafe(length);
+    await this.plotData.read(data, 0, length, bin2Num(key) * PIECE_SIZE);
+    if (isAllZeroes(data)) {
+      // Not found, all zeroes
+      return null;
+    }
+    return data;
+  }
+
+  public async del(key: Uint8Array): Promise<void> {
+    await this.plotData.write(new Uint8Array(PIECE_SIZE), 0, PIECE_SIZE, bin2Num(key) * PIECE_SIZE);
+  }
+
+  public async getKeys(): Promise<Uint8Array[]> {
+    const keys: Uint8Array[] = [];
+    for (let i = 0, max = this.numberOfPieces; i < max; ++i) {
+      const key = num2Bin(i);
+      const data = await this.get(key);
+      if (!data) {
+        break;
+      }
+      keys.push(key);
+    }
+    return keys;
+  }
+
+  public async getLength(): Promise<number> {
+    const keys = await this.getKeys();
+    return keys.length;
+  }
+
+  public async clear(): Promise<void> {
+    const keys = await this.getKeys();
+    for (const key of keys) {
+      await this.del(key);
+    }
+  }
+
+  public async close(): Promise<void> {
+    await this.plotData.close();
+  }
+}

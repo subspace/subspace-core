@@ -7,7 +7,7 @@ import { PIECE_SIZE } from "../main/constants";
 import { IEncodingSet, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { areArraysEqual, smallBin2Num, smallNum2Bin } from "../utils/utils";
-import { Plot } from './plot';
+import { Plot } from './Plot';
 
 // ToDo
   // load saved disk plots after shutdown
@@ -32,6 +32,36 @@ import { Plot } from './plot';
  * Supports farming in parallel across multiple plots with different addresses
  */
 export class Farm {
+  /**
+   * @param adapterName
+   * @param metadataStore
+   * @param storageDir
+   * @param numberOfPlots how many plots to encode each new piece under (when the ledger is smaller than average disk)
+   * @param farmSize the maximum allowable size of all disk plots combined
+   * @param encodingRounds
+   * @param addresses the addresses that will be used for plotting (same as number of plots)
+   */
+  public static async open(
+    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
+    metadataStore: Storage,
+    storageDir: string,
+    numberOfPlots: number,
+    farmSize: number,
+    encodingRounds: number,
+    addresses: Uint8Array[],
+  ): Promise<Farm> {
+    const plots: Plot[] = [];
+
+    const plotSize = Math.floor(farmSize / numberOfPlots);
+
+    for (let i = 0; i < numberOfPlots; ++i) {
+      const plot = await Plot.open(adapterName, storageDir, i, plotSize, addresses[i]);
+      plots.push(plot);
+    }
+
+    return new Farm(plots, metadataStore, encodingRounds);
+  }
+
   public readonly plots: Plot[];
   public pieceOffset: number;
   private readonly encodingRounds: number;
@@ -41,34 +71,19 @@ export class Farm {
   /**
    * Returns a new farm instance for use by parent node.
    *
-   * @param adapterName the type of plotting and storage backend to be used (e.g. memory or disk)
+   * @param plots
    * @param metadataStore
-   * @param storageDir
-   * @param numberOfPlots how many plots to encode each new piece under (when the ledger is smaller than average disk)
-   * @param farmSize the maximum allowable size of all disk plots combined
    * @param encodingRounds the number of rounds of encoding/decoding to apply to each piece
-   * @param addresses the addresses that will be used for plotting (same as number of plots)
    */
   constructor(
-    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
+    plots: Plot[],
     metadataStore: Storage,
-    storageDir: string,
-    numberOfPlots: number,
-    farmSize: number,
     encodingRounds: number,
-    addresses: Uint8Array[],
   ) {
     this.metadataStore = metadataStore;
     this.encodingRounds = encodingRounds;
     this.pieceOffset = 0;
-    this.plots = [];
-
-    const plotSize = Math.floor(farmSize / numberOfPlots);
-
-    for (let i = 0; i < numberOfPlots; ++i) {
-      const plot = Plot.open(adapterName, storageDir, i, plotSize, addresses[i]);
-      this.plots.push(plot);
-    }
+    this.plots = plots;
 
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.pieceIndex = new Tree(nodeManager);

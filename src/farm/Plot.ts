@@ -1,6 +1,7 @@
 import * as path from 'path';
 import {PIECE_SIZE} from "../main/constants";
 import {num2Bin} from "../utils/utils";
+import DiskStore from "./DiskStore";
 import IndexedDBStore from './IndexedDBStore';
 import IStore from "./IStore";
 import MemoryStore from './MemoryStore';
@@ -15,61 +16,57 @@ export class Plot {
   /**
    * Opens a new plot. Will open an existing plot if rocks or disk storage with same path as previous plot.
    */
-  public static open(
+  public static async open(
     adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
     storageDir: string,
     index: number,
     size: number,
     address: Uint8Array,
-  ): Plot {
-    return new Plot(adapterName, storageDir, index, size, address);
+  ): Promise<Plot> {
+    const plotPath = `plot-${index}`;
+    let store: IStore | undefined;
+    switch (adapterName) {
+      case Plot.ADAPTER_MEM_DB:
+        store = new MemoryStore();
+        break;
+      case Plot.ADAPTER_DISK_DB: {
+        const storagePath = path.join(storageDir, plotPath);
+        store = await DiskStore.create(storagePath, size);
+        break;
+      }
+      case Plot.ADAPTER_ROCKS_DB: {
+        const storagePath = path.join(storageDir, plotPath);
+        store = new RocksStore(path.normalize(storagePath));
+        break;
+      }
+      case Plot.ADAPTER_INDEXED_DB:
+        store = new IndexedDBStore(plotPath);
+        break;
+      default:
+        throw new Error(`Incorrect adapter name ${adapterName}`);
+    }
+    return new Plot(store, size, address);
   }
 
-  public readonly type: string;
-  public readonly index: number;
   public readonly size: number;
   public readonly maxOffset: number;
   public readonly address: Uint8Array;
   private store: IStore;
 
   /**
-   * @param adapterName
-   * @param storageDir
-   * @param index
+   * @param store
    * @param size
    * @param address
    */
   constructor(
-    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB,
-    storageDir: string,
-    index: number,
+    store: IStore,
     size: number,
     address: Uint8Array,
   ) {
-    this.type = adapterName;
-    this.index = index;
+    this.store = store;
     this.size = size;
     this.maxOffset = Math.floor(this.size / PIECE_SIZE);
     this.address = address;
-    const plotPath = `plot-${this.index}`;
-    switch (adapterName) {
-      case Plot.ADAPTER_MEM_DB:
-        this.store = new MemoryStore();
-        break;
-      case Plot.ADAPTER_DISK_DB:
-        // TODO
-        throw new Error('Not implemented yet');
-        break;
-      case Plot.ADAPTER_ROCKS_DB:
-        const storagePath = path.join(storageDir, plotPath);
-        this.store = new RocksStore(path.normalize(storagePath));
-        break;
-      case Plot.ADAPTER_INDEXED_DB:
-        this.store = new IndexedDBStore(plotPath);
-        break;
-      default:
-        throw new Error(`Incorrect adapter name ${adapterName}`);
-    }
   }
 
   /**

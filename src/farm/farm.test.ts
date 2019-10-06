@@ -1,5 +1,3 @@
-import {Plot} from "./plot";
-
 if (!globalThis.indexedDB) {
   // Only import when not preset (in Node.js)
   // tslint:disable-next-line:no-var-requires no-submodule-imports
@@ -15,7 +13,8 @@ import { HASH_LENGTH } from '../main/constants';
 import { IPiece } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { rmDirRecursiveSync } from '../utils/utils';
-import { Farm } from './farm';
+import { Farm } from './Farm';
+import {Plot} from "./Plot";
 
 const storageDir = `${os.tmpdir()}/subspace/tests/farm`;
 
@@ -36,7 +35,7 @@ test('mem-plot', async () => {
     addresses.push(crypto.randomBytes(HASH_LENGTH));
   }
   const metadataStore = new Storage('memory', storageDir, 'farm');
-  const farm = new Farm(plotMode, metadataStore, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const farm = await Farm.open(plotMode, metadataStore, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
   const data = crypto.randomBytes(paddedDataSize);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);
@@ -107,7 +106,7 @@ test('rocks-plot', async () => {
     addresses.push(crypto.randomBytes(HASH_LENGTH));
   }
   const metadataStore = new Storage('rocks', storageDir, 'farm');
-  const farm = new Farm(plotMode, metadataStore, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
+  const farm = await Farm.open(plotMode, metadataStore, storageDir, numberOfPlots, farmSize, encodingRounds, addresses);
   const data = crypto.randomBytes(paddedDataSize);
   const paddedData = codes.padLevel(data);
   const encodedData = await codes.erasureCodeLevel(paddedData);

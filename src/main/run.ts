@@ -1,4 +1,4 @@
-import {Plot} from "../farm/plot";
+import {Plot} from "../farm/Plot";
 
 if (!globalThis.indexedDB) {
   // Only import when not preset (in Node.js)
@@ -12,7 +12,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
-import { Farm } from '../farm/farm';
+import { Farm } from '../farm/Farm';
 import { Ledger } from '../ledger/ledger';
 import { INodeContactInfo, Network } from '../network/Network';
 import { Node } from '../node/node';
@@ -286,7 +286,7 @@ export default async function run(
     }
 
     // create farm
-    farm = new Farm(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
+    farm = await Farm.open(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
   }
 
   // instantiate a ledger for all nodes
