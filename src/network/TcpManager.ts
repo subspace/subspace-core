@@ -30,6 +30,8 @@ function composeMessageWithTcpHeader(message: Uint8Array): Uint8Array {
 // 4 bytes for message length, 1 byte for command, 4 bytes for request ID
 const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
+const emptyPayload = new Uint8Array(0);
+
 export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
@@ -246,10 +248,22 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   }
 
   protected destroyImplementation(): Promise<void> {
-    return new Promise((resolve) => {
-      for (const socket of this.nodeIdToConnectionMap.values()) {
-        socket.destroy();
-      }
+    return new Promise(async (resolve) => {
+      await Promise.all([
+        Array.from(this.connectionToNodeIdMap.keys())
+          .map((socket) => {
+            this.sendMessageOneWay(socket, 'shutdown-disconnection', emptyPayload)
+              .catch((error) => {
+                const errorText = (error.stack || error) as string;
+                this.logger.debug(`Error on sending shutdown-disconnection command: ${errorText}`);
+              })
+              .finally(() => {
+                if (this.connectionToNodeIdMap.has(socket)) {
+                  socket.destroy();
+                }
+              });
+          }),
+      ]);
       for (const socket of this.incompleteConnections.values()) {
         socket.destroy();
       }

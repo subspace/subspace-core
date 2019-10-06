@@ -18,6 +18,8 @@ function extractWsBootstrapNodes(bootstrapNodes: INodeContactInfo[]): INodeConta
   return bootstrapNodesWs;
 }
 
+const emptyPayload = new Uint8Array(0);
+
 export class WsManager extends AbstractProtocolManager<WebSocketConnection, INodeContactInfoWs> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
@@ -222,11 +224,23 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
   }
 
   protected destroyImplementation(): Promise<void> {
-    return new Promise((resolve) => {
-      for (const connection of this.connectionToNodeIdMap.keys()) {
-        connection.close();
-        this.connectionCloseHandler(connection);
-      }
+    return new Promise(async (resolve) => {
+      await Promise.all([
+        Array.from(this.connectionToNodeIdMap.keys())
+          .map((connection) => {
+            this.sendMessageOneWay(connection, 'shutdown-disconnection', emptyPayload)
+              .catch((error) => {
+                const errorText = (error.stack || error) as string;
+                this.logger.debug(`Error on sending shutdown-disconnection command: ${errorText}`);
+              })
+              .finally(() => {
+                if (this.connectionToNodeIdMap.has(connection)) {
+                  connection.close();
+                  this.connectionCloseHandler(connection);
+                }
+              });
+          }),
+      ]);
       for (const connection of this.incompleteConnections.values()) {
         // Hack: See https://github.com/theturtle32/WebSocket-Node/issues/371
         if (
