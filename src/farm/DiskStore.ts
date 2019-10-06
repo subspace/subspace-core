@@ -1,28 +1,8 @@
 import * as fs from "fs";
 import {PIECE_SIZE} from "../main/constants";
 import IStore from "./IStore";
+import {allocateEmptyFile, isAllZeroes} from "./utils";
 
-async function allocateEmptyFile(path: string, size: number, chunkSize: number): Promise<void> {
-  const fileHandle = await fs.promises.open(path, 'w');
-  let written = 0;
-  const emptyPiece = Buffer.alloc(chunkSize);
-  while (written < size) {
-    await fileHandle.write(emptyPiece);
-    written += chunkSize;
-  }
-  await fileHandle.close();
-}
-
-function isAllZeroes(array: Uint8Array): boolean {
-  for (let byte = 0, length = array.length; byte < length; ++byte) {
-    if (array[byte] !== 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-// This implementation is a rough inefficient sketch that follows existing API defined by IStore
 export default class DiskStore implements IStore {
   /**
    * @param plotDataLocation
