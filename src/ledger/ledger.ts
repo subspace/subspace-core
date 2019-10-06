@@ -132,7 +132,7 @@ export class Ledger extends EventEmitter {
    * @param proof the canonical proof of unique storage
    * @param coinbaseTx the associatec coinbase tx
    *
-   * @return the fully formed Block for Node to validate, gossip, and apply to the ledger -- or a null response if proof is too late for chain
+   * @return the fully formed Block for Node to validate, gossip, and apply to the ledger -- or void if proof is too late for chain
    */
   public async createBlock(proof: Proof, coinbaseTx: Tx): Promise<Block | void> {
     const chainIndex = crypto.jumpHash(proof.key, this.chainCount);
@@ -637,7 +637,7 @@ export class Ledger extends EventEmitter {
   }
 
   /**
-   * Compiles new records for pending state when for all blocks within a new confirmed level
+   * Compiles new records for pending state when all blocks at the same block height are confirmed.
    *
    * @param levelIndex the height of the block tree that is being confirmed
    */
@@ -724,6 +724,8 @@ export class Ledger extends EventEmitter {
    * 127 parity pieces (erasure coded level data)
    * 1 parity index piece
    * Any node can reconstruct the state using just the state block by querying the DHT for the two index pieces and retrieving any combination of 127 source and parity pieces.
+   * 
+   * @param timestamp the timestamp of the newest tx in the block, used to timestamp the state block
    */
   private async createState(timestamp: number): Promise<void> {
     return new Promise(async (resolve) => {
