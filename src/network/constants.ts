@@ -6,6 +6,7 @@ export const COMMANDS = {
   'identification': 1,
   'gossip': 2,
   'get-peers': 3,
+  'shutdown-disconnection': 4,
   'tx-gossip': 10,
   'block-gossip': 11,
   'ping': 12,
@@ -24,7 +25,7 @@ export const COMMANDS = {
 export type ICommandsKeys = keyof typeof COMMANDS;
 export type ICommandsKeysForSending = keyof Omit<
   typeof COMMANDS,
-  'gossip' | 'get-peers' | 'response' | 'identification'
+  'gossip' | 'get-peers' | 'response' | 'identification' | 'shutdown-disconnection'
 >;
 
 export const COMMANDS_INVERSE: { [commandNumber: number]: ICommandsKeys } = {};

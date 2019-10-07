@@ -214,6 +214,10 @@ export class Network extends EventEmitter {
 
     for (const manager of [udpManager, tcpManager, wsManager]) {
       manager
+        .on('shutdown-disconnection', (nodeId: Uint8Array) => {
+          logger.info('shutdown-disconnection', {nodeId: bin2Hex(nodeId)});
+          this.peers.delete(nodeId);
+        })
         .on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
           logger.info('peer-contact-info', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
           this.addPeer(nodeContactInfo);

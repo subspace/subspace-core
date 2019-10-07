@@ -67,6 +67,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   // TODO: Achieve the same without re-implementing methods
 
   public on(
+    event: 'shutdown-disconnection',
+    listener: (nodeId: Uint8Array) => void,
+  ): this;
+  public on(
     event: 'gossip',
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
@@ -96,6 +100,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     return this;
   }
 
+  public once(
+    event: 'shutdown-disconnection',
+    listener: (nodeId: Uint8Array) => void,
+  ): this;
   public once(
     event: 'gossip',
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
@@ -127,6 +135,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
   }
 
   public off(
+    event: 'shutdown-disconnection',
+    listener: (nodeId: Uint8Array) => void,
+  ): this;
+  public off(
     event: 'gossip',
     listener: (gossipMessage: Uint8Array, contactIdentification: INodeContactIdentification) => void,
   ): this;
@@ -156,6 +168,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     return this;
   }
 
+  public emit(
+    event: 'shutdown-disconnection',
+    nodeId: Uint8Array,
+  ): boolean;
   public emit(
     event: 'gossip',
     gossipMessageOrNumberOfPeersBinary: Uint8Array,
@@ -412,6 +428,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
           payload,
           contactIdentification,
         );
+        break;
+      case 'shutdown-disconnection':
+        this.destroyConnection(connection);
+        this.emit('shutdown-disconnection', contactIdentification.nodeId);
         break;
       default:
         if (requestId) {
