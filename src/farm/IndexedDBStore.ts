@@ -11,11 +11,11 @@ export default class IndexedDBStore implements IStore {
     this.store = levelup(leveljs(path));
   }
 
-  public async add(encoding: Uint8Array, offset: Uint8Array): Promise<void> {
+  public async add(encoding: Uint8Array, offset: number): Promise<void> {
     await this.store.put(offset, encoding);
   }
 
-  public async get(offset: Uint8Array): Promise<Uint8Array | null> {
+  public async get(offset: number): Promise<Uint8Array | null> {
     try {
       return new Uint8Array(await this.store.get(offset));
     } catch (error) {
@@ -26,7 +26,7 @@ export default class IndexedDBStore implements IStore {
     }
   }
 
-  public async del(offset: Uint8Array): Promise<void> {
+  public async del(offset: number): Promise<void> {
     try {
       await this.store.del(offset);
     } catch (error) {

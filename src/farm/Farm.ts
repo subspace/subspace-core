@@ -1,13 +1,16 @@
 // tslint:disable: object-literal-sort-keys
 
 import { NodeManagerJsUint8Array, Tree } from "@subspace/red-black-tree";
+import * as path from "path";
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
 import { PIECE_SIZE } from "../main/constants";
 import { IEncodingSet, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
 import { areArraysEqual, smallBin2Num, smallNum2Bin } from "../utils/utils";
-import { Plot } from './plot';
+import {MegaPlot} from "./MegaPlot";
+import MegaPlotStore from "./MegaPlotStore";
+import { Plot } from './Plot';
 
 // ToDo
   // load saved disk plots after shutdown
@@ -32,13 +35,47 @@ import { Plot } from './plot';
  * Supports farming in parallel across multiple plots with different addresses
  */
 export class Farm {
-  public static readonly MODE_MEM_DB = 'mem-db';
-  public static readonly MODE_DISK_DB = 'disk-db';
-  public static readonly MODE_INDEXED_DB = 'indexed-db';
+  /**
+   * @param adapterName
+   * @param metadataStore
+   * @param storageDir
+   * @param numberOfPlots how many plots to encode each new piece under (when the ledger is smaller than average disk)
+   * @param farmSize the maximum allowable size of all disk plots combined
+   * @param encodingRounds
+   * @param addresses the addresses that will be used for plotting (same as number of plots)
+   */
+  public static async open(
+    adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB | typeof Plot.ADAPTER_MEGAPLOT_DB,
+    metadataStore: Storage,
+    storageDir: string,
+    numberOfPlots: number,
+    farmSize: number,
+    encodingRounds: number,
+    addresses: Uint8Array[],
+  ): Promise<Farm> {
+    const plots: Plot[] = [];
+
+    const plotSize = Math.floor(farmSize / numberOfPlots);
+
+    if (adapterName === Plot.ADAPTER_MEGAPLOT_DB) {
+      const storagePath = path.join(storageDir, `megaPlot.bin`);
+      const megaPlot = await MegaPlot.create(storagePath, plotSize, numberOfPlots);
+      for (let plotIndex = 0; plotIndex < numberOfPlots; ++plotIndex) {
+        const plot = new Plot(new MegaPlotStore(megaPlot, plotIndex), plotSize, addresses[plotIndex]);
+        plots.push(plot);
+      }
+    } else {
+      for (let plotIndex = 0; plotIndex < numberOfPlots; ++plotIndex) {
+        const plot = await Plot.open(adapterName, storageDir, plotIndex, plotSize, addresses[plotIndex]);
+        plots.push(plot);
+      }
+    }
+
+    return new Farm(plots, metadataStore, encodingRounds);
+  }
 
   public readonly plots: Plot[];
   public pieceOffset: number;
-  private readonly mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB;
   private readonly encodingRounds: number;
   private readonly metadataStore: Storage;
   private readonly pieceIndex: Tree<Uint8Array, number>;
@@ -46,56 +83,19 @@ export class Farm {
   /**
    * Returns a new farm instance for use by parent node.
    *
-   * @param mode the type of plotting and storage backend to be used (e.g. memory or disk)
-   * @param numberOfPlots how many plots to encode each new piece under (when the ledger is smaller than average disk)
-   * @param farmSize the maximum allowable size of all disk plots combined
+   * @param plots
+   * @param metadataStore
    * @param encodingRounds the number of rounds of encoding/decoding to apply to each piece
-   * @param addresses the addresses that will be used for plotting (same as number of plots)
    */
   constructor(
-    mode: typeof Farm.MODE_MEM_DB | typeof Farm.MODE_DISK_DB | typeof Farm.MODE_INDEXED_DB,
+    plots: Plot[],
     metadataStore: Storage,
-    storageDir: string,
-    numberOfPlots: number,
-    farmSize: number,
     encodingRounds: number,
-    addresses: Uint8Array[],
   ) {
-    this.mode = mode;
     this.metadataStore = metadataStore;
     this.encodingRounds = encodingRounds;
     this.pieceOffset = 0;
-    this.plots = [];
-
-    let plotAdapter: string;
-    // let indexAdapter: string;
-
-    switch (this.mode) {
-      case Farm.MODE_MEM_DB:
-        plotAdapter = 'mem-db';
-        // indexAdapter = 'memory';
-        break;
-      case Farm.MODE_DISK_DB:
-        plotAdapter = 'disk-db';
-        // indexAdapter = 'disk';
-        break;
-      case Farm.MODE_INDEXED_DB:
-        plotAdapter = 'indexed-db';
-        // indexAdapter = 'disk';
-        break;
-      default:
-        plotAdapter = 'mem-db';
-        // indexAdapter = 'memory';
-        break;
-    }
-
-    // this.metadataStore = new Storage(storageAdapter, storageDir, `farm-${mode}`);
-    const plotSize = Math.floor(farmSize / numberOfPlots);
-
-    for (let i = 0; i < numberOfPlots; ++i) {
-      const plot = Plot.open(plotAdapter, storageDir, i, plotSize, addresses[i]);
-      this.plots.push(plot);
-    }
+    this.plots = plots;
 
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.pieceIndex = new Tree(nodeManager);
