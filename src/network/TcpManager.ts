@@ -30,6 +30,8 @@ function composeMessageWithTcpHeader(message: Uint8Array): Uint8Array {
 // 4 bytes for message length, 1 byte for command, 4 bytes for request ID
 const MIN_TCP_MESSAGE_SIZE = 4 + 1 + 4;
 
+const emptyPayload = new Uint8Array(0);
+
 export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContactInfoTcp> {
   public static init(
     ownNodeContactInfo: INodeContactInfo,
@@ -115,16 +117,30 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     this.connectionExpiration = connectionExpiration;
 
     if (!browserNode && ownNodeContactInfo.tcp4Port) {
+      let ready = false;
       this.tcp4Server = net.createServer()
         .on('connection', (socket: net.Socket) => {
+          socket.on('error', (error) => {
+            const errorText = (error.stack || error) as string;
+            this.logger.info(`Error on incoming TCP connection: ${errorText}`);
+          });
           this.registerTcpConnection(socket);
         })
         .on('error', (error: Error) => {
-          if (errorCallback) {
+          const errorText = (error.stack || error) as string;
+          if (errorCallback && !ready) {
+            this.logger.error(`Error on TCP server: ${errorText}`);
             errorCallback(error);
+          } else {
+            this.logger.info(`Error on TCP server: ${errorText}`);
           }
         })
-        .listen(ownNodeContactInfo.tcp4Port, ownNodeContactInfo.address, readyCallback);
+        .listen(ownNodeContactInfo.tcp4Port, ownNodeContactInfo.address, () => {
+          ready = true;
+          if (readyCallback) {
+            readyCallback();
+          }
+        });
     } else if (readyCallback) {
       setTimeout(readyCallback);
     }
@@ -201,7 +217,12 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
               nodeContactInfo,
             );
             this.incompleteConnections.delete(socket);
-            socket.off('error', onError);
+            socket
+              .off('error', onError)
+              .on('error', (error) => {
+                const errorText = (error.stack || error) as string;
+                this.logger.info(`Error on outgoing TCP connection to node ${bin2Hex(nodeId)}: ${errorText}`);
+              });
             resolve(socket);
           }
         },
@@ -228,10 +249,22 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
   }
 
   protected destroyImplementation(): Promise<void> {
-    return new Promise((resolve) => {
-      for (const socket of this.nodeIdToConnectionMap.values()) {
-        socket.destroy();
-      }
+    return new Promise(async (resolve) => {
+      await Promise.all([
+        Array.from(this.connectionToNodeIdMap.keys())
+          .map((socket) => {
+            this.sendMessageOneWay(socket, 'shutdown-disconnection', emptyPayload)
+              .catch((error) => {
+                const errorText = (error.stack || error) as string;
+                this.logger.debug(`Error on sending shutdown-disconnection command: ${errorText}`);
+              })
+              .finally(() => {
+                if (this.connectionToNodeIdMap.has(socket)) {
+                  socket.destroy();
+                }
+              });
+          }),
+      ]);
       for (const socket of this.incompleteConnections.values()) {
         socket.destroy();
       }
@@ -287,9 +320,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
       });
 
     if (nodeContactInfo) {
-      const nodeId = nodeContactInfo.nodeId;
-      this.nodeIdToConnectionMap.set(nodeId, socket);
-      this.connectionToNodeIdMap.set(socket, nodeId);
+      this.registerConnectionMappingToIdentificationInfo(socket, nodeContactInfo);
       setTimeout(() => {
         this.emit('peer-connected', nodeContactInfo);
       });

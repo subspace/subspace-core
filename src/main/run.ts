@@ -1,16 +1,18 @@
+// tslint:disable: object-literal-sort-keys
+
 if (!globalThis.indexedDB) {
   // Only import when not preset (in Node.js)
   // tslint:disable-next-line:no-var-requires no-submodule-imports
   require('fake-indexeddb/auto');
 }
-// tslint:disable: object-literal-sort-keys
 
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
-import { Farm } from '../farm/farm';
+import { Farm } from '../farm/Farm';
+import { Plot } from "../farm/Plot";
 import { Ledger } from '../ledger/ledger';
 import { INodeContactInfo, Network } from '../network/Network';
 import { Node } from '../node/node';
@@ -20,19 +22,32 @@ import { allocatePort, createLogger, rmDirRecursiveSync } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 import { INodeConfig, INodeSettings, IPeerContactInfo } from './interfaces';
 
+function determinePlotAdapterName(
+  farm: boolean,
+  isPersistingStorage: boolean,
+  env: 'browser' | 'node',
+): typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB {
+  if (env === 'node' && farm && isPersistingStorage) {
+    return Plot.ADAPTER_ROCKS_DB;
+  } else if (env === 'browser' && farm && isPersistingStorage) {
+    return Plot.ADAPTER_INDEXED_DB;
+  }
+  return Plot.ADAPTER_MEM_DB;
+}
+
 /**
  * Init Params
  * chainCount: 1 to 1024 -- number of chains in the ledger, the more chains the longer it will take to confirm new levels but the lower the probability of a fork on any given chain.
  * Calculate expected number of blocks to confirmation as chainCount * log(2) chainCount
- * plotMode: mem-db or disk-db -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
+ * plotMode: memory or disk -- where to store encoded pieces, memory is preferred for testing and security analysis, disk is the default mode for production farmers
  * validateRecords: true or false -- whether to validate new blocks and tx on receipt, default false for DevNet testing -- since BLS signature validation is slow, it takes a long time to plot
  *
- * @param network         Which network the node is joining (local testing, cloud testing, production network)
+ * @param net             Which network the node is joining (local testing, cloud testing, production network)
  * @param nodeType        Functional configuration for this node (full node, farmer, validator, light client, gateway)
- * @param numberOfChains      Number of chains for the ledger (1 -- 1024)
- * @param plotMode        How encoded pieces are persisted (js-memory, rocks db, raw disk)
+ * @param numberOfChains  Number of chains for the ledger (1 -- 1024)
+ * @param farmMode        How encoded pieces are persisted (js-memory, rocks db, raw disk)
  * @param numberOfPlots   How many plots to create for // farming (1 -- 1024)
- * @param sizeOfFarm        How much space will be allocated to the plot in bytes (1 GB to 16 TB)
+ * @param sizeOfFarm      How much space will be allocated to the plot in bytes (1 GB to 16 TB)
  * @param validateRecords If new records are validated (set to false for testing)
  * @param encodingRounds  How many rounds of encoding are applied when plotting (1 to 512)
  * @param storageDir      The path on disk for where to store all persistent data, defaults to homedir
@@ -66,7 +81,6 @@ export default async function run(
   // initialize empty config params
   let env: 'browser' | 'node';
   let storageAdapter: 'rocks' | 'browser' | 'memory';
-  let plotAdapter: 'mem-db' | 'disk-db' | 'indexed-db';
   let rpc: Rpc;
   let ledger: Ledger;
   let wallet: Wallet | undefined;
@@ -244,8 +258,7 @@ export default async function run(
   }
 
   // set plot adapter for farming
-  env === 'node' && config.farm && isPersistingStorage ? plotAdapter = 'disk-db' : plotAdapter = 'mem-db';
-  env === 'browser' && config.farm && isPersistingStorage ? plotAdapter = 'indexed-db' : plotAdapter = 'mem-db';
+  const plotAdapter = determinePlotAdapterName(config.farm, isPersistingStorage, env);
 
   const blsSignatures = await BlsSignatures.init();
   const storage = new Storage(storageAdapter, storagePath, 'storage');
@@ -273,7 +286,7 @@ export default async function run(
     }
 
     // create farm
-    farm = new Farm(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
+    farm = await Farm.open(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
   }
 
   // instantiate a ledger for all nodes

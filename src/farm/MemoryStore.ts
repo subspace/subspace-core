@@ -1,22 +1,17 @@
-import { ArrayMap } from "array-map-set";
 import IStore from './IStore';
 
 export default class MemoryStore implements IStore {
-  private store: Map<Uint8Array, Uint8Array>;
+  private store = new Map<number, Uint8Array>();
 
-  public constructor() {
-    this.store = ArrayMap<Uint8Array, Uint8Array>();
-  }
-
-  public async add(encoding: Uint8Array, offset: Uint8Array): Promise<void> {
+  public async add(encoding: Uint8Array, offset: number): Promise<void> {
     this.store.set(offset, encoding);
   }
 
-  public async get(offset: Uint8Array): Promise<Uint8Array | undefined> {
+  public async get(offset: number): Promise<Uint8Array | undefined> {
     return this.store.get(offset);
   }
 
-  public async del(offset: Uint8Array): Promise<void> {
+  public async del(offset: number): Promise<void> {
     this.store.delete(offset);
   }
 

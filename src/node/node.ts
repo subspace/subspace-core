@@ -5,7 +5,7 @@ import { ArrayMap } from 'array-map-set';
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
 import * as crypto from '../crypto/crypto';
-import { Farm } from '../farm/farm';
+import { Farm } from '../farm/Farm';
 import { Block } from '../ledger/block';
 import { Content } from '../ledger/content';
 import { Ledger } from '../ledger/ledger';

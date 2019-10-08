@@ -102,7 +102,7 @@ Manages identities (profiles) for nodes on the network. An identity is not requi
 Manages plots for this node. A node may have many plots. A plot is a set of encoded pieces under a given node id (address). If the ledger is small, nodes must have many plots to fully utilize their free disk. Once the ledger is large (> 16 TB) we would expect most nodes to have a single plot. Multiple plots per node will make testing sybil attacks far easier as well. Farming is purely optional and not required to query the network or maintain a copy of the Ledger. Each plot is initialized with a different path, which may be on different drives.
 
 1. Encodes pieces under a node id and persists them through a plot mode.
-2. Current modes include pure in-memory (mem-db) and rocks-db (disk-db). Future modes include raw-disk and on-the-fly computation from unencoded pieces stored in memory (for security analysis).
+2. Current modes include pure in-memory (mem-db) and on-disk (rocks-db). Future modes include raw-disk and on-the-fly computation from unencoded pieces stored in memory (for security analysis).
 3. Uses a Red Black tree that combines memory and disk storage for indexing a plot with fast lookups.
 4. Retrieves encodings from a piece id and returns the encoding or original pieces (storage and codes modules)
 
