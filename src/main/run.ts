@@ -1,11 +1,10 @@
-import {Plot} from "../farm/Plot";
+// tslint:disable: object-literal-sort-keys
 
 if (!globalThis.indexedDB) {
   // Only import when not preset (in Node.js)
   // tslint:disable-next-line:no-var-requires no-submodule-imports
   require('fake-indexeddb/auto');
 }
-// tslint:disable: object-literal-sort-keys
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -13,6 +12,7 @@ import * as path from 'path';
 import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { Farm } from '../farm/Farm';
+import { Plot } from "../farm/Plot";
 import { Ledger } from '../ledger/ledger';
 import { INodeContactInfo, Network } from '../network/Network';
 import { Node } from '../node/node';
