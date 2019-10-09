@@ -74,7 +74,7 @@ export class Ledger extends EventEmitter {
   // An array of chains, each chain contains a set of unconfirmed block ids for this chain
   private pendingBlocksByChain: Array<Set<Uint8Array>> = [];
   // An Array of levels (block heights), each level contains a map of key (blockId) -> value (number of chains pending confirmation)
-  private pendingBlocksByLevel: Map<number, Map<Uint8Array, number>> = new Map();
+  public pendingBlocksByLevel: Map<number, Map<Uint8Array, number>> = new Map();
   // A lookup table that maps the blockId for a pending block to which level index it sits at
   private levelForPendingBlock: Map<Uint8Array, number> = ArrayMap<Uint8Array, number>();
   // A lookup table that maps txId to a set of all valid blockIds that have claimed that tx
@@ -118,8 +118,15 @@ export class Ledger extends EventEmitter {
    * @return the genesis piece set for plotting in the farm
    */
   public async createGenesisState(): Promise<IPiece[]> {
-    const sourceData = crypto.randomBytes(127 * 4096);
-    const { state, pieceDataSet } = await codes.encodeState(sourceData, this.previousStateHash, Date.now());
+    let seed = crypto.hash(Buffer.from('subspace'));
+    const genesisPieces: Uint8Array[] = [];
+    for (let i = 0; i < 127; ++i) {
+      const piece = codes.padPiece(seed);
+      genesisPieces.push(piece);
+      seed = crypto.hash(piece);
+    }
+    const sourceData = Buffer.concat(genesisPieces);
+    const { state, pieceDataSet } = await codes.encodeState(sourceData, this.previousStateHash, 0);
     this.stateMap.set(state.key, state.toBytes());
     this.previousStateHash = state.key;
     return pieceDataSet;
@@ -222,6 +229,7 @@ export class Ledger extends EventEmitter {
     if (!(await this.getProof(block.value.proof.value.previousProofHash))) {
       if (!areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
         this.logger.error('Invalid block proof, points to an unknown previous proof');
+        console.log(bin2Hex(block.value.proof.value.previousProofHash).substring(0, 12));
         throw new Error('Invalid block proof, points to an unknown previous proof');
       }
     }
@@ -285,8 +293,8 @@ export class Ledger extends EventEmitter {
     const pieceStateData = this.stateMap.get(block.value.proof.value.pieceStateHash);
 
     if (!pieceStateData) {
-      this.logger.verbose('state keys are: ', this.stateMap.keys());
-      this.logger.verbose('missing state is', block.value.proof.value.pieceStateHash);
+      this.logger.verbose('state keys are: ', { keys: [...this.stateMap.keys()]});
+      this.logger.verbose('missing state is', { key: block.value.proof.value.pieceStateHash});
       this.logger.error('Invalid block proof, referenced state data is not in state map');
       throw new Error('Invalid block proof, referenced state data is not in state map');
     }
@@ -330,6 +338,8 @@ export class Ledger extends EventEmitter {
         throw new Error('Invalid block content, does not hash to the same chain as parent');
       }
     }
+
+    this.logger.verbose(`Validated proof: ${bin2Hex(block.value.proof.key)}`);
 
     // validate the coinbase tx (since not in mempool)
     if (!block.value.coinbase) {
@@ -412,7 +422,7 @@ export class Ledger extends EventEmitter {
   public async applyBlock(block: Block): Promise<void> {
     // extend the correct chain with block id and add to compact block map
     const chainIndex = crypto.jumpHash(block.value.proof.key, this.chainCount);
-    const parentBlockId = this.chains[chainIndex].head;
+    const parentContentBlockId = this.chains[chainIndex].head;
     this.chains[chainIndex].addBlock(block.key);
     this.compactBlockMap.set(block.key, block.toCompactBytes());
     this.previousBlockHash = block.key;
@@ -428,13 +438,50 @@ export class Ledger extends EventEmitter {
     const contentData = block.value.content.toBytes();
     this.contentMap.set(block.value.content.key, contentData);
 
-    if (parentBlockId.length === 32) {
+    if (parentContentBlockId.length === 32) {
+      // standard block
 
       // insert block into the appropriate level
-      const parentBlockLevelIndex = this.levelForPendingBlock.get(parentBlockId);
+      const parentProofBlockId = this.proof2BlockMap.get(block.value.proof.value.previousProofHash);
+      if (!parentProofBlockId) {
+        throw new Error('Cannot get parent proof for block that is not a gensis block');
+      }
+
+      const parentBlockLevelIndex = this.levelForPendingBlock.get(parentProofBlockId);
       if (parentBlockLevelIndex === undefined) {
-        this.logger.verbose(`Parent block ID: ${bin2Hex(parentBlockId)}`);
-        this.logger.verbose(`Parent block level index is: ${parentBlockLevelIndex}`);
+        this.logger.verbose(`Parent proof block ID: ${bin2Hex(parentProofBlockId)}`);
+        this.logger.verbose(`Parent proof block level index is: ${parentBlockLevelIndex}`);
+        console.log(this.levelForPendingBlock);
+        throw new Error('Cannot get level for parent block');
+      }
+
+      // get or create the level for the new pending block
+      let pendingBlocksForLevel = this.pendingBlocksByLevel.get(parentBlockLevelIndex + 1);
+      if (!pendingBlocksForLevel) {
+        // if null level, then create the new level
+        pendingBlocksForLevel = ArrayMap<Uint8Array, number>();
+      }
+
+      // add the counter for this blocks level and set
+      pendingBlocksForLevel.set(block.key, this.chainCount);
+      this.pendingBlocksByLevel.set(parentBlockLevelIndex + 1, pendingBlocksForLevel);
+
+      // record the level for this block
+      this.levelForPendingBlock.set(block.key, parentBlockLevelIndex + 1);
+      this.logger.verbose(`Added pending block ${bin2Hex(block.key).substring(0, 12)} to level ${parentBlockLevelIndex + 1}`);
+
+    } else if (!(areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32)))) {
+      // genesis block for a chain
+
+      const parentProofBlockId = this.proof2BlockMap.get(block.value.proof.value.previousProofHash);
+      if (!parentProofBlockId) {
+        throw new Error('Cannot get parent proof for geneis block that is not the first gensis block');
+      }
+
+      const parentBlockLevelIndex = this.levelForPendingBlock.get(parentProofBlockId);
+      if (parentBlockLevelIndex === undefined) {
+        this.logger.verbose(`Parent proof block ID: ${bin2Hex(parentProofBlockId)}`);
+        this.logger.verbose(`Parent proof block level index is: ${parentBlockLevelIndex}`);
         console.log(this.levelForPendingBlock);
         throw new Error('Cannot get level for parent block');
       }
@@ -455,7 +502,7 @@ export class Ledger extends EventEmitter {
       this.logger.verbose(`Added pending block ${bin2Hex(block.key).substring(0, 12)} to level ${parentBlockLevelIndex + 1}`);
 
     } else {
-      // genesis block
+      // genesis block the ledger
 
       let pendingBlocksForLevel = this.pendingBlocksByLevel.get(0);
       if (!pendingBlocksForLevel) {
@@ -496,7 +543,7 @@ export class Ledger extends EventEmitter {
 
       // confirm the last block for this chain
       // skip the first block on each chain
-      if (parentBlockId.length === 32) {
+      if (parentContentBlockId.length === 32) {
         // get the block id of parent content and remove from pending blocks for this chain
         const parentContentBlockHash = this.content2BlockMap.get(block.value.content.value.parentContentHash);
 

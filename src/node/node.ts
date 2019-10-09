@@ -15,7 +15,7 @@ import { Tx } from '../ledger/tx';
 import { CHUNK_LENGTH, COINBASE_REWARD, PIECE_SIZE } from '../main/constants';
 import { INodeConfig, INodeSettings, IPiece } from '../main/interfaces';
 import { Rpc } from '../rpc/Rpc';
-import { areArraysEqual, bin2Hex, ILogger, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
+import { bin2Hex, ILogger, measureProximity, randomWait, smallNum2Bin } from '../utils/utils';
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
@@ -44,6 +44,7 @@ export class Node extends EventEmitter {
     this.rpc.on('block-gossip', (block: Block, encoding: Uint8Array) => this.onBlock(block, encoding));
     this.rpc.on('tx-request', (txId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onTxRequest(txId, responseCallback));
     this.rpc.on('block-request', (blockId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onBlockRequest(blockId, responseCallback));
+    this.rpc.on('blocks-request-for-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onBlocksForIndexRequest(index, responseCallback));
     this.rpc.on('block-request-by-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onBlockRequestByIndex(index, responseCallback));
     this.rpc.on('piece-request', (pieceId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onPieceRequest(pieceId, responseCallback));
     this.rpc.on('proof-request', (proofId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onProofRequest(proofId, responseCallback));
@@ -72,7 +73,7 @@ export class Node extends EventEmitter {
           this.syncLedgerAndFarm();
         break;
       case 'validator':
-        this.syncLedgerAndValidate();
+        this.syncLedger();
         break;
       case 'farmer':
         this.syncLedgerAndFarm();
@@ -96,6 +97,7 @@ export class Node extends EventEmitter {
     this.logger.verbose(`Created a new node identity with address ${bin2Hex(account.address)}`);
     this.logger.verbose(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
     const pieceDataSet = await this.ledger.createGenesisState();
+    this.logger.verbose(`Created genesis piece set and state block with id: ${bin2Hex([...this.ledger.stateMap.keys()][0])}`);
     await this.farm.seedPlot(pieceDataSet);
     while (this.config.farm) {
       await this.farmBlock();
@@ -198,7 +200,7 @@ export class Node extends EventEmitter {
    * Discards the original ledger data after several confirmed levels while retaining only the encoded pieces within its plot.
    */
   public async syncLedgerAndFarm(): Promise<void> {
-    await this.syncLedgerAndValidate();
+    await this.syncLedger();
     while (this.config.farm) {
       await this.farmBlock();
     }
@@ -208,48 +210,63 @@ export class Node extends EventEmitter {
    * Syncs the ledger from the network.
    * Validates and forwards new blocks and txs received over the network.
    */
-  public async syncLedgerAndValidate(): Promise<void> {
+  public async syncLedger(): Promise<void> {
     console.log('\nLaunching a new Subspace Validator Node!');
     console.log('-----------------------------------\n');
 
     // this.isGossiping = true;
+    const pieceDataSet = await this.ledger.createGenesisState();
+    this.logger.verbose(`Created genesis piece set and state block with id: ${bin2Hex([...this.ledger.stateMap.keys()][0])}`);
+
+    if (this.farm) {
+      await this.farm.seedPlot(pieceDataSet);
+    }
 
     console.log('Syncing ledger state......');
-    let blockIndex = 0;
-    let hasChild = true;
+    let levelIndex = 0;
+    let hasChildLevel = true;
     const piecePool: Map<Uint8Array, IPiece> = ArrayMap<Uint8Array, IPiece>();
-    while (hasChild) {
+    while (hasChildLevel) {
       let encoding = new Uint8Array();
-      console.log(`Requesting block at index: ${blockIndex}`);
-      const block = await this.requestBlockByIndex(blockIndex);
-      if (block) {
-        console.log('Received block');
-        // only get piece if not genesis piece
-        if (areArraysEqual(block.value.proof.value.pieceHash, new Uint8Array(32))) {
-          console.log('Genesis piece, use null encoding');
-          encoding = new Uint8Array(4096);
-        } else {
-          console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
+      console.log(`Requesting all blocks at index: ${levelIndex}`);
+      const blockIds = await this.requestBlocksForIndex(levelIndex);
+      if (blockIds) {
+        console.log(`Received ${blockIds} block ids for level with index: ${levelIndex}`);
+        // for each block in the level
+        for (const blockId of blockIds) {
+
+          // retrieve the block
+          const block = await this.rpc.requestBlock(blockId);
+
+          // retrieve the piece
           let piece = piecePool.get(block.value.proof.value.pieceHash);
           if (!piece) {
+            console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
             piece = await this.requestPiece(block.value.proof.value.pieceHash);
+            console.log('got piece');
             piecePool.set(piece.data.pieceHash, piece);
           }
-          console.log('Received piece');
+
+          // encode the piece
           const proverAddress = crypto.hash(block.value.proof.value.publicKey);
           encoding = codes.encodePiece(piece.piece, proverAddress, this.settings.encodingRounds);
           console.log('Completing encoding piece');
+
+          // verify the block and encoding
+          if (block && encoding.length) {
+            console.log('Validating block and encoding...');
+            if (await this.ledger.isValidBlock(block, encoding)) {
+              this.ledger.applyBlock(block);
+            }
+          }
         }
-      }
-      if (block && encoding.length) {
-        console.log('Validating block and encoding...');
-        if (await this.ledger.isValidBlock(block, encoding)) {
-          this.ledger.applyBlock(block);
-          ++ blockIndex;
-        }
+
+        // once all blocks for this level have been retrieved and applied
+        this.logger.verbose('Received all pieces for level');
+        ++ levelIndex;
       } else {
         console.log('Completed syncing the ledger');
-        hasChild = false;
+        hasChildLevel = false;
         this.isGossiping = true;
       }
     }
@@ -384,6 +401,21 @@ export class Node extends EventEmitter {
     const blockData = await this.ledger.getBlock(blockId);
     if (blockData) {
       responseCallback(blockData);
+    } else {
+      responseCallback(new Uint8Array());
+    }
+  }
+
+  public async requestBlocksForIndex(index: number): Promise<Uint8Array[] | void> {
+    return this.rpc.requestBlocksForIndex(index);
+  }
+
+  private async onBlocksForIndexRequest(index: number, responseCallback: (response: Uint8Array) => void): Promise<Uint8Array[] | void> {
+    const blocksForIndex = this.ledger.pendingBlocksByLevel.get(index);
+    if (blocksForIndex) {
+      const blockIds = [...blocksForIndex.keys()];
+      const blockIdsData = Buffer.concat(blockIds);
+      responseCallback(blockIdsData);
     } else {
       responseCallback(new Uint8Array());
     }

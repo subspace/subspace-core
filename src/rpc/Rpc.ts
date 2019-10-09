@@ -130,6 +130,19 @@ export class Rpc extends EventEmitter {
         this.emit('block-request', payload, responseCallback);
       });
 
+      // received a blocks request for index from another node as part of ledger sync
+      this.network.on('blocks-request-for-index', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
+        if (payload.length !== 4) {
+          // ToDo
+          //  Drop the node who sent the respone from peer table
+          //  Add to blacklisted node
+          this.logger.debug('Invalid blocks-request-for-index, index is not four bytes');
+        }
+        const index = bin2Num(payload);
+        this.logger.verbose(`Received a blocks-request-for-index request for index ${index}`);
+        this.emit('blocks-request-for-index', index, responseCallback);
+      });
+
       // received a block request by index from another node
       this.network.on('block-request-by-index', (payload: Uint8Array, responseCallback: (response: Uint8Array) => void) => {
         if (payload.length !== 4) {
@@ -281,6 +294,31 @@ export class Rpc extends EventEmitter {
     }
     this.logger.verbose('block-response-received', {blockId: bin2Hex(block.key)});
     return block;
+  }
+
+  /**
+   * Request the id of all blocks for a given index in the block tree
+   *
+   * @param index integer index of the block tree (level)
+   *
+   * @return an array of all block ids at that index
+   */
+  public async requestBlocksForIndex(index: number): Promise<Uint8Array[] | void> {
+    const binaryIndex = num2Bin(index);
+    const binaryBlockIds = await this.network.sendRequest(['gateway', 'full', 'validator'], 'blocks-request-for-index', binaryIndex);
+    if (binaryBlockIds.length % 32 !== 0) {
+      this.logger.debug('Received invalid blocks for index response from peer');
+    }
+
+    if (binaryBlockIds.length > 0) {
+      const blockIds: Uint8Array[] = [];
+      for (let i = 0; i < binaryBlockIds.length / 32; ++i) {
+        const blockId = binaryBlockIds.subarray(i * 32, (i + 1) * 32);
+        blockIds.push(blockId);
+      }
+
+      return blockIds;
+    }
   }
 
   /**

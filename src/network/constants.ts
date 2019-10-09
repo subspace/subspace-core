@@ -19,6 +19,7 @@ export const COMMANDS = {
   'content-request': 19,
   'state-request': 20,
   'state-request-by-index': 21,
+  'blocks-request-for-index': 22,
 };
 // tslint:enable:object-literal-sort-keys
 
