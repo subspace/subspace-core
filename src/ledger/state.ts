@@ -15,21 +15,22 @@ export class State {
    */
   public static create(
     previousStateHash: Uint8Array,
-    levelHash: Uint8Array,
     pieceRoot: Uint8Array,
+    sourceIndexPieceHash: Uint8Array,
+    parityIndexPieceHash: Uint8Array,
     timestamp: number,
     difficulty: number,
     version: number,
-    indexPiece: Uint8Array,
   ): State {
+
     const stateValue: IStateValue = {
       previousStateHash,
-      levelHash,
       pieceRoot,
+      sourceIndexPieceHash,
+      parityIndexPieceHash,
       timestamp: (timestamp / 1000) * 1000,
       difficulty,
       version,
-      indexPiece,
     };
     const state = new State(stateValue);
     state.setKey();
@@ -39,12 +40,12 @@ export class State {
   public static fromBytes(data: Uint8Array): State {
     const stateValue: IStateValue = {
       previousStateHash: data.subarray(0, 32),
-      levelHash: data.subarray(32, 64),
-      pieceRoot: data.subarray(64, 96),
-      timestamp: bin2Num(data.subarray(96, 100)) * 1000,
-      difficulty: smallBin2Num(data.subarray(100, 102)),
-      version: smallBin2Num(data.subarray(102, 104)),
-      indexPiece: data.subarray(104, 136),
+      pieceRoot: data.subarray(32, 64),
+      sourceIndexPieceHash: data.subarray(64, 96),
+      parityIndexPieceHash: data.subarray(96, 128),
+      timestamp: bin2Num(data.subarray(128, 132)) * 1000,
+      difficulty: smallBin2Num(data.subarray(132, 134)),
+      version: smallBin2Num(data.subarray(134, 136)),
     };
 
     const state = new State(stateValue);
@@ -74,12 +75,12 @@ export class State {
   public toBytes(): Uint8Array {
     return Buffer.concat([
       this._value.previousStateHash,
-      this._value.levelHash,
       this._value.pieceRoot,
+      this._value.sourceIndexPieceHash,
+      this._value.parityIndexPieceHash,
       num2Bin(this._value.timestamp / 1000),
       smallNum2Bin(this._value.difficulty),
       smallNum2Bin(this._value.version),
-      this._value.indexPiece,
     ]);
   }
 
@@ -92,12 +93,12 @@ export class State {
       key: bin2Hex(this._key),
       value: {
         previousStateHash: bin2Hex(this._value.previousStateHash),
-        levelHash: bin2Hex(this._value.levelHash),
         pieceRoot: bin2Hex(this._value.pieceRoot),
+        sourceIndexPieceHash: bin2Hex(this._value.sourceIndexPieceHash),
+        parityIndexPieceHash: bin2Hex(this._value.parityIndexPieceHash),
         timestamp: num2Date(this._value.timestamp),
         difficulty: this._value.difficulty,
         version: this._value.version,
-        indexPiece: bin2Hex(this._value.indexPiece),
       },
     };
   }

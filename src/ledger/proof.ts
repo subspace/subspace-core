@@ -19,7 +19,7 @@ export class Proof {
    * Proof must be passed to wallet for signing before being valid.
    */
   public static create(
-    previousLevelHash: Uint8Array,
+    // previousLevelHash: Uint8Array,
     previousProofHash: Uint8Array,
     solution: Uint8Array,
     pieceHash: Uint8Array,
@@ -28,7 +28,7 @@ export class Proof {
     publicKey: Uint8Array,
   ): Proof {
     const proofValue: IProofValue = {
-      previousLevelHash,
+      // previousLevelHash,
       previousProofHash,
       solution,
       pieceHash,
@@ -42,19 +42,6 @@ export class Proof {
   }
 
   /**
-   * Creates an empty proof for a new chain as part of the genesis level.
-   * Does not need to be signed.
-   */
-  public static createGenesisProof(previousProofHash: Uint8Array = new Uint8Array(32)): Proof {
-    const nullArray48 = new Uint8Array(48);
-    const nullArray32 = new Uint8Array(32);
-    const nullArray8 = new Uint8Array(8);
-    const proof = Proof.create(nullArray32, previousProofHash, nullArray8, nullArray32, nullArray32, nullArray32, nullArray48);
-    proof.setKey();
-    return proof;
-  }
-
-  /**
    * Loads a new proof from binary data received over the network
    *
    * @param data a 280+ byte Uint8Array
@@ -62,20 +49,19 @@ export class Proof {
    */
   public static fromBytes(data: Uint8Array): Proof {
 
-    // all proofs are at least 280 bytes
+    // all proofs are at least 280 bytes (assuming 32 byte merkle proof)
     if (data.length < 280) {
       throw new Error('Cannot load proof from bytes, data is less than 280 bytes long');
     }
 
     const proofValue: IProofValue = {
-      previousLevelHash: data.subarray(0, 32),
-      previousProofHash: data.subarray(32, 64),
-      solution: data.subarray(64, 72),
-      pieceHash: data.subarray(72, 104),
-      pieceStateHash: data.subarray(104, 136),
-      publicKey: data.subarray(136, 184),
-      signature: data.subarray(184, 280),
-      pieceProof: data.subarray(280),
+      previousProofHash: data.subarray(0, 32),  // 32 byte proof hash
+      solution: data.subarray(32, 40),          // 8 byte solution
+      pieceHash: data.subarray(40, 72),         // 32 byte piece hash
+      pieceStateHash: data.subarray(72, 104),   // 32 state hash for piece
+      publicKey: data.subarray(104, 152),       // 48 byte BLS public key
+      signature: data.subarray(152, 248),       // 96 byte BLS signature
+      pieceProof: data.subarray(248),           // Remainder is Merkle Proof
     };
 
     const proof = new Proof(proofValue);
@@ -104,7 +90,6 @@ export class Proof {
    */
   public toBytes(signed = true): Uint8Array {
     return Buffer.concat([
-      this._value.previousLevelHash,
       this._value.previousProofHash,
       this._value.solution,
       this._value.pieceHash,
@@ -123,7 +108,6 @@ export class Proof {
       type: 'Proof',
       key: bin2Hex(this._key),
       value: {
-        previousLevelHash: bin2Hex(this._value.previousLevelHash),
         previousProofHash: bin2Hex(this._value.previousProofHash),
         solution: bin2Hex(this._value.solution),
         pieceHash: bin2Hex(this._value.pieceHash),
@@ -139,26 +123,6 @@ export class Proof {
    * Validates that proof follows schema and is internally consistent, but not the proof is correct.
    */
   public isValid(blsSignatures: BlsSignatures): boolean {
-
-    // validate genesis proof
-    if (areArraysEqual(this._value.previousLevelHash, new Uint8Array(32))) {
-      // ensure fields are null
-      if (!areArraysEqual(this._value.solution, new Uint8Array(8)) ||
-          !areArraysEqual(this._value.pieceHash, new Uint8Array(832) ||
-          !areArraysEqual(this._value.pieceStateHash, new Uint8Array(32)) ||
-          // !areArraysEqual(this._value.pieceProof, new Uint8Array(32)) ||
-          !areArraysEqual(this._value.publicKey, new Uint8Array(48)) ||
-          !areArraysEqual(this._value.signature, new Uint8Array(96)))) {
-        throw new Error('Invalid genesis proof, includes values for null properties');
-      }
-
-      return true;
-    }
-
-    // previous level hash is 32 bytes
-    if (this._value.previousLevelHash.length !== 32) {
-      throw new Error('Invalid proof, invalid length for previous level hash');
-    }
 
     // previous proof hash is 32 bytes
     if (this._value.previousProofHash.length !== 32) {
@@ -180,12 +144,12 @@ export class Proof {
       throw new Error('Invalid proof, invalid length for piece level');
     }
 
-    // // piece proof is greater than 0 bytes
-    // if (this._value.pieceProof.length < 32) {
-    //   // tslint:disable-next-line: no-console
-    //   console.log(this.print());
-    //   throw new Error('Invalid proof, invalid length for piece proof');
-    // }
+    // piece proof is greater than 0 bytes
+    if (this._value.pieceProof.length < 32) {
+      // tslint:disable-next-line: no-console
+      console.log(this.print());
+      throw new Error('Invalid proof, invalid length for piece proof');
+    }
 
     // public key is 48 bytes
     if (this._value.publicKey.length !== 48) {

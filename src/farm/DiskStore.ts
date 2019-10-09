@@ -9,7 +9,7 @@ export default class DiskStore implements IStore {
    * @param size
    */
   public static async create(plotDataLocation: string, size: number): Promise<DiskStore> {
-    if (size % PIECE_SIZE === 0) {
+    if (size % PIECE_SIZE !== 0) {
       throw new Error('Incorrect plot size, should be multiple of piece size');
     }
     await allocateEmptyFile(plotDataLocation, size, PIECE_SIZE);

@@ -75,19 +75,31 @@ test('create-credit-tx', async () => {
 });
 
 test('create-genesis-proof', () => {
-  const previousProofHash = crypto.randomBytes(HASH_LENGTH);
-  const genesisProof = Proof.createGenesisProof(previousProofHash);
-  expect(genesisProof.isValid(blsSignatures)).toBe(true);
+  const previousProofHash = new Uint8Array(HASH_LENGTH);
+  const solution = crypto.randomBytes(8);
+  const pieceHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceStateHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceProof = crypto.randomBytes(100);
 
-  const data = genesisProof.toBytes();
+  const unsignedProof = Proof.create(
+    previousProofHash,
+    solution,
+    pieceHash,
+    pieceStateHash,
+    pieceProof,
+    receiverAccount.publicKey,
+  );
+
+  const signedProof = ledgerWallet.signProof(unsignedProof);
+  expect(signedProof.isValid(blsSignatures)).toBe(true);
+
+  const data = signedProof.toBytes();
   const fromBytes = Proof.fromBytes(data);
   fromBytes.isValid(blsSignatures);
-  expect(fromBytes.key.toString()).toBe(genesisProof.key.toString());
-
+  expect(fromBytes.key.toString()).toBe(signedProof.key.toString());
 });
 
 test('create-proof', () => {
-  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(8);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -95,7 +107,6 @@ test('create-proof', () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,
@@ -114,15 +125,20 @@ test('create-proof', () => {
 });
 
 test('create-genesis-content', () => {
-  const parentContentHash = new Uint8Array(32);
-  const proofHash = crypto.randomBytes(32);
-  const genesisContent = Content.createGenesisContent(parentContentHash, proofHash);
-  expect(genesisContent.isValid()).toBe(true);
+  const parentContentHash = new Uint8Array(HASH_LENGTH);
+  const proofHash = crypto.randomBytes(HASH_LENGTH);
+  const payload: Uint8Array[] = [
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+  ];
+  const content = Content.create(parentContentHash, proofHash, payload);
+  expect(content.isValid()).toBe(true);
 
-  const data = genesisContent.toBytes();
+  const data = content.toBytes();
   const fromBytes = Content.fromBytes(data);
   fromBytes.isValid();
-  expect(fromBytes.key.toString()).toBe(genesisContent.key.toString());
+  expect(fromBytes.key.toString()).toBe(content.key.toString());
 });
 
 test('create-content', () => {
@@ -142,16 +158,50 @@ test('create-content', () => {
   expect(fromBytes.key.toString()).toBe(content.key.toString());
 });
 
-test('create-genesis-block', () => {
-  const previousProofHash =  crypto.randomBytes(HASH_LENGTH);
-  const parentContentHash = crypto.randomBytes(HASH_LENGTH);
-  const genesisBlock = Block.createGenesisBlock(previousProofHash, parentContentHash);
-  expect(genesisBlock.isValid(blsSignatures)).toBe(true);
+test('create-genesis-block', async () => {
 
-  const data = genesisBlock.toFullBytes();
-  const block = Block.fromFullBytes(data);
+  // create the proof
+  const previousProofHash = new Uint8Array(HASH_LENGTH);
+  const solution = crypto.randomBytes(CHUNK_LENGTH);
+  const pieceHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceStateHash = crypto.randomBytes(HASH_LENGTH);
+  const pieceProof = crypto.randomBytes(100);
+
+  const unsignedProof = Proof.create(
+    previousProofHash,
+    solution,
+    pieceHash,
+    pieceStateHash,
+    pieceProof,
+    receiverAccount.publicKey,
+  );
+
+  const signedProof = ledgerWallet.signProof(unsignedProof);
+
+  // create parent content
+  const parentContentHash = new Uint8Array(HASH_LENGTH);
+
+  // create tx set
+  const txIds: Uint8Array[] = [
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+    crypto.randomBytes(HASH_LENGTH),
+  ];
+
+  // create coinbase tx and add to tx set
+  const reward = 1;
+  const coinbaseTx = await ledgerWallet.createCoinBaseTx(reward, receiverAccount.publicKey);
+  txIds.unshift(coinbaseTx.key);
+
+  const previousBlockHash = new Uint8Array(32);
+
+  const block = Block.create(previousBlockHash, signedProof, parentContentHash, txIds, coinbaseTx);
+  expect(block.isValid(blsSignatures)).toBe(true);
+
+  const data = block.toFullBytes();
+  const fromBinaryBlock = Block.fromFullBytes(data);
   block.isValid(blsSignatures);
-  expect(block.key.toString()).toBe(genesisBlock.key.toString());
+  expect(fromBinaryBlock.key.toString()).toBe(block.key.toString());
 
   const compactBlockData = block.toCompactBytes();
   const compactBlock = Block.fromCompactBytes(compactBlockData);
@@ -162,7 +212,6 @@ test('create-genesis-block', () => {
 test('create-block', async () => {
 
   // create the proof
-  const previousLevelHash = crypto.randomBytes(HASH_LENGTH);
   const previousProofHash = crypto.randomBytes(HASH_LENGTH);
   const solution = crypto.randomBytes(CHUNK_LENGTH);
   const pieceHash = crypto.randomBytes(HASH_LENGTH);
@@ -170,7 +219,6 @@ test('create-block', async () => {
   const pieceProof = crypto.randomBytes(100);
 
   const unsignedProof = Proof.create(
-    previousLevelHash,
     previousProofHash,
     solution,
     pieceHash,

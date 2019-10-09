@@ -8,12 +8,13 @@ import {INodeContactInfo} from "../network/Network";
  */
 export interface IStateValue {
   previousStateHash: Uint8Array; // hash of the previous state (32 bytes)
-  levelHash: Uint8Array; // hash of the concatenation of all proofs for the last full level (32 bytes)
+  // levelHash: Uint8Array; // hash of the concatenation of all proofs for the last full level (32 bytes)
   pieceRoot: Uint8Array; // merkle root of the piece set for the last full level (32 bytes)
+  sourceIndexPieceHash: Uint8Array;
+  parityIndexPieceHash: Uint8Array;
   timestamp: number; // UNIX time (4 bytes) of last block added to level
   difficulty: number; // piece audit scope or range (4 bytes) based on last level
   version: number; // protocol version of last level (2 bytes)
-  indexPiece: Uint8Array;
 }
 
 /**
@@ -24,7 +25,7 @@ export interface IFullBlockValue {
   previousBlockHash: Uint8Array;
   proof: Proof;
   content: Content;
-  coinbase?: Tx;
+  coinbase: Tx;
 }
 
 /**
@@ -41,7 +42,7 @@ export interface ICompactBlockValue {
  * 252 bytes + merkle proof
  */
 export interface IProofValue {
-  previousLevelHash: Uint8Array; // 32 byte hash of all proofs in the previous level
+  // previousLevelHash: Uint8Array; // 32 byte hash of all proofs in the previous level
   previousProofHash: Uint8Array;  // 32 byte hash of the last unconfirmed proof seen
   solution: Uint8Array; // 8 byte encoded chunk closest to encoding target
   pieceHash: Uint8Array; // 32 byte original piece id of encoding that includes the solution
