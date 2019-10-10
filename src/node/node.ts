@@ -1,4 +1,3 @@
-// tslint:disable: no-console
 // tslint:disable: member-ordering
 
 import { ArrayMap } from 'array-map-set';
@@ -19,7 +18,9 @@ import { bin2Hex, ILogger, measureProximity, randomWait, smallNum2Bin } from '..
 import { Wallet } from '../wallet/wallet';
 
 // ToDo
-//   add time logging
+//  Add ability to sync only the state chain
+//  Add farmer mode -- discards the confirmed state and farms
+//  Add client mode -- discards the confirmed state and does not serve requests
 
 export class Node extends EventEmitter {
 
@@ -56,27 +57,30 @@ export class Node extends EventEmitter {
      * A new state block has been confimred, if farming, plot the new piece set within farm.
      */
     this.ledger.on('confirmed-state', async (stateHash: Uint8Array, pieceDataSet: IPiece[]) => {
-      this.logger.info('Confirmed new state');
+      this.logger.info(`Confimred new state block with statehash: ${bin2Hex(stateHash).substring(0, 12)}`);
       if (this.farm) {
         for (const piece of pieceDataSet) {
           await this.farm.addPiece(piece.piece, piece.data);
         }
+        this.logger.info(`Completed plotting piece set for newly confirmed state.`);
       }
-      this.logger.info('completed plotting in node', bin2Hex(stateHash));
       this.ledger.emit('completed-plotting', stateHash);
     });
 
+    // initialize node based on provided type
     switch (this.type) {
       case 'full':
         this.settings.genesis ?
           this.createLedgerAndFarm() :
           this.syncLedgerAndFarm();
         break;
-      case 'validator':
-        this.syncLedger();
-        break;
       case 'farmer':
         this.syncLedgerAndFarm();
+      case 'validator':
+        this.syncLedgerAndValidate();
+        break;
+      case 'client':
+        this.syncStateAndListen();
         break;
     }
   }
@@ -92,8 +96,7 @@ export class Node extends EventEmitter {
     }
     this.isGossiping = true;
     const account = this.wallet.getAccounts()[0];
-    this.logger.verbose('\nLaunching a new Subspace Full Node!');
-    this.logger.verbose('-----------------------------------\n');
+    this.logger.verbose('Launching a new Subspace Full Node from Genesis!');
     this.logger.verbose(`Created a new node identity with address ${bin2Hex(account.address)}`);
     this.logger.verbose(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
     const pieceDataSet = await this.ledger.createGenesisState();
@@ -104,6 +107,107 @@ export class Node extends EventEmitter {
     }
   }
 
+  /**
+   * Syncs the ledger from the network and begins farming. Default startup procedure for farmers.
+   * Discards the original ledger data after several confirmed levels while retaining only the encoded pieces within its plot.
+   */
+  public async syncLedgerAndFarm(): Promise<void> {
+    if (!this.farm) {
+      this.logger.error(`Cannot farm in this mode`);
+      throw new Error(`Cannot farm in this mode`);
+    }
+
+    this.logger.info('Lauching a new subpace farmer node');
+    const pieceDataSet = await this.ledger.createGenesisState();
+    await this.farm.seedPlot(pieceDataSet);
+    await this.syncLedger();
+    await this.farmBlock();
+  }
+
+  /**
+   * Syncs the ledger from the network. Listens for new blocks -- validating, applying, and relaying them.
+   */
+  public async syncLedgerAndValidate(): Promise<void> {
+    this.logger.info(`Launching a new subspace validator node`);
+    await this.ledger.createGenesisState();
+    await this.syncLedger();
+  }
+
+  /**
+   * Syncs the ledger from the network.
+   * Validates and forwards new blocks and txs received over the network.
+   * Answers RPC requests sent over the network
+   */
+  public async syncLedger(): Promise<void> {
+    this.logger.verbose(`Syncing ledger state...`);
+    let levelIndex = 0;
+    let hasChildLevel = true;
+    const piecePool: Map<Uint8Array, IPiece> = ArrayMap<Uint8Array, IPiece>();
+    while (hasChildLevel) {
+      let encoding = new Uint8Array();
+      this.logger.verbose(`Requesting all block at index: ${levelIndex}`);
+      const blockIds = await this.requestBlocksForIndex(levelIndex);
+      if (blockIds) {
+        this.logger.verbose(`Received ${blockIds.length} block ids for new level`);
+
+        // for each block in the level
+        for (const blockId of blockIds) {
+
+          // retrieve the block
+          const block = await this.rpc.requestBlock(blockId);
+
+          // retrieve the piece
+          let piece = piecePool.get(block.value.proof.value.pieceHash);
+          if (!piece) {
+            this.logger.verbose(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
+            piece = await this.requestPiece(block.value.proof.value.pieceHash);
+            piecePool.set(piece.data.pieceHash, piece);
+          }
+
+          // encode the piece
+          const proverAddress = crypto.hash(block.value.proof.value.publicKey);
+          encoding = codes.encodePiece(piece.piece, proverAddress, this.settings.encodingRounds);
+          this.logger.verbose(`Completed encoding piece`);
+
+          // verify the block and encoding
+          if (block && encoding.length) {
+            if (await this.ledger.isValidBlock(block, encoding)) {
+              this.logger.verbose('Block and Encoding are valid');
+              this.ledger.applyBlock(block);
+            }
+          }
+        }
+
+        // once all blocks for this level have been retrieved and applied
+        this.logger.verbose('Received all pieces for level');
+        ++ levelIndex;
+      } else {
+        this.logger.verbose(`Completed syncing the ledger`);
+        hasChildLevel = false;
+        this.isGossiping = true;
+      }
+    }
+  }
+
+  /**
+   * Starts applying and re-transmitting any gossip received.
+   */
+  public async joinGossipNetwork(): Promise<void> {
+    this.isGossiping = true;
+  }
+
+  /**
+   * Syncs the state chain from the network. Equivalent to a light client.
+   * Listens for and validates new blocks, discarding them as they are compressed into new state blocks.
+   */
+  public async syncStateAndListen(): Promise<void> {
+    return;
+  }
+
+  /**
+   * Starts an evaluation loop that attempts to solve each new valid block recieved over the network or generated locally.
+   * Validates, gossips, applies, and emits the block (if created).
+   */
   public async farmBlock(): Promise<void> {
     await randomWait(this.settings.delay);
     if (!this.farm || !this.wallet) {
@@ -196,105 +300,11 @@ export class Node extends EventEmitter {
   }
 
   /**
-   * Syncs the ledger from the network and begins farming. Default startup procedure for farmers.
-   * Discards the original ledger data after several confirmed levels while retaining only the encoded pieces within its plot.
+   * Sends a ping request to another node
    */
-  public async syncLedgerAndFarm(): Promise<void> {
-    await this.syncLedger();
-    while (this.config.farm) {
-      await this.farmBlock();
-    }
-  }
-
-  /**
-   * Syncs the ledger from the network.
-   * Validates and forwards new blocks and txs received over the network.
-   */
-  public async syncLedger(): Promise<void> {
-    console.log('\nLaunching a new Subspace Validator Node!');
-    console.log('-----------------------------------\n');
-
-    // this.isGossiping = true;
-    const pieceDataSet = await this.ledger.createGenesisState();
-    this.logger.verbose(`Created genesis piece set and state block with id: ${bin2Hex([...this.ledger.stateMap.keys()][0])}`);
-
-    if (this.farm) {
-      await this.farm.seedPlot(pieceDataSet);
-    }
-
-    console.log('Syncing ledger state......');
-    let levelIndex = 0;
-    let hasChildLevel = true;
-    const piecePool: Map<Uint8Array, IPiece> = ArrayMap<Uint8Array, IPiece>();
-    while (hasChildLevel) {
-      let encoding = new Uint8Array();
-      console.log(`Requesting all blocks at index: ${levelIndex}`);
-      const blockIds = await this.requestBlocksForIndex(levelIndex);
-      if (blockIds) {
-        console.log(`Received ${blockIds} block ids for level with index: ${levelIndex}`);
-        // for each block in the level
-        for (const blockId of blockIds) {
-
-          // retrieve the block
-          const block = await this.rpc.requestBlock(blockId);
-
-          // retrieve the piece
-          let piece = piecePool.get(block.value.proof.value.pieceHash);
-          if (!piece) {
-            console.log(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
-            piece = await this.requestPiece(block.value.proof.value.pieceHash);
-            console.log('got piece');
-            piecePool.set(piece.data.pieceHash, piece);
-          }
-
-          // encode the piece
-          const proverAddress = crypto.hash(block.value.proof.value.publicKey);
-          encoding = codes.encodePiece(piece.piece, proverAddress, this.settings.encodingRounds);
-          console.log('Completing encoding piece');
-
-          // verify the block and encoding
-          if (block && encoding.length) {
-            console.log('Validating block and encoding...');
-            if (await this.ledger.isValidBlock(block, encoding)) {
-              this.ledger.applyBlock(block);
-            }
-          }
-        }
-
-        // once all blocks for this level have been retrieved and applied
-        this.logger.verbose('Received all pieces for level');
-        ++ levelIndex;
-      } else {
-        console.log('Completed syncing the ledger');
-        hasChildLevel = false;
-        this.isGossiping = true;
-      }
-    }
-  }
-
-  /**
-   * Syncs the ledger from existing nodes and serves RPC requests for structured data. Equivalent to a full validator node.
-   * Retains the full unencoded ledger within persistent storage.
-   */
-  public async syncLedgerAndServe(): Promise<void> {
-    return;
-  }
-
-  /**
-   * Syncs the state chain from the network. Equivalent to a light client.
-   * Listens for and validates new blocks, discarding them as they are compressed into new state blocks.
-   */
-  public async syncStateAndListen(): Promise<void> {
-    return;
-  }
-
   public async ping(): Promise<void> {
     await this.rpc.ping();
-    console.log('Received a ping reply from gateway');
-  }
-
-  public async joinGossipNetwork(): Promise<void> {
-    this.isGossiping = true;
+    this.logger.info(`Received a ping reply from gateway`);
   }
 
   /**
@@ -326,7 +336,6 @@ export class Node extends EventEmitter {
    */
   public async onBlock(block: Block, encoding: Uint8Array): Promise<void> {
     if (this.isGossiping) {
-      console.log('New block received by node via gossip', bin2Hex(block.key));
       // check to ensure you have parent
       if (! (await this.ledger.getBlock(block.value.previousBlockHash))) {
         // we have received an early block who arrived before its parent
@@ -406,10 +415,23 @@ export class Node extends EventEmitter {
     }
   }
 
+  /**
+   * Request all blocks for a given index in the ordered ledger from another node over the network.
+   *
+   * @param index an integer index in the ordered ledger
+   *
+   * @return An array of block hashes or null if no blocks at this level
+   */
   public async requestBlocksForIndex(index: number): Promise<Uint8Array[] | void> {
     return this.rpc.requestBlocksForIndex(index);
   }
 
+  /**
+   * Received a request for all blocks at a given index over the network, used to sync the chain.
+   *
+   * @param index
+   * @param responseCallback
+   */
   private async onBlocksForIndexRequest(index: number, responseCallback: (response: Uint8Array) => void): Promise<Uint8Array[] | void> {
     const blocksForIndex = this.ledger.pendingBlocksByLevel.get(index);
     if (blocksForIndex) {
@@ -429,11 +451,7 @@ export class Node extends EventEmitter {
    * @return block instance or not found
    */
   public async requestBlockByIndex(index: number): Promise<Block | void> {
-    const block = await this.rpc.requestBlockByIndex(index);
-    if (block) {
-      console.log('Received block at index', index);
-    }
-    return block;
+   return this.rpc.requestBlockByIndex(index);
   }
 
   /**
@@ -547,11 +565,7 @@ export class Node extends EventEmitter {
    * @return state instance or not found
    */
   public async requestStateByIndex(index: number): Promise<State | void> {
-    const state = await this.rpc.requestStateByIndex(index);
-    if (state) {
-      console.log('Received state at index', index);
-    }
-    return state;
+    return this.rpc.requestStateByIndex(index);
   }
 
   /**

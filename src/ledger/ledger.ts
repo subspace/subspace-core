@@ -129,6 +129,7 @@ export class Ledger extends EventEmitter {
     const { state, pieceDataSet } = await codes.encodeState(sourceData, this.previousStateHash, 0);
     this.stateMap.set(state.key, state.toBytes());
     this.previousStateHash = state.key;
+    this.logger.info(`Created genesis piece set and state block with id: ${bin2Hex([...this.stateMap.keys()][0])}`);
     return pieceDataSet;
   }
 
