@@ -21,6 +21,7 @@ import { Wallet } from '../wallet/wallet';
 //  Add ability to sync only the state chain
 //  Add farmer mode -- discards the confirmed state and farms
 //  Add client mode -- discards the confirmed state and does not serve requests
+//  sync state without having to decode/recode the piece
 
 export class Node extends EventEmitter {
 
@@ -76,6 +77,7 @@ export class Node extends EventEmitter {
         break;
       case 'farmer':
         this.syncLedgerAndFarm();
+        break;
       case 'validator':
         this.syncLedgerAndValidate();
         break;
@@ -97,10 +99,10 @@ export class Node extends EventEmitter {
     this.isGossiping = true;
     const account = this.wallet.getAccounts()[0];
     this.logger.verbose('Launching a new Subspace Full Node from Genesis!');
-    this.logger.verbose(`Created a new node identity with address ${bin2Hex(account.address)}`);
+    this.logger.verbose(`Created a new node identity with address ${bin2Hex(account.address).substring(0, 12)}`);
     this.logger.verbose(`Starting a new ledger from genesis with ${this.ledger.chainCount} chains.`);
     const pieceDataSet = await this.ledger.createGenesisState();
-    this.logger.verbose(`Created genesis piece set and state block with id: ${bin2Hex([...this.ledger.stateMap.keys()][0])}`);
+    this.logger.verbose(`Created genesis piece set and state block with id: ${bin2Hex([...this.ledger.stateMap.keys()][0]).substring(0, 12)}`);
     await this.farm.seedPlot(pieceDataSet);
     while (this.config.farm) {
       await this.farmBlock();
@@ -121,7 +123,9 @@ export class Node extends EventEmitter {
     const pieceDataSet = await this.ledger.createGenesisState();
     await this.farm.seedPlot(pieceDataSet);
     await this.syncLedger();
-    await this.farmBlock();
+    while (this.config.farm) {
+      await this.farmBlock();
+    }
   }
 
   /**
@@ -145,7 +149,7 @@ export class Node extends EventEmitter {
     const piecePool: Map<Uint8Array, IPiece> = ArrayMap<Uint8Array, IPiece>();
     while (hasChildLevel) {
       let encoding = new Uint8Array();
-      this.logger.verbose(`Requesting all block at index: ${levelIndex}`);
+      this.logger.verbose(`Requesting all blocks at index: ${levelIndex}`);
       const blockIds = await this.requestBlocksForIndex(levelIndex);
       if (blockIds) {
         this.logger.verbose(`Received ${blockIds.length} block ids for new level`);
@@ -157,11 +161,26 @@ export class Node extends EventEmitter {
           const block = await this.rpc.requestBlock(blockId);
 
           // retrieve the piece
-          let piece = piecePool.get(block.value.proof.value.pieceHash);
+          let piece: IPiece | void;
+
+          // if farmer or full node, should have already stored the piece
+          if (this.farm) {
+            piece = await this.farm.getExactPiece(block.value.proof.value.pieceHash);
+            if (piece) {
+              this.logger.verbose(`Retrieve piece from farm`);
+            }
+          }
+
+          // else retrieve from the network
           if (!piece) {
-            this.logger.verbose(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
-            piece = await this.requestPiece(block.value.proof.value.pieceHash);
-            piecePool.set(piece.data.pieceHash, piece);
+            piece = piecePool.get(block.value.proof.value.pieceHash);
+            if (!piece) {
+              this.logger.verbose(`Requesting piece ${bin2Hex(block.value.proof.value.pieceHash).substring(0, 12)}`);
+              piece = await this.requestPiece(block.value.proof.value.pieceHash);
+              piecePool.set(piece.data.pieceHash, piece);
+            } else {
+              this.logger.verbose(`Retrieved piece from cache`);
+            }
           }
 
           // encode the piece
@@ -214,7 +233,7 @@ export class Node extends EventEmitter {
       throw new Error('Cannot farm, this node is not configured as a farmer');
     }
     // find best encoding for challenge
-    this.logger.verbose('\nSolving a new block challenge');
+    this.logger.verbose('Solving a new block challenge');
     this.logger.verbose('------------------------------');
     this.logger.verbose(`State: ${this.ledger.stateMap.size} levels`);
     this.logger.verbose(`Ledger; ${this.ledger.compactBlockMap.size} blocks`);
@@ -222,9 +241,8 @@ export class Node extends EventEmitter {
     const plotSize = this.farm.getSize() / 1000000;
     this.logger.verbose(`Farm: ${pieceCount} pieces comprising ${plotSize} MB across ${this.farm.plots.length} plots`);
     this.logger.verbose(`Balance: ${this.wallet.getPendingBalanceOfAllAccounts()} credits`);
-    this.logger.verbose('------------------------------\n');
+    this.logger.verbose('------------------------------');
 
-    // ToDo concatenate previousProofhash with Node ID so every node has a different challenge
     const parentProofHash = this.ledger.parentProofHash;
     const pieceTarget = crypto.hash(parentProofHash);
     const closestEncodings = await this.farm.getClosestEncodings(pieceTarget);
@@ -232,7 +250,7 @@ export class Node extends EventEmitter {
       this.logger.error('Cannot find a piece within plot for target');
       throw new Error('Cannot find a piece within plot for target');
     }
-    this.logger.verbose(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 16)} is ${bin2Hex(closestEncodings.data.pieceHash).substring(0, 16)}`);
+    this.logger.verbose(`Closest piece to target: ${bin2Hex(pieceTarget).substr(0, 12)} is ${bin2Hex(closestEncodings.data.pieceHash).substring(0, 12)}`);
 
     let encodingIndex = 0;
     let bestChunkQuality = 0;
@@ -253,7 +271,7 @@ export class Node extends EventEmitter {
       }
     }
 
-    this.logger.verbose(`Closest chunk to target: ${bin2Hex(chunkTarget)} is ${bin2Hex(bestChunk)} from plot ${encodingIndex}`);
+    this.logger.verbose(`Closest chunk to target: ${bin2Hex(chunkTarget).substring(0, 12)} is ${bin2Hex(bestChunk).substring(0, 12)} from plot ${encodingIndex}`);
 
     const encoding = closestEncodings.encodings[encodingIndex];
     const account = this.wallet.getAccount(this.farm.getPlotAddress(encodingIndex));
@@ -288,12 +306,12 @@ export class Node extends EventEmitter {
     // validate the block
     if (this.ledger.isValidating) {
       await this.ledger.isValidBlock(block, encoding);
-      this.logger.verbose(`Validated new block ${bin2Hex(block.key).substring(0, 16)}`);
+      this.logger.verbose(`Validated new block ${bin2Hex(block.key).substring(0, 12)}`);
     }
 
     // apply the block to the ledger
     await this.ledger.applyBlock(block);
-    this.logger.verbose(`Applied new block ${bin2Hex(block.key).substring(0, 16)} to ledger.`);
+    this.logger.verbose(`Applied new block ${bin2Hex(block.key).substring(0, 12)} to ledger.`);
 
     // emit the block and encoding
     this.emit('block', block, encoding);

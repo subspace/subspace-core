@@ -215,15 +215,15 @@ export class Network extends EventEmitter {
     for (const manager of [udpManager, tcpManager, wsManager]) {
       manager
         .on('shutdown-disconnection', (nodeId: Uint8Array) => {
-          logger.info('shutdown-disconnection', {nodeId: bin2Hex(nodeId)});
+          logger.info('shutdown-disconnection', {nodeId: bin2Hex(nodeId).substring(0, 12)});
           this.peers.delete(nodeId);
         })
         .on('peer-contact-info', (nodeContactInfo: INodeContactInfo) => {
-          logger.info('peer-contact-info', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
+          logger.info('peer-contact-info', {nodeId: bin2Hex(nodeContactInfo.nodeId).substring(0, 12)});
           this.addPeer(nodeContactInfo);
         })
         .on('peer-connected', (nodeContactInfo: INodeContactInfo) => {
-          logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId)});
+          logger.info('peer-connected', {nodeId: bin2Hex(nodeContactInfo.nodeId).substring(0, 12)});
           ++this.numberOfActiveConnections;
           this.emit('peer-connected', nodeContactInfo);
           if (this.peers.size < this.options.routingTableMinSize) {
@@ -252,7 +252,7 @@ export class Network extends EventEmitter {
               })
               .catch((error: any) => {
                 const errorText = (error.stack || error) as string;
-                logger.debug(`Failed to request peers from ${bin2Hex(nodeContactInfo.nodeId)}: ${errorText}`);
+                logger.debug(`Failed to request peers from ${bin2Hex(nodeContactInfo.nodeId).substring(0, 12)}: ${errorText}`);
               });
           }
         })

@@ -1,5 +1,4 @@
 // tslint:disable: object-literal-sort-keys
-// tslint:disable: no-console
 // tslint:disable: member-ordering
 
 import { ArrayMap, ArraySet } from "array-map-set";
@@ -129,7 +128,7 @@ export class Ledger extends EventEmitter {
     const { state, pieceDataSet } = await codes.encodeState(sourceData, this.previousStateHash, 0);
     this.stateMap.set(state.key, state.toBytes());
     this.previousStateHash = state.key;
-    this.logger.info(`Created genesis piece set and state block with id: ${bin2Hex([...this.stateMap.keys()][0])}`);
+    this.logger.info(`Created genesis piece set and state block with id: ${bin2Hex([...this.stateMap.keys()][0]).substring(0, 12)}`);
     return pieceDataSet;
   }
 
@@ -200,7 +199,7 @@ export class Ledger extends EventEmitter {
 
     const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
     const block = Block.create(this.previousBlockHash, proof, parentContentHash, txIds, coinbaseTx);
-    this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
+    this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 12)} for chain ${chainIndex}`);
     return block;
   }
 
@@ -229,8 +228,7 @@ export class Ledger extends EventEmitter {
     // previous proof hash is in proof map
     if (!(await this.getProof(block.value.proof.value.previousProofHash))) {
       if (!areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
-        this.logger.error('Invalid block proof, points to an unknown previous proof');
-        console.log(bin2Hex(block.value.proof.value.previousProofHash).substring(0, 12));
+        this.logger.error(`Invalid block proof, points to an unknown previous proof with id ${block.value.proof.value.previousProofHash}`);
         throw new Error('Invalid block proof, points to an unknown previous proof');
       }
     }
@@ -452,7 +450,6 @@ export class Ledger extends EventEmitter {
       if (parentBlockLevelIndex === undefined) {
         this.logger.verbose(`Parent proof block ID: ${bin2Hex(parentProofBlockId)}`);
         this.logger.verbose(`Parent proof block level index is: ${parentBlockLevelIndex}`);
-        console.log(this.levelForPendingBlock);
         throw new Error('Cannot get level for parent block');
       }
 
@@ -483,7 +480,6 @@ export class Ledger extends EventEmitter {
       if (parentBlockLevelIndex === undefined) {
         this.logger.verbose(`Parent proof block ID: ${bin2Hex(parentProofBlockId)}`);
         this.logger.verbose(`Parent proof block level index is: ${parentBlockLevelIndex}`);
-        console.log(this.levelForPendingBlock);
         throw new Error('Cannot get level for parent block');
       }
 
@@ -651,14 +647,6 @@ export class Ledger extends EventEmitter {
     let pendingChainCount = pendingBlocks.get(blockId);
 
     if (pendingChainCount === undefined) {
-      console.log(`Searching for block ${bin2Hex(blockId).substring(0, 12)} at index ${pendingBlockLevelIndex}`);
-      console.log(this.pendingBlocksByLevel.size);
-      for (const [level, entries] of this.pendingBlocksByLevel.entries()) {
-        console.log('Level: ', level);
-        for (const [blockId, chainCount] of entries.entries()) {
-          console.log(`${bin2Hex(blockId).substring(0, 12)}: ${chainCount}`);
-        }
-      }
       throw new Error('Cannot get pending block from pending block map for block that needs to have chain count decremented');
     }
 
