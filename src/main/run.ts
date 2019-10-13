@@ -286,7 +286,7 @@ export default async function run(
     }
 
     // create farm
-    farm = await Farm.open(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses);
+    farm = await Farm.open(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses, logger);
   }
 
   // instantiate a ledger for all nodes

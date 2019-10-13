@@ -7,7 +7,7 @@ import * as crypto from '../crypto/crypto';
 import { PIECE_SIZE } from "../main/constants";
 import { IEncodingSet, IPiece, IPieceData } from '../main/interfaces';
 import { Storage } from '../storage/storage';
-import { areArraysEqual, smallBin2Num, smallNum2Bin } from "../utils/utils";
+import {areArraysEqual, ILogger, smallBin2Num, smallNum2Bin} from "../utils/utils";
 import {MegaPlot} from "./MegaPlot";
 import MegaPlotStore from "./MegaPlotStore";
 import { Plot } from './Plot';
@@ -43,6 +43,7 @@ export class Farm {
    * @param farmSize the maximum allowable size of all disk plots combined
    * @param encodingRounds
    * @param addresses the addresses that will be used for plotting (same as number of plots)
+   * @param parentLogger
    */
   public static async open(
     adapterName: typeof Plot.ADAPTER_MEM_DB | typeof Plot.ADAPTER_DISK_DB | typeof Plot.ADAPTER_INDEXED_DB | typeof Plot.ADAPTER_ROCKS_DB | typeof Plot.ADAPTER_MEGAPLOT_DB,
@@ -52,6 +53,7 @@ export class Farm {
     farmSize: number,
     encodingRounds: number,
     addresses: Uint8Array[],
+    parentLogger: ILogger,
   ): Promise<Farm> {
     const plots: Plot[] = [];
 
@@ -71,12 +73,13 @@ export class Farm {
       }
     }
 
-    return new Farm(plots, metadataStore, encodingRounds);
+    return new Farm(plots, metadataStore, encodingRounds, parentLogger);
   }
 
   public readonly plots: Plot[];
   public pieceOffset: number;
   private readonly encodingRounds: number;
+  private readonly logger: ILogger;
   private readonly metadataStore: Storage;
   private readonly pieceIndex: Tree<Uint8Array, number>;
 
@@ -86,16 +89,19 @@ export class Farm {
    * @param plots
    * @param metadataStore
    * @param encodingRounds the number of rounds of encoding/decoding to apply to each piece
+   * @param parentLogger
    */
   constructor(
     plots: Plot[],
     metadataStore: Storage,
     encodingRounds: number,
+    parentLogger: ILogger,
   ) {
     this.metadataStore = metadataStore;
     this.encodingRounds = encodingRounds;
     this.pieceOffset = 0;
     this.plots = plots;
+    this.logger = parentLogger.child({subsystem: 'farm'});
 
     const nodeManager = new NodeManagerJsUint8Array<number>();
     this.pieceIndex = new Tree(nodeManager);
@@ -241,6 +247,15 @@ export class Farm {
   public async seedPlot(pieceSet: IPiece[]): Promise<void> {
     for (const piece of pieceSet) {
       await this.addPiece(piece.piece, piece.data);
+    }
+  }
+
+  public async close(): Promise<void> {
+    for (const plot of this.plots) {
+      await plot.close().catch((error) => {
+        const errorText = (error.stack || error) as string;
+        this.logger.warn(`Error when closing plot: ${errorText}`);
+      });
     }
   }
 
