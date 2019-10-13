@@ -54,6 +54,7 @@ export class Node extends EventEmitter {
     this.rpc.on('state-request', (stateId: Uint8Array, responseCallback: (response: Uint8Array) => void) => this.onStateRequest(stateId, responseCallback));
     this.rpc.on('state-request-by-index', (index: number, responseCallback: (response: Uint8Array) => void) => this.onStateRequestByIndex(index, responseCallback));
 
+    this.ledger.on('applied-block', (block: Block) => this.emit('applied-block', block));
     /**
      * A new state block has been confimred, if farming, plot the new piece set within farm.
      */
@@ -156,6 +157,10 @@ export class Node extends EventEmitter {
 
         // for each block in the level
         for (const blockId of blockIds) {
+
+          if (blockId.length !== 32) {
+            continue;
+          }
 
           // retrieve the block
           const block = await this.rpc.requestBlock(blockId);
@@ -637,5 +642,9 @@ export class Node extends EventEmitter {
       }
       responseCallback(new Uint8Array());
     }
+  }
+
+  public async destroy(): Promise<void> {
+    await this.rpc.destroy();
   }
 }

@@ -112,9 +112,9 @@ export class Proof {
         solution: bin2Hex(this._value.solution),
         pieceHash: bin2Hex(this._value.pieceHash),
         pieceStateHash: bin2Hex(this._value.pieceStateHash),
-        pieceProof: bin2Hex(this._value.pieceProof),
-        publicKey: bin2Hex(this._value.publicKey),
-        signature: bin2Hex(this._value.signature),
+        pieceProof: bin2Hex(this._value.pieceProof).substring(0, 64) + '...',
+        publicKey: bin2Hex(this._value.publicKey).substring(0, 64) + '...',
+        signature: bin2Hex(this._value.signature).substring(0, 64) + '...',
       },
     };
   }
