@@ -16,7 +16,7 @@ export class Storage {
   private adapter: IAdapter;
 
   constructor(
-    public readonly adapterName: string,
+    public readonly adapterName: 'browser' | 'rocks' | 'memory',
     public storageDir: string,
     public nameSpace: string,
   ) {

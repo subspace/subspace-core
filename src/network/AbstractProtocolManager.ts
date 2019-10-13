@@ -530,8 +530,10 @@ export abstract class AbstractProtocolManager<Connection extends object, Address
     this.nodeIdToConnectionMap.set(nodeId, connection);
     this.connectionToNodeIdMap.set(connection, nodeId);
     this.connectionToIdentificationMap.set(connection, nodeContactInfo);
-    this.emit('peer-contact-info', nodeContactInfo);
-    this.emit('peer-connected', nodeContactInfo);
+    setTimeout(() => {
+      this.emit('peer-contact-info', nodeContactInfo);
+      this.emit('peer-connected', nodeContactInfo);
+    });
   }
 
   /**

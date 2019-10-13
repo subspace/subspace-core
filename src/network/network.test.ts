@@ -23,27 +23,18 @@ const peer1: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('01'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'full',
-  tcp4Port: allocatePort(),
-  udp4Port: allocatePort(),
-  wsPort: allocatePort(),
 };
 
 const peer2: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('02'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'validator',
-  tcp4Port: allocatePort(),
-  udp4Port: allocatePort(),
-  wsPort: allocatePort(),
 };
 
 const peer3: IPeerContactInfo = {
   address: 'localhost',
   nodeId: Buffer.from('03'.repeat(NODE_ID_LENGTH), 'hex'),
   nodeType: 'full',
-  tcp4Port: allocatePort(),
-  udp4Port: allocatePort(),
-  wsPort: allocatePort(),
 };
 
 const peer4: IPeerContactInfo = {
@@ -56,7 +47,17 @@ let networkClient2: Network;
 let networkClient3: Network;
 let networkClient4: Network;
 
-beforeEach(async () => {
+async function prepareTest(testNumber: number): Promise<void> {
+  let basePortNumber = 10000 + testNumber * 1000;
+  peer1.tcp4Port = basePortNumber++;
+  peer1.udp4Port = basePortNumber++;
+  peer1.wsPort = basePortNumber++;
+  peer2.tcp4Port = basePortNumber++;
+  peer2.udp4Port = basePortNumber++;
+  peer2.wsPort = basePortNumber++;
+  peer3.tcp4Port = basePortNumber++;
+  peer3.udp4Port = basePortNumber++;
+  peer3.wsPort = basePortNumber++;
   networkClient1 = await Network.init(
     peer1,
     [peer2, peer3],
@@ -93,10 +94,11 @@ beforeEach(async () => {
     }),
     {contactsMaintenanceInterval},
   );
-});
+}
 
 describe('UDP', () => {
-  test('Send one-way unreliable', () => {
+  test('Send one-way unreliable', async () => {
+    await prepareTest(1);
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       networkClient2.once('ping', (payload, _, clientIdentification) => {
@@ -110,6 +112,7 @@ describe('UDP', () => {
   });
 
   test('Send unreliable', async () => {
+    await prepareTest(2);
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
@@ -129,6 +132,7 @@ describe('UDP', () => {
 
 describe('TCP', () => {
   test('Send one-way reliable', async () => {
+    await prepareTest(3);
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       networkClient2.once('ping', (payload, _, clientIdentification) => {
@@ -146,6 +150,7 @@ describe('TCP', () => {
   });
 
   test('Send reliable', async () => {
+    await prepareTest(4);
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
@@ -171,6 +176,7 @@ describe('TCP', () => {
 
 describe('WebSocket', () => {
   test('Send one-way reliable', async () => {
+    await prepareTest(5);
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       networkClient4.once('ping', (payload, _, clientIdentification) => {
@@ -188,6 +194,7 @@ describe('WebSocket', () => {
   });
 
   test('Send reliable', async () => {
+    await prepareTest(6);
     const randomPayload = randomBytes(32);
     const [, payload] = await Promise.all([
       new Promise((resolve) => {
@@ -212,7 +219,8 @@ describe('WebSocket', () => {
 });
 
 describe('Gossip', () => {
-  test('Send gossip command', () => {
+  test('Send gossip command', async () => {
+    await prepareTest(7);
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       let waitingFor = 3;
@@ -246,6 +254,7 @@ describe('Gossip', () => {
 
 describe('Identification', () => {
   test('Send one-way reliable to initially unknown', async () => {
+    await prepareTest(8);
     const randomPayload = randomBytes(32);
     return new Promise((resolve) => {
       networkClient4.once('ping', (payload, _, clientIdentification) => {
@@ -264,7 +273,8 @@ describe('Identification', () => {
 });
 
 describe('Peers', () => {
-  test('Get contacts from network instance', () => {
+  test('Get contacts from network instance', async () => {
+    await prepareTest(9);
     return new Promise((resolve) => {
       setTimeout(() => {
         const peer1Peers = networkClient1.getContacts().map(serializeNodeContactInfo);
@@ -286,6 +296,7 @@ describe('Peers', () => {
   });
 
   test('Maintain contacts', async () => {
+    await prepareTest(10);
     return new Promise((resolve) => {
       setTimeout(async () => {
         const peerServer: IPeerContactInfo = {
@@ -337,7 +348,8 @@ describe('Peers', () => {
     });
   });
 
-  test('Connection events', () => {
+  test('Connection events', async () => {
+    await prepareTest(11);
     return new Promise((resolve) => {
       setTimeout(async () => {
         const peerServer: IPeerContactInfo = {

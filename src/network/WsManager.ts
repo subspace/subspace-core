@@ -161,7 +161,7 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         () => {
           timedOut = true;
           this.incompleteConnections.delete(connection);
-          reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed`));
+          reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed with timeout`));
         },
         this.connectionTimeout * 1000,
       );
@@ -193,9 +193,8 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
         }
       };
       connection.onerror = (error: Error) => {
-        const errorText = (error.stack || error) as string;
         const baseMessage = `Connection to node ${bin2Hex(nodeId)} failed`;
-        this.logger.debug(`${baseMessage}: ${errorText}`);
+        this.logger.debug(baseMessage, {error});
         clearTimeout(timeout);
         this.incompleteConnections.delete(connection);
         reject(new Error(baseMessage));
@@ -334,7 +333,9 @@ export class WsManager extends AbstractProtocolManager<WebSocketConnection, INod
     if (nodeContactInfo) {
       this.registerConnectionMappingToIdentificationInfo(connection, nodeContactInfo);
       setTimeout(() => {
-        this.emit('peer-connected', nodeContactInfo);
+        if (connection.readyState !== websocket.w3cwebsocket.OPEN) {
+          this.emit('peer-connected', nodeContactInfo);
+        }
       });
     }
   }
