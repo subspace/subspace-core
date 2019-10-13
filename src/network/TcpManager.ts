@@ -191,7 +191,7 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
             socket.destroy();
           }
           this.incompleteConnections.delete(socket);
-          reject(new Error(`Connection to node ${bin2Hex(nodeId)}`));
+          reject(new Error(`Connection to node ${bin2Hex(nodeId)} failed with timeout`));
         },
         this.connectionTimeout * 1000,
       );
@@ -322,7 +322,9 @@ export class TcpManager extends AbstractProtocolManager<net.Socket, INodeContact
     if (nodeContactInfo) {
       this.registerConnectionMappingToIdentificationInfo(socket, nodeContactInfo);
       setTimeout(() => {
-        this.emit('peer-connected', nodeContactInfo);
+        if (!socket.destroyed) {
+          this.emit('peer-connected', nodeContactInfo);
+        }
       });
     }
   }
