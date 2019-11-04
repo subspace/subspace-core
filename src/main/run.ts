@@ -289,8 +289,14 @@ export default async function run(
     farm = await Farm.open(plotAdapter, storage, storagePath, numberOfPlots, sizeOfFarm, encodingRounds, addresses, logger);
   }
 
+  // farmers and light clients will discard ledger state as it is confirmed
+  let isPruning = false;
+  if (['farmer', 'client'].includes(nodeType)) {
+    isPruning = true;
+  }
+
   // instantiate a ledger for all nodes
-  ledger = new Ledger(blsSignatures, storage, numberOfChains, trustRecords, encodingRounds, logger);
+  ledger = new Ledger(blsSignatures, storage, numberOfChains, trustRecords, isPruning, encodingRounds, logger);
 
   // set the gateway node based on env
   let gatewayNodeId: string;

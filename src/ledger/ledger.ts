@@ -1,11 +1,10 @@
 // tslint:disable: object-literal-sort-keys
-// tslint:disable: no-console
 // tslint:disable: member-ordering
 
 import { ArrayMap, ArraySet } from "array-map-set";
 import { EventEmitter } from 'events';
 import * as codes from '../codes/codes';
-import {BlsSignatures} from "../crypto/BlsSignatures";
+import { BlsSignatures } from "../crypto/BlsSignatures";
 import * as crypto from '../crypto/crypto';
 import { CHUNK_LENGTH, PIECE_SIZE } from '../main/constants';
 import { IFullBlockValue, IPiece} from '../main/interfaces';
@@ -20,74 +19,90 @@ import { State } from './state';
 import { Tx } from './tx';
 
 // Next Steps
-//  handle a fork on one chain
 //  create a new data structure that is the chain graph for audit puposes -- probably some kind of tree
-//  fix logging in node s.t. it is intelligeble
-//  then we can add in notion of piece proximity, chunk quality and audit scope
-//  then we can make the chunk quality and make audit scope dynamic and self-adjusting
-//  handle validation failures where one farmer computes the next level and adds pieces before another
-//  fix memory leak
-//  run in farmer mode, pruning chain state after each new level
+//  handle validation falures where
+//    an unknown block is referenced
+//    an unknown tx is referenced
+//    an unknown piece is referenced
+//  handle a fork on one chain
+//  add a notion of work difficulty
+//    enforce minimum piece proximity
+//    enforce minimum chunk quality
+//    make piece proximity dynamic (audit scope) and self-adjusting
+//    make chunk quality dynamic and self-adjusting
 //  decode levels and refactor level into a separate class
-//  handle tx fees
-//  enforce a maximum block size of 4096 bytes
-//  check that nonce has been incremented to prevent replay attacks
+//  extend txs
+//    properly order and validate txs
+//    handle tx fees
+//    enforce a maximum block size of 4096 bytes
+//    check that nonce has been incremented to prevent replay attacks
+//    add a data tx
 
 export class Ledger extends EventEmitter {
 
+  // injected dependencies
+  private readonly blsSignatures: BlsSignatures;
+  private storage: Storage;
+  private logger: ILogger;
+
+  // ledger settings
   public readonly encodingRounds: number;
-  public isFarming = true;
-  public isServing = true;
+  public isPruning = true;
   public isValidating: boolean;
 
+  // should always be tracked in memory
+  public accounts: Account; // balance (head) of all subspace accounts
+
+  // memory pool, may be cleared after each level is confirmed (if not serving)
+  private chains: Chain[] = []; // array of chains, each hold array of compact blocks
+  public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>(); // valid blocks received
+  private proofMap = ArrayMap<Uint8Array, Uint8Array>(); // valid proofs received
+  private contentMap = ArrayMap<Uint8Array, Uint8Array>(); // valid content received
+  private txMap = ArrayMap<Uint8Array, Uint8Array>(); // valid txs received
+  public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>(); // holding pen for blocks received out of order
+
+  // specific to tx confirmation and encoding
+  private unconfirmedTxs: Set<Uint8Array> = ArraySet(); // has not been included in a block
+  private unencodedTxs: Set<Uint8Array> = ArraySet(); // have been applied to the ledger but not encoded as state
+  // private pendingTxSet: Set<Uint8Array> = ArraySet();
+  // private blocksClaimingTx: Map<Uint8Array, Set<Uint8Array>> = ArrayMap<Uint8Array, Set<Uint8Array>>(); // maps txId to blocks it appears in
+
+  // for confirming blocks and levels, should be cleared as levels are confirmed
+  private pendingBlocksByChain: Array<Set<Uint8Array>> = []; // one element per chain, list all unconfirmed block ids for that chain
+  public pendingBlocksByLevel: Map<number, Map<Uint8Array, number>> = new Map(); // map of levels, each maps blockId -> pendingChainCount
+  private levelForPendingBlock: Map<Uint8Array, number> = ArrayMap<Uint8Array, number>(); // maps blocks pending conf to their level
+  private proof2BlockMap: Map<Uint8Array, Uint8Array> = ArrayMap<Uint8Array, Uint8Array>(); // look up block level from proof id
+  private content2BlockMap: Map<Uint8Array, Uint8Array> = ArrayMap<Uint8Array, Uint8Array>(); // look up block level from content id
+
+  // for tracking state blocks and the ordered ledger
+  private pendingState: Uint8Array = new Uint8Array(); // buffer for confirmed records pending encoding
+  private lastConfirmedTxTime = 0;
+  public stateMap = ArrayMap<Uint8Array, Uint8Array>(); // map of all state blocks
+  public stateIndex: Map<number, Uint8Array> = new Map(); // fetch state blocks by index
+  public blockIndex: Map<number, Uint8Array> = new Map(); // total ordering of confirmed blocks
+
+  // cache for validation and solving
   private previousStateHash = new Uint8Array(32);
   public parentProofHash = new Uint8Array(32);
   public previousBlockHash = new Uint8Array(32);
 
-  // persistent state
+  // confirmed state summaries
   public chainCount = 0;
   public confirmedTxs = 0;
   public confirmedBlocks = 0;
+  public confirmedLevels = 0;
   public confirmedState = 0;
 
-  public accounts: Account;
-  public stateMap = ArrayMap<Uint8Array, Uint8Array>();
-
-  // memory pool, may be cleared after each level is confirmed (if not serving)
-  public compactBlockMap = ArrayMap<Uint8Array, Uint8Array>();
-  private chains: Chain[] = [];
-  private readonly blsSignatures: BlsSignatures;
-  private storage: Storage;
-  private proofMap = ArrayMap<Uint8Array, Uint8Array>();
-  private contentMap = ArrayMap<Uint8Array, Uint8Array>();
-  // private pendingTxSet: Set<Uint8Array> = ArraySet();
-  private txMap = ArrayMap<Uint8Array, Uint8Array>();
-  private unconfirmedTxs: Set<Uint8Array> = ArraySet(); // has not been included in a block
-  private unencodedTxs: Set<Uint8Array> = ArraySet(); // have been applied to the ledger but not encoded as state
-  public earlyBlocks = ArrayMap<Uint8Array, IFullBlockValue>();
-  public blockIndex: Map<number, Uint8Array> = new Map();
-  public stateIndex: Map<number, Uint8Array> = new Map();
-  private pendingState: Uint8Array = new Uint8Array();
-  public pendingRecordsLength = 0;
-  private logger: ILogger;
-
-  // An array of chains, each chain contains a set of unconfirmed block ids for this chain
-  private pendingBlocksByChain: Array<Set<Uint8Array>> = [];
-  // An Array of levels (block heights), each level contains a map of key (blockId) -> value (number of chains pending confirmation)
-  public pendingBlocksByLevel: Map<number, Map<Uint8Array, number>> = new Map();
-  // A lookup table that maps the blockId for a pending block to which level index it sits at
-  private levelForPendingBlock: Map<Uint8Array, number> = ArrayMap<Uint8Array, number>();
-  // A lookup table that maps txId to a set of all valid blockIds that have claimed that tx
-  // private blocksClaimingTx: Map<Uint8Array, Set<Uint8Array>> = ArrayMap<Uint8Array, Set<Uint8Array>>();
-
-  private proof2BlockMap: Map<Uint8Array, Uint8Array> = ArrayMap<Uint8Array, Uint8Array>();
-  private content2BlockMap: Map<Uint8Array, Uint8Array> = ArrayMap<Uint8Array, Uint8Array>();
+  // for rendering the chain summary graph
+  public totalBlockCountByChain: number[] = [];
+  public confirmedBlockCountbyChain: number[] = [];
 
   constructor(
     blsSignatures: BlsSignatures,
     storage: Storage,
     chainCount: number,
     trustRecords: boolean,
+    isPruning: boolean,
     encodingRounds: number,
     parentLogger: ILogger,
   ) {
@@ -97,6 +112,7 @@ export class Ledger extends EventEmitter {
     this.storage = storage;
     this.accounts = new Account();
     this.isValidating = !trustRecords;
+    this.isPruning = isPruning;
     this.encodingRounds = encodingRounds;
 
     // initialize chains
@@ -109,6 +125,8 @@ export class Ledger extends EventEmitter {
       // create empty pending blocks tracker
       const pendingBlocksForChain: Set<Uint8Array> = ArraySet();
       this.pendingBlocksByChain.push(pendingBlocksForChain);
+      this.totalBlockCountByChain.push(0);
+      this.confirmedBlockCountbyChain.push(0);
     }
   }
 
@@ -129,6 +147,7 @@ export class Ledger extends EventEmitter {
     const { state, pieceDataSet } = await codes.encodeState(sourceData, this.previousStateHash, 0);
     this.stateMap.set(state.key, state.toBytes());
     this.previousStateHash = state.key;
+    this.logger.info(`Created genesis piece set and state block with id: ${bin2Hex([...this.stateMap.keys()][0]).substring(0, 12)}`);
     return pieceDataSet;
   }
 
@@ -151,15 +170,15 @@ export class Ledger extends EventEmitter {
       // default case (not a genesis block)
 
       // get the last block on the chain we are extending (parent block)
-      const parentBlockData = await this.getBlock(parentBlockId);
+      const parentBlock = await this.getFullBlock(parentBlockId);
 
-      if (!parentBlockData) {
+      if (!parentBlock) {
         this.logger.error('Cannot get parent block when extending the chain.');
         throw new Error('Cannot get parent block when extending the chain.');
       }
 
       // compile the parent block and get parent content data (for new content pointer)
-      const parentBlock = Block.fromFullBytes(parentBlockData);
+      // const parentBlock = Block.fromFullBytes(parentBlockData);
       parentContentHash = parentBlock.value.content.key;
 
       // retrieve all blocks pending for this chain
@@ -199,7 +218,7 @@ export class Ledger extends EventEmitter {
 
     const txIds = [coinbaseTx.key, ...this.unconfirmedTxs.values()];
     const block = Block.create(this.previousBlockHash, proof, parentContentHash, txIds, coinbaseTx);
-    this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 16)} for chain ${chainIndex}`);
+    this.logger.verbose(`Created new block ${bin2Hex(block.key).substring(0, 12)} for chain ${chainIndex}`);
     return block;
   }
 
@@ -228,8 +247,7 @@ export class Ledger extends EventEmitter {
     // previous proof hash is in proof map
     if (!(await this.getProof(block.value.proof.value.previousProofHash))) {
       if (!areArraysEqual(block.value.proof.value.previousProofHash, new Uint8Array(32))) {
-        this.logger.error('Invalid block proof, points to an unknown previous proof');
-        console.log(bin2Hex(block.value.proof.value.previousProofHash).substring(0, 12));
+        this.logger.error(`Invalid block proof, points to an unknown previous proof with id ${block.value.proof.value.previousProofHash}`);
         throw new Error('Invalid block proof, points to an unknown previous proof');
       }
     }
@@ -451,7 +469,6 @@ export class Ledger extends EventEmitter {
       if (parentBlockLevelIndex === undefined) {
         this.logger.verbose(`Parent proof block ID: ${bin2Hex(parentProofBlockId)}`);
         this.logger.verbose(`Parent proof block level index is: ${parentBlockLevelIndex}`);
-        console.log(this.levelForPendingBlock);
         throw new Error('Cannot get level for parent block');
       }
 
@@ -482,7 +499,6 @@ export class Ledger extends EventEmitter {
       if (parentBlockLevelIndex === undefined) {
         this.logger.verbose(`Parent proof block ID: ${bin2Hex(parentProofBlockId)}`);
         this.logger.verbose(`Parent proof block level index is: ${parentBlockLevelIndex}`);
-        console.log(this.levelForPendingBlock);
         throw new Error('Cannot get level for parent block');
       }
 
@@ -519,6 +535,9 @@ export class Ledger extends EventEmitter {
     for (const chain of this.pendingBlocksByChain) {
       chain.add(block.key);
     }
+
+    // increment the total block count
+    this.totalBlockCountByChain[chainIndex] = this.totalBlockCountByChain[chainIndex] + 1;
 
     // check which pending blocks for this chain that this block confirms
     // start by get the pending blocks for this chain
@@ -599,6 +618,7 @@ export class Ledger extends EventEmitter {
       this.unencodedTxs.add(txId);
     }
     this.logger.verbose('Completed applying new block');
+    this.emit('applied-block', block);
   }
 
   /**
@@ -641,7 +661,6 @@ export class Ledger extends EventEmitter {
     }
 
     const pendingBlocks = this.pendingBlocksByLevel.get(pendingBlockLevelIndex);
-    // const pendingBlocks = this.pendingBlocksByLevel[pendingBlockLevelIndex];
 
     if (!pendingBlocks) {
       throw new Error ('Cannot retrieve level for pending block that needs to have chain count decremented');
@@ -650,14 +669,6 @@ export class Ledger extends EventEmitter {
     let pendingChainCount = pendingBlocks.get(blockId);
 
     if (pendingChainCount === undefined) {
-      console.log(`Searching for block ${bin2Hex(blockId).substring(0, 12)} at index ${pendingBlockLevelIndex}`);
-      console.log(this.pendingBlocksByLevel.size);
-      for (const [level, entries] of this.pendingBlocksByLevel.entries()) {
-        console.log('Level: ', level);
-        for (const [blockId, chainCount] of entries.entries()) {
-          console.log(`${bin2Hex(blockId).substring(0, 12)}: ${chainCount}`);
-        }
-      }
       throw new Error('Cannot get pending block from pending block map for block that needs to have chain count decremented');
     }
 
@@ -666,6 +677,10 @@ export class Ledger extends EventEmitter {
 
     if (pendingChainCount === 0) {
       // this block is confirmed on all chains
+      this.confirmedBlocks ++;
+
+      // increment the confirmed block count for this chain
+      // this.confirmedBlockCountbyChain[]
 
       // remove the block from pending block map
       this.levelForPendingBlock.delete(blockId);
@@ -691,7 +706,6 @@ export class Ledger extends EventEmitter {
 
     // get all blocks for pending level
     const confirmedBlocks = this.pendingBlocksByLevel.get(levelIndex);
-    // const confirmedBlocks = this.pendingBlocksByLevel[levelIndex];
 
     if (!confirmedBlocks) {
       throw new Error('Cannot get confirmed blocks for new confirmed level');
@@ -699,7 +713,6 @@ export class Ledger extends EventEmitter {
 
     const newRecords: Uint8Array[] = [];
     const uniqueTxSet: Set<Uint8Array> = ArraySet();
-    let latestTxTime: number = 0;
 
     // canonicaly order the blocks
     const sortedBlockHashes = [...confirmedBlocks.keys()].sort(compareUint8Array);
@@ -707,19 +720,34 @@ export class Ledger extends EventEmitter {
     // retrieve and comiple the data for each block
     for (const blockHash of sortedBlockHashes) {
       this.blockIndex.set(this.blockIndex.size, blockHash);
-      const blockData = await this.getBlock(blockHash);
+      const block = await this.getFullBlock(blockHash);
 
-      if (!blockData) {
+      if (!block) {
         throw new Error('Cannot retrieve block for state encoding');
       }
 
       // add proof and content to pending records
-      const block = Block.fromFullBytes(blockData);
       const proofData = block.value.proof.toBytes();
       const proofLength = smallNum2Bin(proofData.length);
       const contentData = block.value.content.toBytes();
       const contentLength = smallNum2Bin(contentData.length);
       newRecords.push(proofLength, proofData, contentLength, contentData);
+
+      // remove proof and block to level entries from maps
+      this.proof2BlockMap.delete(block.value.proof.key);
+      this.content2BlockMap.delete(block.value.content.key);
+
+      // if not pruning, move confirmed state from memory to disk
+      if (!this.isPruning) {
+        await this.storage.put(block.value.proof.key, proofData);
+        await this.storage.put(block.value.content.key, contentData);
+        await this.storage.put(block.key, block.toCompactBytes());
+      }
+
+      // discard pending state
+      this.proofMap.delete(block.value.proof.key);
+      this.contentMap.delete(block.value.content.key);
+      this.compactBlockMap.delete(block.key);
 
       // collect all the txs in the set
       for (const txHash of block.value.content.value.payload) {
@@ -733,6 +761,7 @@ export class Ledger extends EventEmitter {
 
     // filter for duplicate txs and encode
     for (const txHash of sortedTxHashes) {
+      this.confirmedTxs ++;
       this.unencodedTxs.delete(txHash);
       const txData = await this.getTx(txHash);
 
@@ -741,13 +770,24 @@ export class Ledger extends EventEmitter {
       }
 
       const tx = Tx.fromBytes(txData);
-      if (tx.value.timestamp > latestTxTime) {
-        latestTxTime = tx.value.timestamp;
+      if (tx.value.timestamp > this.lastConfirmedTxTime) {
+        this.lastConfirmedTxTime = tx.value.timestamp;
       }
 
       const txLength = smallNum2Bin(txData.length);
       newRecords.push(txLength, txData);
+
+      // persist and discard txs
+      if (!this.isPruning) {
+        await this.storage.put(tx.key, txData);
+      }
+
+      this.txMap.delete(tx.key);
     }
+
+    // remove the level from pending levels
+    // this.pendingBlocksByLevel.delete(levelIndex);
+    this.confirmedLevels ++;
 
     // compile new records and add to pending state
     const newState = Buffer.concat(newRecords);
@@ -755,7 +795,7 @@ export class Ledger extends EventEmitter {
 
     // check if state needs to be encoded
     while (this.pendingState.length >= 127 * 4096) {
-      await this.createState(latestTxTime);
+      await this.createState();
     }
 
     // output log info for new confimred level
@@ -772,7 +812,7 @@ export class Ledger extends EventEmitter {
    *
    * @param timestamp the timestamp of the newest tx in the block, used to timestamp the state block
    */
-  private async createState(timestamp: number): Promise<void> {
+  private async createState(): Promise<void> {
     return new Promise(async (resolve) => {
       // we need to only take the first 127 pieces
       const stateData = this.pendingState.subarray(0, 4096 * 127);
@@ -781,7 +821,7 @@ export class Ledger extends EventEmitter {
       this.pendingState = this.pendingState.subarray(4096 * 127);
 
       // erasure code the source state
-      const { state, pieceDataSet } = await codes.encodeState(stateData, this.previousStateHash, timestamp);
+      const { state, pieceDataSet } = await codes.encodeState(stateData, this.previousStateHash, this.lastConfirmedTxTime);
 
       // update the state chain
       this.stateMap.set(state.key, state.toBytes());
@@ -893,9 +933,9 @@ export class Ledger extends EventEmitter {
    *
    * @param blockId hash of block data
    *
-   * @return binary block data or not found
+   * @return block instance or not found
    */
-  public async getBlock(blockId: Uint8Array): Promise<Uint8Array | null | undefined> {
+  public async getFullBlock(blockId: Uint8Array): Promise <Block | null | undefined> {
     let compactBlockData: Uint8Array | undefined | null;
     compactBlockData = this.compactBlockMap.get(blockId);
     if (!compactBlockData) {
@@ -943,7 +983,23 @@ export class Ledger extends EventEmitter {
       throw new Error('Error retrieving block, hash does not match request id');
     }
 
-    return block.toFullBytes();
+    return block;
+  }
+
+  /**
+   * Searches memory and disk for a block matching query. Returns full block data with proof, content, and all txs.
+   *
+   * @param blockId hash of block data
+   *
+   * @return binary block data or not found
+   */
+  public async getBlock(blockId: Uint8Array): Promise <Uint8Array | null | undefined> {
+    const fullBlock = await this.getFullBlock(blockId);
+    if (fullBlock) {
+      return fullBlock.toBytes();
+    }
+
+    return fullBlock;
   }
 
   /**

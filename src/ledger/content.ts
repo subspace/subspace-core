@@ -109,7 +109,7 @@ export class Content {
       value: {
         parentContentHash: bin2Hex(this._value.parentContentHash),
         proofHash: bin2Hex(this._value.proofHash),
-        payload: this._value.payload.forEach((txId) => bin2Hex(txId)),
+        payload: this._value.payload.map((txId) => bin2Hex(txId)),
       },
     };
   }

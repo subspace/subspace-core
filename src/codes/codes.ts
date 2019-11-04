@@ -233,6 +233,24 @@ export function decodePiece(encodedPiece: Uint8Array, key: Uint8Array, rounds = 
   return output;
 }
 
+export function encryptPiece(piece: Uint8Array, pieceId: Uint8Array, key: Uint8Array, rounds: number): Uint8Array {
+  const iv = crypto.hash(Buffer.concat([pieceId, key]));
+  let encryptedPiece = piece;
+  for (let r = 0; r < rounds; ++r) {
+    encryptedPiece = crypto.encrypt(encryptedPiece, key, iv.subarray(0, 16));
+  }
+  return encryptedPiece;
+}
+
+export function decryptPiece(encryptedPiece: Uint8Array, pieceId: Uint8Array, key: Uint8Array, rounds: number): Uint8Array {
+  const iv = crypto.hash(Buffer.concat([pieceId, key]));
+  let decryptedPiece = encryptedPiece;
+  for (let r = 0; r < rounds; ++r) {
+    decryptedPiece = crypto.decrypt(decryptedPiece, key, iv.subarray(0, 16));
+  }
+  return decryptedPiece;
+}
+
 /**
  * TODO: Encodes a piece with an hourglass function that is efficiently invertible.
  */

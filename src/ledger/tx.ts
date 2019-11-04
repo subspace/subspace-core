@@ -140,7 +140,7 @@ export class Tx {
         amount: this._value.amount,
         nonce: this._value.nonce,
         timestamp: num2Date(this._value.timestamp),
-        signature: bin2Hex(this._value.signature),
+        signature: bin2Hex(this._value.signature).substring(0, 64) + '...',
       },
     };
   }

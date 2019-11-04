@@ -67,3 +67,15 @@ export function isDateWithinRange(date: number, range: number): boolean {
   // checks to ensure a supplied unix timestamp is within a supplied range
   return Math.abs(Date.now() - date) <= range;
 }
+
+export function encrypt(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
+  const cipher = crypto.createCipheriv('aes-256-ccm', key, iv);
+  const cipherText = cipher.update(plaintext);
+  return Buffer.concat([cipherText, cipher.final()]);
+}
+
+export function decrypt(cipherText: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
+  const decipher = crypto.createDecipheriv('aes-256-ccm', key, iv);
+  const plainText = decipher.update(cipherText);
+  return Buffer.concat([plainText, decipher.final()]);
+}

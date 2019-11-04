@@ -1,58 +1,62 @@
-/*
-import * as crypto from '../crypto/crypto';
-import { IPieceData } from 'main/interfaces';
+import { ArrayMap } from "array-map-set";
+
+interface IBlock {
+  key: Uint8Array;
+  parentProof: Uint8Array;
+  parentContent: Uint8Array;
+}
+
+// purpose
+//  read blocks in a canonical order
+//  know what blocks are seen at the same time
+//  visualize the linkages betwen blocks
 
 export class Level {
-  public static createGenesisLevel(): Level {
-    return new Level();
+
+  public blockCount: number = 0;
+  private levels: Map<number, Set<IBlock>> = new Map();
+  private blocks: Map<Uint8Array, number> = ArrayMap<Uint8Array, number>();
+
+  /**
+   * Add a new level to the block tree once all blocks for that level are confirmed
+   *
+   * @param blocks an array of compact block values
+   */
+  public addLevel(blocks: Set<IBlock>): void {
+    const levelIndex = this.levels.size;
+    this.levels.set(levelIndex, blocks);
+    for (const block of [...blocks]) {
+      this.blocks.set(block.key, levelIndex);
+      this.blockCount ++;
+    }
   }
 
-  public static create(): Level {
-    return new Level();
+  /**
+   * Get all confimred blocks for a level
+   *
+   * @param levelIndex the numeric index for the level
+   *
+   * @return a set of compact blocks
+   */
+  public getBlocksForLevel(levelIndex: number): Set<IBlock> | undefined {
+    return this.levels.get(levelIndex);
   }
 
-  public static fromPieces(pieces: IPieceData[]): Level {
-    return new Level();
+  /**
+   * Get the level for a block by id
+   *
+   * @param blockId 32 byte content addressed block id
+   *
+   * @return numeric index for level
+   */
+  public getLevelForBlock(blockId: Uint8Array): number | undefined {
+    return this.blocks.get(blockId);
   }
 
-  private _key: Uint8Array;
-  private _value: Uint8Array;
-
-  constructor(value: ILevelValue) {
-    this._value = value;
-    this._key = this.setKey();
-  }
-
-  get key(): Uint8Array {
-    return this._key;
-  }
-
-  get value(): Uint8Array {
-    return this._value;
-  }
-
-  public toBytes(): Uint8Array {
-    return;
-  }
-
-  public setKey(): Uint8Array {
-    return crypto.hash(this.toBytes());
-  }
-
-  public pad(): void {
-    return;
-  }
-
-  public slice(): void {
-    return;
-  }
-
-  public erasure_code(): void {
-    return;
-  }
-
-  public encode(): void {
-    return;
+  /**
+   * Return the number of confirmed levels in the ledger
+   */
+  public getLevelCount(): number {
+    return this.levels.size;
   }
 }
-*/
