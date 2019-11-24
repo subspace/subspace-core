@@ -1,9 +1,6 @@
-/**
- * @jest-environment node
- */
-
 import {BlsSignatures} from "./BlsSignatures";
 import * as crypto from './crypto';
+// import {Ed25519Signatures} from "./Ed25519Signatures";
 
 const hashData = Buffer.from('hello subspace');
 const hashValue = "00ba5188adff22ee1f8abc61d6e96c371f0d505ec76f90e86d4b0c8748d646bb";
@@ -41,9 +38,11 @@ const binaryPublicKey = Uint8Array.from([
 const dateRange = 1000;
 
 let blsSignatures: BlsSignatures;
+// let ed25519Signatures: Ed25519Signatures;
 
 beforeAll(async () => {
   blsSignatures = await BlsSignatures.init();
+  // ed25519Signatures = await Ed25519Signatures.init();
 });
 
 test('sha-256-hash', () => {
@@ -82,6 +81,13 @@ test('bls-keys', () => {
   const signature1 = blsSignatures.signMessage(Buffer.from(hashValue), binaryPrivateKey);
   expect(blsSignatures.verifySignature(Buffer.from(hashValue), signature1, binaryPublicKey)).toBe(true);
 });
+
+// TODO: Legit test, fails because of Jest: https://github.com/facebook/jest/issues/4422
+// test('ed25519-signatures', () => {
+//   const keyPair = ed25519Signatures.generateKeypair();
+//   const signature = ed25519Signatures.sign(Buffer.from(hashValue), keyPair.binaryPublicKey, keyPair.binaryPrivateKey);
+//   expect(ed25519Signatures.verify(Buffer.from(hashValue), signature, keyPair.binaryPublicKey)).toBe(true);
+// });
 
 test('merkle-workflow', () => {
   const leaves: Uint8Array[] = [
