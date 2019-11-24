@@ -4,6 +4,8 @@ import { Tree } from 'merkle-tree-binary';
 import { IMerkleData } from '../main/interfaces';
 
 // ToDo
+  // add ECDSA keys
+  // implement modular division in rust
   // rewrite JCH in Rust (Nazar)
   // rewrite merkle tree in Rust (Nazar)
   // aggregate signatures and public keys (Jeremiah)
@@ -69,13 +71,13 @@ export function isDateWithinRange(date: number, range: number): boolean {
 }
 
 export function encrypt(plaintext: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
-  const cipher = crypto.createCipheriv('aes-256-ccm', key, iv);
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   const cipherText = cipher.update(plaintext);
   return Buffer.concat([cipherText, cipher.final()]);
 }
 
 export function decrypt(cipherText: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
-  const decipher = crypto.createDecipheriv('aes-256-ccm', key, iv);
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
   const plainText = decipher.update(cipherText);
   return Buffer.concat([plainText, decipher.final()]);
 }
