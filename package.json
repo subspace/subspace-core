@@ -71,6 +71,7 @@
     "levelup": "^4.2.0",
     "merkle-tree-binary": "^2.0.1",
     "random-bytes-numbers": "^1.0.0",
+    "supercop.wasm": "^5.0.1",
     "websocket": "^1.0.30",
     "winston": "^3.2.1"
   }
