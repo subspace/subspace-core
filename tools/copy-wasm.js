@@ -3,6 +3,7 @@ const fs = require('fs');
 const files = [
     'node_modules/@subspace/bls-signatures/blsjs.wasm',
     'node_modules/@subspace/reed-solomon-erasure.wasm/dist/reed_solomon_erasure_bg.wasm',
+    'node_modules/@subspace/sloth-permutation/dist/sloth.wasm',
 ];
 
 for (const file of files) {
