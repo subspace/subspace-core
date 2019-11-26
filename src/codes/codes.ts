@@ -8,8 +8,9 @@ import { IPiece } from "../main/interfaces";
 import { xorUint8Array } from '../utils/utils';
 
 // ToDo
+  // include sloth permutation
+  // include correct AES-256 CBC implementation
   // optimize/import encode/decode in Rust
-  // actual hourglass function (from filecoin rust proofs?)
 
 /**
  * Adds deterministic hashes to a piece s.t. it is a exactly 4096 bytes.
